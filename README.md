@@ -20,6 +20,8 @@ npx expo start        # dev; press i for iOS simulator, a for Android
 
 ## Environments & branches
 
+**Full setup & release process: [`DEVELOPMENT.md`](./DEVELOPMENT.md).** Summary:
+
 Two environments, each a different SDS API:
 
 | Environment | API | Built from |
