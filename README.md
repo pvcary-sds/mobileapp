@@ -18,19 +18,48 @@ npm install
 npx expo start        # dev; press i for iOS simulator, a for Android
 ```
 
-By default a **dev** build talks to **staging** (`api.dev.samedaysnaps.com`); a
-release build talks to **production**. Override with `EXPO_PUBLIC_API_BASE`.
+## Environments & branches
+
+**Full setup & release process: [`DEVELOPMENT.md`](./DEVELOPMENT.md).** Summary:
+
+Two environments, each a different SDS API:
+
+| Environment | API | Built from |
+|---|---|---|
+| **staging** | `api.dev.samedaysnaps.com` | `main` |
+| **production** | `api.samedaysnaps.com` | `release` |
+
+**How it's wired.** Each build is pinned to an environment at build time:
+`app.config.ts` reads `APP_ENV` (set by the EAS build profile in `eas.json`) and
+exposes it to the app as `expoConfig.extra.environment` / `.apiBaseUrl`. The API
+client reads it via `src/api/environment.ts`. With no `APP_ENV` (plain
+`npx expo start`) it defaults to **staging**.
+
+**Branch flow.** Feature branches → PR → `main` (staging). To ship, merge
+`main` → `release` (production). Mirrors the branch-per-environment model, just
+`release`-as-production instead of the API repo's `main`-as-production.
+
+**Switching while developing.** Dev builds show an environment pill in the Home
+header — tap it to flip staging ↔ production (persisted, reloads the app).
+Production builds never show it. `EXPO_PUBLIC_API_BASE` still overrides everything
+(e.g. a local tunnel).
+
+**Builds** (needs an Expo account): `eas login` && `eas init` once, then
+`eas build --profile staging` / `--profile production`.
 
 ## Project layout
 
 ```
 src/
-  api/          API client (config, typed client, catalog calls, response types)
+  api/          API client — environment (base URL), config, client, catalog, types
   app/          expo-router screens
-    index.tsx           tier1 — landing categories
-    tier2/[id].tsx      tier2 — sub-catalog
-    product/[id].tsx    product page (copy, images, sizes)
-  components/   ThemedText/View, CatalogCard, ScreenState
+    _layout.tsx         bottom tab bar (Home, Gallery, Cart, Orders)
+    (home)/             Home tab — the browse stack
+      index.tsx           tier1 — landing categories
+      tier2/[id].tsx      tier2 — sub-catalog
+      product/[id].tsx    product page (copy, images, sizes)
+    gallery.tsx / cart.tsx / orders.tsx   placeholder tabs
+  components/   ThemedText/View, CatalogCard, ScreenState, DevEnvSwitcher
   hooks/        useAsync (load/error/retry), theme + color-scheme hooks
   lib/          helpers (html → text)
 ```
