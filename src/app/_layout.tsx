@@ -1,18 +1,24 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
-SplashScreen.preventAutoHideAsync();
-
-export default function TabLayout() {
+/**
+ * Root navigator: a stack for the browse flow
+ * (catalog → sub-catalog → product page). Titles for the dynamic routes are
+ * set inside each screen once its data loads.
+ */
+export default function RootLayout() {
   const colorScheme = useColorScheme();
+
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
+      <Stack>
+        <Stack.Screen name="index" options={{ title: 'SameDaySnaps' }} />
+        <Stack.Screen name="tier2/[id]" options={{ title: '' }} />
+        <Stack.Screen name="product/[id]" options={{ title: '', headerBackTitle: 'Back' }} />
+      </Stack>
+      <StatusBar style="auto" />
     </ThemeProvider>
   );
 }
