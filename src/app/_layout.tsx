@@ -29,8 +29,9 @@ const navigationTheme = {
  * hosts the browse stack, which draws its own headers. `(home)` is a group, so
  * it adds no URL segment — the browse screens keep their paths.
  *
- * The app is a single light theme; the selected tab is tinted with the brand
- * primary (orange).
+ * The app is a single light theme. Tab items are neutral — selected is near-black
+ * (text), unselected is Gray 500 (textSecondary); the orange primary is reserved
+ * for actions (CTAs, selected chips), not the tab bar.
  */
 export default function RootLayout() {
   // Load any persisted dev environment override before rendering, so the first
@@ -43,7 +44,12 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={navigationTheme}>
-      <NativeTabs tintColor={Colors.primary}>
+      <NativeTabs
+        iconColor={{ default: Colors.textSecondary, selected: Colors.text }}
+        labelStyle={{
+          default: { color: Colors.textSecondary },
+          selected: { color: Colors.text },
+        }}>
         <NativeTabs.Trigger name="(home)">
           <NativeTabs.Trigger.Icon sf="house" />
           <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
