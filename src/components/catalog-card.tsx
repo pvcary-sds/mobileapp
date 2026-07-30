@@ -37,7 +37,7 @@ export function CatalogCard({ item, onPress }: Props) {
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
-        { borderColor: theme.backgroundSelected, opacity: pressed ? 0.85 : 1 },
+        { borderColor: theme.border, opacity: pressed ? 0.85 : 1 },
       ]}>
       {hasImage ? (
         <Image

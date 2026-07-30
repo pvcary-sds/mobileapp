@@ -1,10 +1,24 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { DefaultTheme, ThemeProvider } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 
 import { initEnvironmentAsync } from '@/api/environment';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/constants/theme';
+
+/** Single (light) navigation theme, tinted from the app palette. */
+const navigationTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: Colors.primary,
+    background: Colors.background,
+    card: Colors.background,
+    text: Colors.text,
+    border: Colors.border,
+    notification: Colors.primary,
+  },
+};
 
 /**
  * Root navigator: a NATIVE bottom tab bar — Home, Gallery, Cart, Orders.
@@ -14,10 +28,11 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
  * Android it's the native Material tab bar. The Home tab (`(home)` route group)
  * hosts the browse stack, which draws its own headers. `(home)` is a group, so
  * it adds no URL segment — the browse screens keep their paths.
+ *
+ * The app is a single light theme; the selected tab is tinted with the brand
+ * primary (orange).
  */
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   // Load any persisted dev environment override before rendering, so the first
   // API calls use the right base URL. In production this resolves immediately.
   const [ready, setReady] = useState(false);
@@ -27,8 +42,8 @@ export default function RootLayout() {
   if (!ready) return null;
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <NativeTabs>
+    <ThemeProvider value={navigationTheme}>
+      <NativeTabs tintColor={Colors.primary}>
         <NativeTabs.Trigger name="(home)">
           <NativeTabs.Trigger.Icon sf="house" />
           <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
@@ -46,7 +61,7 @@ export default function RootLayout() {
           <NativeTabs.Trigger.Label>Orders</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>
       </NativeTabs>
-      <StatusBar style="auto" />
+      <StatusBar style="dark" />
     </ThemeProvider>
   );
 }
