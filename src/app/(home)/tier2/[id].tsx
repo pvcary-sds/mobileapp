@@ -4,10 +4,13 @@ import { FlatList, StyleSheet } from 'react-native';
 
 import { getTier2 } from '@/api/catalog';
 import type { CatalogItem } from '@/api/types';
-import { CatalogCard } from '@/components/catalog-card';
+import {
+  CatalogCard,
+  CATALOG_GRID_GAP,
+  CATALOG_GRID_PADDING,
+} from '@/components/catalog-card';
 import { ScreenState } from '@/components/screen-state';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
 import { useAsync } from '@/hooks/use-async';
 
 /**
@@ -43,6 +46,8 @@ export default function Tier2Screen() {
         <FlatList
           data={data ?? []}
           keyExtractor={(item) => item.id}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
           renderItem={({ item }) => (
             <CatalogCard item={item} onPress={() => openProduct(item)} />
           )}
@@ -58,7 +63,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   list: {
-    padding: Spacing.three,
-    gap: Spacing.three,
+    padding: CATALOG_GRID_PADDING,
+    rowGap: CATALOG_GRID_GAP,
+  },
+  row: {
+    justifyContent: 'space-between',
   },
 });
