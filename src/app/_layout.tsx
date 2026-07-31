@@ -10,13 +10,13 @@ import {
   DMSans_700Bold,
 } from '@expo-google-fonts/dm-sans';
 import { useFonts } from 'expo-font';
-import { DefaultTheme, Tabs, ThemeProvider } from 'expo-router';
+import { DefaultTheme, ThemeProvider } from 'expo-router';
+import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 
 import { initEnvironmentAsync } from '@/api/environment';
-import { GlassTabBar } from '@/components/glass-tab-bar';
-import { Colors } from '@/constants/theme';
+import { Colors, NativeFontFamily } from '@/constants/theme';
 
 /** Single (light) navigation theme, tinted from the app palette. */
 const navigationTheme = {
@@ -33,14 +33,17 @@ const navigationTheme = {
 };
 
 /**
- * Root navigator: a bottom tab bar — Home, Gallery, Cart, Orders.
+ * Root navigator: a NATIVE bottom tab bar — Home, Gallery, Cart, Orders.
  *
- * We use expo-router's `Tabs` with a custom **Liquid Glass** tab bar
- * (`GlassTabBar`) rather than `NativeTabs`, because iOS 26's native glass bar
- * won't let us control the label typography/color. The custom bar renders on a
- * real `GlassView` surface, so we keep the glass while getting exact DM Sans
- * colors/weights/spacing and the Figma SVG icons directly. The Home tab
- * (`(home)` group) hosts the browse stack, which draws its own headers.
+ * `NativeTabs` renders the platform's real tab bar, so on **iOS 26 it's Liquid
+ * Glass** (blur, morph, scroll-edge effects) for free, with SF Symbol icons; on
+ * Android it's the native Material tab bar. The Home tab (`(home)` route group)
+ * hosts the browse stack, which draws its own headers. `(home)` is a group, so
+ * it adds no URL segment — the browse screens keep their paths.
+ *
+ * The app is a single light theme. Tab items are neutral — selected is near-black
+ * (text), unselected is Gray 500 (textSecondary); the orange primary is reserved
+ * for actions (CTAs, selected chips), not the tab bar.
  */
 export default function RootLayout() {
   // Brand fonts: DM Sans (body) + Crimson Text (title).
@@ -64,12 +67,50 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={navigationTheme}>
-      <Tabs tabBar={(props) => <GlassTabBar {...props} />} screenOptions={{ headerShown: false }}>
-        <Tabs.Screen name="(home)" />
-        <Tabs.Screen name="gallery" />
-        <Tabs.Screen name="cart" />
-        <Tabs.Screen name="orders" />
-      </Tabs>
+      <NativeTabs
+        iconColor={{ default: Colors.textSecondary, selected: Colors.text }}
+        titlePositionAdjustment={{ vertical: 8 }} // best-effort 8px icon↔label gap
+        labelStyle={{
+          // unselected: Body Medium 12, Gray 500
+          default: { color: Colors.textSecondary, fontFamily: NativeFontFamily.bodyMedium, fontSize: 12 },
+          // selected: Body SemiBold 12, near-black (text)
+          selected: { color: Colors.text, fontFamily: NativeFontFamily.bodySemiBold, fontSize: 12 },
+        }}>
+        <NativeTabs.Trigger name="(home)">
+          <NativeTabs.Trigger.Icon
+            src={{
+              default: require('../../assets/tab-icons/home.png'),
+              selected: require('../../assets/tab-icons/home-selected.png'),
+            }}
+            renderingMode="original"
+          />
+          <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="gallery">
+          <NativeTabs.Trigger.Icon sf="photo.on.rectangle" />
+          <NativeTabs.Trigger.Label>Gallery</NativeTabs.Trigger.Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="cart">
+          <NativeTabs.Trigger.Icon
+            src={{
+              default: require('../../assets/tab-icons/cart.png'),
+              selected: require('../../assets/tab-icons/cart-selected.png'),
+            }}
+            renderingMode="original"
+          />
+          <NativeTabs.Trigger.Label>Cart</NativeTabs.Trigger.Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="orders">
+          <NativeTabs.Trigger.Icon
+            src={{
+              default: require('../../assets/tab-icons/orders.png'),
+              selected: require('../../assets/tab-icons/orders-selected.png'),
+            }}
+            renderingMode="original"
+          />
+          <NativeTabs.Trigger.Label>Orders</NativeTabs.Trigger.Label>
+        </NativeTabs.Trigger>
+      </NativeTabs>
       <StatusBar style="dark" />
     </ThemeProvider>
   );
