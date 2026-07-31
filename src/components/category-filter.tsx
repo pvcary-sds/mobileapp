@@ -1,18 +1,20 @@
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
+import type { Category } from '@/api/types';
 import { FontFamily, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type Props = {
-  categories: string[];
+  categories: Category[];
+  /** The selected category's `id`. */
   selected: string;
-  onSelect: (category: string) => void;
+  onSelect: (id: string) => void;
 };
 
 /**
  * A horizontally scrollable row of category chips above the catalog grid.
  * Selected chip: near-black text + border; unselected: Gray 500 text, Gray 200
- * border. Categories are static for now; will become API-driven.
+ * border. Categories come from the tier1 API (`{ id, label }`).
  */
 export function CategoryFilter({ categories, selected, onSelect }: Props) {
   const theme = useTheme();
@@ -23,14 +25,14 @@ export function CategoryFilter({ categories, selected, onSelect }: Props) {
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.row}>
       {categories.map((category) => {
-        const active = category === selected;
+        const active = category.id === selected;
         return (
           <Pressable
-            key={category}
-            onPress={() => onSelect(category)}
+            key={category.id}
+            onPress={() => onSelect(category.id)}
             style={[styles.chip, { borderColor: active ? theme.text : theme.border }]}>
             <Text style={[styles.label, { color: active ? theme.text : theme.textSecondary }]}>
-              {category}
+              {category.label}
             </Text>
           </Pressable>
         );

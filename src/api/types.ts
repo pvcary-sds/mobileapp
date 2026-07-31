@@ -19,11 +19,21 @@ export interface CatalogItem {
   description: string;
   imageUrl: string;
   imageUrlWide: string;
+  /** Category ids this item appears under (empty = only under "All"). */
   categories: string[];
+}
+
+/** A filter chip above the tier1 grid. `id` is stable; `label` is display text. */
+export interface Category {
+  id: string;
+  label: string;
+  iconUrl: string;
 }
 
 /** tier1 / tier2 both return the picked channel's array (here: `shipToYou`). */
 export interface CatalogResponse {
+  /** Filter chips — present on tier1. */
+  categories?: Category[];
   shipToYou?: CatalogItem[];
   sameDayPickup?: CatalogItem[];
 }
