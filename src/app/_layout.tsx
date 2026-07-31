@@ -16,7 +16,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 
 import { initEnvironmentAsync } from '@/api/environment';
-import { Colors } from '@/constants/theme';
+import { Colors, FontFamily } from '@/constants/theme';
 
 /** Single (light) navigation theme, tinted from the app palette. */
 const navigationTheme = {
@@ -69,12 +69,19 @@ export default function RootLayout() {
     <ThemeProvider value={navigationTheme}>
       <NativeTabs
         iconColor={{ default: Colors.textSecondary, selected: Colors.text }}
+        titlePositionAdjustment={{ vertical: 8 }} // best-effort 8px icon↔label gap
         labelStyle={{
-          default: { color: Colors.textSecondary },
-          selected: { color: Colors.text },
+          default: { color: Colors.textSecondary, fontFamily: FontFamily.body, fontSize: 12 },
+          selected: { color: Colors.text, fontFamily: FontFamily.body, fontSize: 12 },
         }}>
         <NativeTabs.Trigger name="(home)">
-          <NativeTabs.Trigger.Icon sf="house" />
+          <NativeTabs.Trigger.Icon
+            src={{
+              default: require('../../assets/tab-icons/home.png'),
+              selected: require('../../assets/tab-icons/home-selected.png'),
+            }}
+            renderingMode="original"
+          />
           <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="gallery">
@@ -82,11 +89,23 @@ export default function RootLayout() {
           <NativeTabs.Trigger.Label>Gallery</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="cart">
-          <NativeTabs.Trigger.Icon sf="cart" />
+          <NativeTabs.Trigger.Icon
+            src={{
+              default: require('../../assets/tab-icons/cart.png'),
+              selected: require('../../assets/tab-icons/cart-selected.png'),
+            }}
+            renderingMode="original"
+          />
           <NativeTabs.Trigger.Label>Cart</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="orders">
-          <NativeTabs.Trigger.Icon sf="shippingbox" />
+          <NativeTabs.Trigger.Icon
+            src={{
+              default: require('../../assets/tab-icons/orders.png'),
+              selected: require('../../assets/tab-icons/orders-selected.png'),
+            }}
+            renderingMode="original"
+          />
           <NativeTabs.Trigger.Label>Orders</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>
       </NativeTabs>
