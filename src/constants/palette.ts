@@ -81,3 +81,9 @@ export const Stroke = {
   10: 'rgba(0, 0, 0, 0.10)',
   20: 'rgba(0, 0, 0, 0.20)',
 } as const;
+
+/** Base neutrals. */
+export const Base = {
+  white: '#FFFFFF',
+  black: '#000000',
+} as const;
