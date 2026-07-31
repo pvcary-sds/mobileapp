@@ -16,7 +16,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 
 import { initEnvironmentAsync } from '@/api/environment';
-import { Colors, FontFamily } from '@/constants/theme';
+import { Colors, NativeFontFamily } from '@/constants/theme';
 
 /** Single (light) navigation theme, tinted from the app palette. */
 const navigationTheme = {
@@ -71,8 +71,10 @@ export default function RootLayout() {
         iconColor={{ default: Colors.textSecondary, selected: Colors.text }}
         titlePositionAdjustment={{ vertical: 8 }} // best-effort 8px icon↔label gap
         labelStyle={{
-          default: { color: Colors.textSecondary, fontFamily: FontFamily.body, fontSize: 12 },
-          selected: { color: Colors.text, fontFamily: FontFamily.body, fontSize: 12 },
+          // unselected: Body Medium 12, Gray 500
+          default: { color: Colors.textSecondary, fontFamily: NativeFontFamily.bodyMedium, fontSize: 12 },
+          // selected: Body SemiBold 12, near-black (text)
+          selected: { color: Colors.text, fontFamily: NativeFontFamily.bodySemiBold, fontSize: 12 },
         }}>
         <NativeTabs.Trigger name="(home)">
           <NativeTabs.Trigger.Icon

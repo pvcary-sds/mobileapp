@@ -79,6 +79,16 @@ export const FontFamily = {
   titleBold: 'CrimsonText_700Bold',
 } as const;
 
+/**
+ * PostScript font names — required by native UIKit components (e.g. the
+ * `NativeTabs` tab-bar labels), which resolve fonts by PostScript name rather
+ * than the expo-font key used for React Native `<Text>`.
+ */
+export const NativeFontFamily = {
+  bodyMedium: 'DMSans-Medium',
+  bodySemiBold: 'DMSans-SemiBold',
+} as const;
+
 export const Spacing = {
   half: 2,
   one: 4,
