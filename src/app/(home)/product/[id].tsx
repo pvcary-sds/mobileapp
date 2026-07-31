@@ -104,18 +104,18 @@ export default function ProductScreen() {
               <BulletSection title="Packaging" items={product.packaging} />
             </ScrollView>
 
-            <View style={[styles.footer, { borderTopColor: theme.backgroundElement }]}>
+            <View style={[styles.footer, { borderTopColor: theme.border }]}>
               <Pressable
                 onPress={onContinue}
                 disabled={!selectedSku}
                 style={[
                   styles.cta,
                   {
-                    backgroundColor: selectedSku ? '#208AEF' : theme.backgroundSelected,
+                    backgroundColor: selectedSku ? theme.primary : theme.backgroundSelected,
                     opacity: selectedSku ? 1 : 0.6,
                   },
                 ]}>
-                <ThemedText type="smallBold" style={{ color: '#ffffff' }}>
+                <ThemedText type="smallBold" style={{ color: theme.onPrimary }}>
                   {selectedSku ? 'Continue' : 'Select a size'}
                 </ThemedText>
               </Pressable>
@@ -143,8 +143,8 @@ function SizeChip({
       style={[
         styles.chip,
         {
-          backgroundColor: selected ? theme.backgroundSelected : theme.backgroundElement,
-          borderColor: selected ? '#208AEF' : 'transparent',
+          backgroundColor: selected ? theme.primarySoft : theme.backgroundElement,
+          borderColor: selected ? theme.primary : 'transparent',
         },
       ]}>
       <ThemedText type="smallBold">{variant.size}</ThemedText>

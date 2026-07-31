@@ -1,30 +1,45 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * The app's single (light) theme. Semantic color roles mapped from the Figma
+ * palette primitives in `palette.ts`. Components consume these roles — never the
+ * raw palette. There is intentionally no dark variant: the app is locked to this
+ * one theme (see `userInterfaceStyle` in app.json).
  */
 
 import '@/global.css';
 
 import { Platform } from 'react-native';
 
+import { Gray, Label, Primary } from '@/constants/palette';
+
 export const Colors = {
-  light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
-  },
-  dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
-  },
+  // Text
+  text: Gray[900], // primary text
+  textSecondary: Gray[500], // descriptions, captions
+  textMuted: Gray[400], // hints, disabled
+
+  // Surfaces
+  background: '#FFFFFF', // screen background
+  backgroundElement: Gray[100], // raised fills / image placeholders
+  backgroundSelected: Gray[200], // pressed / subtle selected surface
+  border: Gray[200], // card borders, dividers
+
+  // Brand / action (Primary 500)
+  primary: Primary[500],
+  primarySoft: Primary[50], // tinted selected background
+  onPrimary: '#FFFFFF', // text/icon on a primary fill
+
+  // Status (Label pairs)
+  successFg: Label.darkGreen,
+  successBg: Label.lightGreen,
+  errorFg: Label.darkRed,
+  errorBg: Label.lightRed,
+  warningFg: Label.darkYellow,
+  warningBg: Label.lightYellow,
+  infoFg: Label.darkBlue,
+  infoBg: Label.lightBlue,
 } as const;
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+export type ThemeColor = keyof typeof Colors;
 
 export const Fonts = Platform.select({
   ios: {
