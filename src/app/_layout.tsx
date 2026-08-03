@@ -1,10 +1,22 @@
+import {
+  CrimsonText_400Regular,
+  CrimsonText_600SemiBold,
+  CrimsonText_700Bold,
+} from '@expo-google-fonts/crimson-text';
+import {
+  DMSans_400Regular,
+  DMSans_500Medium,
+  DMSans_600SemiBold,
+  DMSans_700Bold,
+} from '@expo-google-fonts/dm-sans';
+import { useFonts } from 'expo-font';
 import { DefaultTheme, ThemeProvider } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 
 import { initEnvironmentAsync } from '@/api/environment';
-import { Colors } from '@/constants/theme';
+import { Colors, NativeFontFamily } from '@/constants/theme';
 
 /** Single (light) navigation theme, tinted from the app palette. */
 const navigationTheme = {
@@ -34,24 +46,44 @@ const navigationTheme = {
  * for actions (CTAs, selected chips), not the tab bar.
  */
 export default function RootLayout() {
+  // Brand fonts: DM Sans (body) + Crimson Text (title).
+  const [fontsLoaded] = useFonts({
+    DMSans_400Regular,
+    DMSans_500Medium,
+    DMSans_600SemiBold,
+    DMSans_700Bold,
+    CrimsonText_400Regular,
+    CrimsonText_600SemiBold,
+    CrimsonText_700Bold,
+  });
+
   // Load any persisted dev environment override before rendering, so the first
   // API calls use the right base URL. In production this resolves immediately.
   const [ready, setReady] = useState(false);
   useEffect(() => {
     initEnvironmentAsync().finally(() => setReady(true));
   }, []);
-  if (!ready) return null;
+  if (!ready || !fontsLoaded) return null;
 
   return (
     <ThemeProvider value={navigationTheme}>
       <NativeTabs
         iconColor={{ default: Colors.textSecondary, selected: Colors.text }}
+        titlePositionAdjustment={{ vertical: 8 }} // best-effort 8px icon↔label gap
         labelStyle={{
-          default: { color: Colors.textSecondary },
-          selected: { color: Colors.text },
+          // unselected: Body Medium 12, Gray 500
+          default: { color: Colors.textSecondary, fontFamily: NativeFontFamily.bodyMedium, fontSize: 12 },
+          // selected: Body SemiBold 12, near-black (text)
+          selected: { color: Colors.text, fontFamily: NativeFontFamily.bodySemiBold, fontSize: 12 },
         }}>
         <NativeTabs.Trigger name="(home)">
-          <NativeTabs.Trigger.Icon sf="house" />
+          <NativeTabs.Trigger.Icon
+            src={{
+              default: require('../../assets/tab-icons/home.png'),
+              selected: require('../../assets/tab-icons/home-selected.png'),
+            }}
+            renderingMode="original"
+          />
           <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="gallery">
@@ -59,11 +91,23 @@ export default function RootLayout() {
           <NativeTabs.Trigger.Label>Gallery</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="cart">
-          <NativeTabs.Trigger.Icon sf="cart" />
+          <NativeTabs.Trigger.Icon
+            src={{
+              default: require('../../assets/tab-icons/cart.png'),
+              selected: require('../../assets/tab-icons/cart-selected.png'),
+            }}
+            renderingMode="original"
+          />
           <NativeTabs.Trigger.Label>Cart</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="orders">
-          <NativeTabs.Trigger.Icon sf="shippingbox" />
+          <NativeTabs.Trigger.Icon
+            src={{
+              default: require('../../assets/tab-icons/orders.png'),
+              selected: require('../../assets/tab-icons/orders-selected.png'),
+            }}
+            renderingMode="original"
+          />
           <NativeTabs.Trigger.Label>Orders</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>
       </NativeTabs>

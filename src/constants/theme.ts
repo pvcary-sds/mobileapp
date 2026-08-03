@@ -9,7 +9,7 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
-import { Gray, Label, Primary } from '@/constants/palette';
+import { Base, Gray, Label, Primary } from '@/constants/palette';
 
 export const Colors = {
   // Text
@@ -18,7 +18,7 @@ export const Colors = {
   textMuted: Gray[400], // hints, disabled
 
   // Surfaces
-  background: '#FFFFFF', // screen background
+  background: Base.white, // screen background
   backgroundElement: Gray[100], // raised fills / image placeholders
   backgroundSelected: Gray[200], // pressed / subtle selected surface
   border: Gray[200], // card borders, dividers
@@ -26,7 +26,7 @@ export const Colors = {
   // Brand / action (Primary 500)
   primary: Primary[500],
   primarySoft: Primary[50], // tinted selected background
-  onPrimary: '#FFFFFF', // text/icon on a primary fill
+  onPrimary: Base.white, // text/icon on a primary fill
 
   // Status (Label pairs)
   successFg: Label.darkGreen,
@@ -65,6 +65,29 @@ export const Fonts = Platform.select({
     mono: 'var(--font-mono)',
   },
 });
+
+/**
+ * Brand fonts (loaded in the root layout via `useFonts`):
+ * body = DM Sans, title = Crimson Text. Use these family names in `fontFamily`.
+ */
+export const FontFamily = {
+  body: 'DMSans_400Regular',
+  bodyMedium: 'DMSans_500Medium',
+  bodySemiBold: 'DMSans_600SemiBold',
+  bodyBold: 'DMSans_700Bold',
+  title: 'CrimsonText_600SemiBold',
+  titleBold: 'CrimsonText_700Bold',
+} as const;
+
+/**
+ * PostScript font names — required by native UIKit components (e.g. the
+ * `NativeTabs` tab-bar labels), which resolve fonts by PostScript name rather
+ * than the expo-font key used for React Native `<Text>`.
+ */
+export const NativeFontFamily = {
+  bodyMedium: 'DMSans-Medium',
+  bodySemiBold: 'DMSans-SemiBold',
+} as const;
 
 export const Spacing = {
   half: 2,
