@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 import { FlatList, StyleSheet } from 'react-native';
 
 import { getTier1 } from '@/api/catalog';
-import type { CatalogItem } from '@/api/types';
+import type { CatalogItem, Category } from '@/api/types';
 import {
   CatalogCard,
   CATALOG_GRID_GAP,
@@ -14,8 +14,15 @@ import { ScreenState } from '@/components/screen-state';
 import { ThemedView } from '@/components/themed-view';
 import { useAsync } from '@/hooks/use-async';
 
-/** The "no filter" sentinel category id (from the API). */
+/** The "no filter" sentinel category id. */
 const ALL = 'all';
+
+/**
+ * The "All" chip is a client-side no-filter control, not merchandising content,
+ * so the app supplies it — Storyblok only holds the real categories. Prepended to
+ * whatever the API returns.
+ */
+const ALL_CATEGORY: Category = { id: ALL, label: 'All', iconUrl: '' };
 
 /**
  * tier1 — the landing screen. Category chips + a grid of top-level products.
@@ -37,7 +44,10 @@ export default function HomeScreen() {
     [router],
   );
 
-  const categories = data?.categories ?? [];
+  const apiCategories = data?.categories ?? [];
+  // Prepend the client-side "All" chip; only show the row if the CMS gave us
+  // real categories to filter by.
+  const categories = apiCategories.length > 0 ? [ALL_CATEGORY, ...apiCategories] : [];
   const items = data?.items ?? [];
   const visible =
     category === ALL ? items : items.filter((item) => item.categories.includes(category));
