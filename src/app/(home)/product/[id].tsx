@@ -172,8 +172,8 @@ function SizeChip({
       style={[
         styles.chip,
         {
-          backgroundColor: selected ? theme.primarySoft : theme.backgroundElement,
-          borderColor: selected ? theme.primary : 'transparent',
+          backgroundColor: theme.background, // white
+          borderColor: selected ? theme.text : theme.border, // Gray/black vs Gray/200
         },
       ]}>
       <ThemedText type="smallBold">{variant.size}</ThemedText>
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     borderRadius: Spacing.two,
-    borderWidth: 1.5,
+    borderWidth: 1, // Gray/200 (or Gray/black when selected)
     alignItems: 'center',
     gap: 2,
   },
