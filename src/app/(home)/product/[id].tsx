@@ -7,6 +7,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Text,
   View,
 } from 'react-native';
 
@@ -15,18 +16,20 @@ import type { ProductVariant } from '@/api/types';
 import { ScreenState } from '@/components/screen-state';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { FontFamily, Spacing } from '@/constants/theme';
 import { useAsync } from '@/hooks/use-async';
 import { useTheme } from '@/hooks/use-theme';
 import { htmlToText } from '@/lib/html';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const HERO_HEIGHT = 268;
 
 /** `GET /v1/products/{id}` — the product page. */
 export default function ProductScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
   const [selectedSku, setSelectedSku] = useState<string | null>(null);
+  const [activeImage, setActiveImage] = useState(0);
 
   const { data: product, error, loading, reload } = useAsync(
     (signal) => getProduct(id, signal),
@@ -52,56 +55,82 @@ export default function ProductScreen() {
           <>
             <ScrollView contentContainerStyle={styles.scroll}>
               {product.images.length > 0 && (
-                <ScrollView
-                  horizontal
-                  pagingEnabled
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.gallery}>
-                  {product.images.map((img, i) => (
-                    <Image
-                      key={`${img.filename}-${i}`}
-                      source={{ uri: img.filename }}
-                      style={styles.heroImage}
-                      contentFit="cover"
-                      transition={150}
-                      accessibilityLabel={img.alt || product.name}
-                    />
-                  ))}
-                </ScrollView>
+                <View style={[styles.gallery, { backgroundColor: theme.backgroundElement }]}>
+                  <ScrollView
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onMomentumScrollEnd={(e) =>
+                      setActiveImage(
+                        Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH),
+                      )
+                    }>
+                    {product.images.map((img, i) => (
+                      <Image
+                        key={`${img.filename}-${i}`}
+                        source={{ uri: img.filename }}
+                        style={styles.heroImage}
+                        contentFit="cover"
+                        transition={150}
+                        accessibilityLabel={img.alt || product.name}
+                      />
+                    ))}
+                  </ScrollView>
+
+                  {product.images.length > 1 && (
+                    <View style={styles.dotsWrap} pointerEvents="none">
+                      <View style={[styles.dotsPill, { backgroundColor: theme.overlayLight }]}>
+                        {product.images.map((img, i) => (
+                          <View
+                            key={`dot-${img.filename}-${i}`}
+                            style={[
+                              styles.dot,
+                              {
+                                backgroundColor: theme.overlayContent,
+                                opacity: i === activeImage ? 1 : 0.5,
+                              },
+                            ]}
+                          />
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                </View>
               )}
 
-              <View style={styles.section}>
-                <ThemedText type="subtitle">{product.name}</ThemedText>
-                {!!product.shortDescription && (
-                  <ThemedText themeColor="textSecondary">
-                    {product.shortDescription}
-                  </ThemedText>
-                )}
-              </View>
-
-              <View style={styles.section}>
-                <ThemedText type="smallBold">Choose a size</ThemedText>
-                <View style={styles.sizeGrid}>
-                  {product.variants.map((v) => (
-                    <SizeChip
-                      key={v.sku}
-                      variant={v}
-                      selected={v.sku === selectedSku}
-                      onPress={() => setSelectedSku(v.sku)}
-                    />
-                  ))}
+              <View style={styles.titleSection}>
+                <View style={styles.titleRow}>
+                  <Text style={[styles.title, { color: theme.text }]}>{product.name}</Text>
+                  {/* TODO: make badges API-driven (product.badges) — hardcoded for now. */}
+                  <Badge label="Free shipping" />
                 </View>
               </View>
 
-              {!!longText && (
+              <View style={styles.content}>
                 <View style={styles.section}>
-                  <ThemedText>{longText}</ThemedText>
+                  <ThemedText type="smallBold">Choose a size</ThemedText>
+                  <View style={styles.sizeGrid}>
+                    {product.variants.map((v) => (
+                      <SizeChip
+                        key={v.sku}
+                        variant={v}
+                        selected={v.sku === selectedSku}
+                        onPress={() => setSelectedSku(v.sku)}
+                      />
+                    ))}
+                  </View>
                 </View>
-              )}
 
-              <BulletSection title="Features" items={product.features} />
-              <BulletSection title="Materials" items={product.materials} />
-              <BulletSection title="Packaging" items={product.packaging} />
+                {!!longText && (
+                  <View style={styles.section}>
+                    <ThemedText>{longText}</ThemedText>
+                  </View>
+                )}
+
+                <BulletSection title="Features" items={product.features} />
+                <BulletSection title="Materials" items={product.materials} />
+                <BulletSection title="Packaging" items={product.packaging} />
+              </View>
             </ScrollView>
 
             <View style={[styles.footer, { borderTopColor: theme.border }]}>
@@ -143,15 +172,24 @@ function SizeChip({
       style={[
         styles.chip,
         {
-          backgroundColor: selected ? theme.primarySoft : theme.backgroundElement,
-          borderColor: selected ? theme.primary : 'transparent',
+          backgroundColor: theme.background, // white
+          borderColor: selected ? theme.text : theme.border, // Gray/black vs Gray/200
         },
       ]}>
-      <ThemedText type="smallBold">{variant.size}</ThemedText>
-      <ThemedText type="small" themeColor="textSecondary">
-        ${variant.price}
-      </ThemedText>
+      <Text style={[styles.priceText, { color: theme.textTertiary }]}>${variant.price}</Text>
+      {/* TODO: unit ("in") is hardcoded — the API's variant.size has no unit. */}
+      <Text style={[styles.sizeText, { color: theme.text }]}>{variant.size} in</Text>
     </Pressable>
+  );
+}
+
+/** A neutral pill badge (e.g. "Free shipping"), shown beside the product title. */
+function Badge({ label }: { label: string }) {
+  const theme = useTheme();
+  return (
+    <View style={[styles.badge, { backgroundColor: theme.neutralBg }]}>
+      <Text style={[styles.badgeLabel, { color: theme.neutralFg }]}>{label}</Text>
+    </View>
   );
 }
 
@@ -176,14 +214,67 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingBottom: Spacing.five,
+  },
+  titleSection: {
+    marginTop: 32, // 32 below the image to the title
+    paddingHorizontal: Spacing.three, // 16
+  },
+  content: {
+    marginTop: 20, // 20 below the title to the sizes
     gap: Spacing.four,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center', // badge centered with the title
+    gap: 12,
+  },
+  title: {
+    flex: 1, // take the row's width so the badge sits at the trailing edge
+    fontFamily: FontFamily.title, // Crimson Text SemiBold
+    fontSize: 28,
+    lineHeight: 34,
+  },
+  badge: {
+    height: 28,
+    borderRadius: 14, // pill
+    paddingHorizontal: 12, // 12 leading/trailing
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeLabel: {
+    fontFamily: FontFamily.bodyMedium, // Body / Medium
+    fontSize: 14,
+    lineHeight: 20,
+  },
   gallery: {
-    height: SCREEN_WIDTH,
+    height: HERO_HEIGHT,
   },
   heroImage: {
     width: SCREEN_WIDTH,
-    height: SCREEN_WIDTH,
+    height: HERO_HEIGHT,
+  },
+  dotsWrap: {
+    position: 'absolute',
+    bottom: 16, // 16 above the image's bottom edge
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  dotsPill: {
+    // backgroundColor comes from the theme (Gray/0 @ 10%).
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8, // 8 between dots
+    paddingVertical: 8, // 8 above/below the dots
+    paddingHorizontal: 12, // 12 leading/trailing
+    borderRadius: 12,
+  },
+  dot: {
+    // backgroundColor comes from the theme (Gray/0).
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   section: {
     paddingHorizontal: Spacing.three,
@@ -196,12 +287,21 @@ const styles = StyleSheet.create({
   },
   chip: {
     minWidth: 76,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three, // 16 left/right
+    paddingVertical: 12, // 12 top/bottom
     borderRadius: Spacing.two,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    gap: 2,
+    borderWidth: 1, // Gray/200 (or Gray/black when selected)
+    alignItems: 'flex-start', // left-align price + size
+  },
+  priceText: {
+    fontFamily: FontFamily.body, // Body / Regular
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  sizeText: {
+    fontFamily: FontFamily.bodyMedium, // Body / Medium
+    fontSize: 16,
+    lineHeight: 24,
   },
   footer: {
     padding: Spacing.three,

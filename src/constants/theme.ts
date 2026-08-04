@@ -9,11 +9,12 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
-import { Base, Gray, Label, Primary } from '@/constants/palette';
+import { Base, Gray, Label, Primary, withAlpha } from '@/constants/palette';
 
 export const Colors = {
   // Text
   text: Gray[900], // primary text
+  textTertiary: Gray[700], // supporting text a step lighter than primary (e.g. prices)
   textSecondary: Gray[500], // descriptions, captions
   textMuted: Gray[400], // hints, disabled
 
@@ -28,6 +29,10 @@ export const Colors = {
   primarySoft: Primary[50], // tinted selected background
   onPrimary: Base.white, // text/icon on a primary fill
 
+  // Over imagery (Gray/0 = white)
+  overlayContent: Gray[0], // dots / controls sitting on a photo
+  overlayLight: withAlpha(Gray[0], 0.1), // translucent light pill/scrim (Gray/0 @ 10%)
+
   // Status (Label pairs)
   successFg: Label.darkGreen,
   successBg: Label.lightGreen,
@@ -37,6 +42,9 @@ export const Colors = {
   warningBg: Label.lightYellow,
   infoFg: Label.darkBlue,
   infoBg: Label.lightBlue,
+  // Neutral badge — Dark Blue/700 text on Dark Blue/light fill.
+  neutralFg: Label.defaultDark, // #222244 (Dark Blue 700)
+  neutralBg: Label.defaultLight, // #F0F0F4 (Dark Blue light)
 } as const;
 
 export type ThemeColor = keyof typeof Colors;
