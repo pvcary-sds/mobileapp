@@ -9,7 +9,7 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
-import { Base, Gray, Label, Primary } from '@/constants/palette';
+import { Base, Gray, Label, Primary, withAlpha } from '@/constants/palette';
 
 export const Colors = {
   // Text
@@ -27,6 +27,10 @@ export const Colors = {
   primary: Primary[500],
   primarySoft: Primary[50], // tinted selected background
   onPrimary: Base.white, // text/icon on a primary fill
+
+  // Over imagery (Gray/0 = white)
+  overlayContent: Gray[0], // dots / controls sitting on a photo
+  overlayLight: withAlpha(Gray[0], 0.1), // translucent light pill/scrim (Gray/0 @ 10%)
 
   // Status (Label pairs)
   successFg: Label.darkGreen,

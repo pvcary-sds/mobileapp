@@ -5,6 +5,7 @@
  */
 
 export const Gray = {
+  0: '#FFFFFF',
   25: '#FCFCFC',
   50: '#FAFAFA',
   100: '#F5F5F5',
@@ -87,3 +88,16 @@ export const Base = {
   white: '#FFFFFF',
   black: '#000000',
 } as const;
+
+/**
+ * Add an alpha channel to a 6-digit hex color → `rgba(r, g, b, a)`. Lets the
+ * theme derive translucent tints from a palette primitive instead of hardcoding
+ * rgba() in components (e.g. Gray/0 at 10%).
+ */
+export function withAlpha(hex: string, alpha: number): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}

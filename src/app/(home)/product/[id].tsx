@@ -78,13 +78,16 @@ export default function ProductScreen() {
 
                   {product.images.length > 1 && (
                     <View style={styles.dotsWrap} pointerEvents="none">
-                      <View style={styles.dotsPill}>
+                      <View style={[styles.dotsPill, { backgroundColor: theme.overlayLight }]}>
                         {product.images.map((img, i) => (
                           <View
                             key={`dot-${img.filename}-${i}`}
                             style={[
                               styles.dot,
-                              { opacity: i === activeImage ? 1 : 0.5 },
+                              {
+                                backgroundColor: theme.overlayContent,
+                                opacity: i === activeImage ? 1 : 0.5,
+                              },
                             ]}
                           />
                         ))}
@@ -218,19 +221,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dotsPill: {
+    // backgroundColor comes from the theme (Gray/0 @ 10%).
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingVertical: 8, // 8 above/below the dots
     paddingHorizontal: 12, // 12 leading/trailing
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)', // Gray/0 at 10%
   },
   dot: {
+    // backgroundColor comes from the theme (Gray/0).
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#FFFFFF',
   },
   section: {
     paddingHorizontal: Spacing.three,
