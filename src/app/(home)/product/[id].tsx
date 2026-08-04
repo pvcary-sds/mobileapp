@@ -21,12 +21,14 @@ import { useTheme } from '@/hooks/use-theme';
 import { htmlToText } from '@/lib/html';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const HERO_HEIGHT = 268;
 
 /** `GET /v1/products/{id}` — the product page. */
 export default function ProductScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
   const [selectedSku, setSelectedSku] = useState<string | null>(null);
+  const [activeImage, setActiveImage] = useState(0);
 
   const { data: product, error, loading, reload } = useAsync(
     (signal) => getProduct(id, signal),
@@ -52,22 +54,44 @@ export default function ProductScreen() {
           <>
             <ScrollView contentContainerStyle={styles.scroll}>
               {product.images.length > 0 && (
-                <ScrollView
-                  horizontal
-                  pagingEnabled
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.gallery}>
-                  {product.images.map((img, i) => (
-                    <Image
-                      key={`${img.filename}-${i}`}
-                      source={{ uri: img.filename }}
-                      style={styles.heroImage}
-                      contentFit="cover"
-                      transition={150}
-                      accessibilityLabel={img.alt || product.name}
-                    />
-                  ))}
-                </ScrollView>
+                <View style={[styles.gallery, { backgroundColor: theme.backgroundElement }]}>
+                  <ScrollView
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onMomentumScrollEnd={(e) =>
+                      setActiveImage(
+                        Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH),
+                      )
+                    }>
+                    {product.images.map((img, i) => (
+                      <Image
+                        key={`${img.filename}-${i}`}
+                        source={{ uri: img.filename }}
+                        style={styles.heroImage}
+                        contentFit="cover"
+                        transition={150}
+                        accessibilityLabel={img.alt || product.name}
+                      />
+                    ))}
+                  </ScrollView>
+
+                  {product.images.length > 1 && (
+                    <View style={styles.dotsWrap} pointerEvents="none">
+                      <View style={styles.dotsPill}>
+                        {product.images.map((img, i) => (
+                          <View
+                            key={`dot-${img.filename}-${i}`}
+                            style={[
+                              styles.dot,
+                              { opacity: i === activeImage ? 1 : 0.5 },
+                            ]}
+                          />
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                </View>
               )}
 
               <View style={styles.section}>
@@ -179,11 +203,34 @@ const styles = StyleSheet.create({
     gap: Spacing.four,
   },
   gallery: {
-    height: SCREEN_WIDTH,
+    height: HERO_HEIGHT,
   },
   heroImage: {
     width: SCREEN_WIDTH,
-    height: SCREEN_WIDTH,
+    height: HERO_HEIGHT,
+  },
+  dotsWrap: {
+    position: 'absolute',
+    bottom: 16, // 16 above the image's bottom edge
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  dotsPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8, // 8 above/below the dots
+    paddingHorizontal: 12, // 12 leading/trailing
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)', // Gray/0 at 10%
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
   },
   section: {
     paddingHorizontal: Spacing.three,
