@@ -21,6 +21,12 @@ export interface CatalogItem {
   imageUrlWide: string;
   /** Category ids this item appears under (empty = only under "All"). */
   categories: string[];
+  /**
+   * Lowest variant price as a decimal USD string (e.g. "29.00"), for the tier2
+   * "from $X" label. Optional — the API doesn't return it yet; the card shows a
+   * placeholder until it does.
+   */
+  fromPrice?: string;
 }
 
 /** A filter chip above the tier1 grid. `id` is stable; `label` is display text. */
