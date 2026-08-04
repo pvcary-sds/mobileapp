@@ -30,7 +30,7 @@ export default function HomeStackLayout() {
           headerRight: () => <HeaderCartButton />,
         }}
       />
-      <Stack.Screen name="tier2/[id]" options={{ title: '' }} />
+      <Stack.Screen name="tier2/[id]" options={{ title: '', headerBackTitle: 'Back' }} />
       <Stack.Screen name="product/[id]" options={{ title: '', headerBackTitle: 'Back' }} />
     </Stack>
   );
