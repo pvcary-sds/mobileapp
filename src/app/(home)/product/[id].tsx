@@ -7,6 +7,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Text,
   View,
 } from 'react-native';
 
@@ -15,7 +16,7 @@ import type { ProductVariant } from '@/api/types';
 import { ScreenState } from '@/components/screen-state';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { FontFamily, Spacing } from '@/constants/theme';
 import { useAsync } from '@/hooks/use-async';
 import { useTheme } from '@/hooks/use-theme';
 import { htmlToText } from '@/lib/html';
@@ -97,38 +98,40 @@ export default function ProductScreen() {
                 </View>
               )}
 
-              <View style={styles.section}>
-                <ThemedText type="subtitle">{product.name}</ThemedText>
-                {!!product.shortDescription && (
-                  <ThemedText themeColor="textSecondary">
-                    {product.shortDescription}
-                  </ThemedText>
-                )}
-              </View>
-
-              <View style={styles.section}>
-                <ThemedText type="smallBold">Choose a size</ThemedText>
-                <View style={styles.sizeGrid}>
-                  {product.variants.map((v) => (
-                    <SizeChip
-                      key={v.sku}
-                      variant={v}
-                      selected={v.sku === selectedSku}
-                      onPress={() => setSelectedSku(v.sku)}
-                    />
-                  ))}
-                </View>
-              </View>
-
-              {!!longText && (
+              <View style={styles.content}>
                 <View style={styles.section}>
-                  <ThemedText>{longText}</ThemedText>
+                  <Text style={[styles.title, { color: theme.text }]}>{product.name}</Text>
+                  {!!product.shortDescription && (
+                    <ThemedText themeColor="textSecondary">
+                      {product.shortDescription}
+                    </ThemedText>
+                  )}
                 </View>
-              )}
 
-              <BulletSection title="Features" items={product.features} />
-              <BulletSection title="Materials" items={product.materials} />
-              <BulletSection title="Packaging" items={product.packaging} />
+                <View style={styles.section}>
+                  <ThemedText type="smallBold">Choose a size</ThemedText>
+                  <View style={styles.sizeGrid}>
+                    {product.variants.map((v) => (
+                      <SizeChip
+                        key={v.sku}
+                        variant={v}
+                        selected={v.sku === selectedSku}
+                        onPress={() => setSelectedSku(v.sku)}
+                      />
+                    ))}
+                  </View>
+                </View>
+
+                {!!longText && (
+                  <View style={styles.section}>
+                    <ThemedText>{longText}</ThemedText>
+                  </View>
+                )}
+
+                <BulletSection title="Features" items={product.features} />
+                <BulletSection title="Materials" items={product.materials} />
+                <BulletSection title="Packaging" items={product.packaging} />
+              </View>
             </ScrollView>
 
             <View style={[styles.footer, { borderTopColor: theme.border }]}>
@@ -203,7 +206,15 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingBottom: Spacing.five,
+  },
+  content: {
+    marginTop: 32, // 32 below the image to the title
     gap: Spacing.four,
+  },
+  title: {
+    fontFamily: FontFamily.title, // Crimson Text SemiBold
+    fontSize: 28,
+    lineHeight: 34,
   },
   gallery: {
     height: HERO_HEIGHT,
@@ -224,7 +235,7 @@ const styles = StyleSheet.create({
     // backgroundColor comes from the theme (Gray/0 @ 10%).
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8, // 8 between dots
     paddingVertical: 8, // 8 above/below the dots
     paddingHorizontal: 12, // 12 leading/trailing
     borderRadius: 12,
