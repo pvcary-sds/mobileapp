@@ -98,20 +98,15 @@ export default function ProductScreen() {
                 </View>
               )}
 
-              <View style={styles.content}>
-                <View style={styles.section}>
-                  <View style={styles.titleRow}>
-                    <Text style={[styles.title, { color: theme.text }]}>{product.name}</Text>
-                    {/* TODO: make badges API-driven (product.badges) — hardcoded for now. */}
-                    <Badge label="Free shipping" />
-                  </View>
-                  {!!product.shortDescription && (
-                    <ThemedText themeColor="textSecondary">
-                      {product.shortDescription}
-                    </ThemedText>
-                  )}
+              <View style={styles.titleSection}>
+                <View style={styles.titleRow}>
+                  <Text style={[styles.title, { color: theme.text }]}>{product.name}</Text>
+                  {/* TODO: make badges API-driven (product.badges) — hardcoded for now. */}
+                  <Badge label="Free shipping" />
                 </View>
+              </View>
 
+              <View style={styles.content}>
                 <View style={styles.section}>
                   <ThemedText type="smallBold">Choose a size</ThemedText>
                   <View style={styles.sizeGrid}>
@@ -221,8 +216,12 @@ const styles = StyleSheet.create({
   scroll: {
     paddingBottom: Spacing.five,
   },
-  content: {
+  titleSection: {
     marginTop: 32, // 32 below the image to the title
+    paddingHorizontal: Spacing.three, // 16
+  },
+  content: {
+    marginTop: 20, // 20 below the title to the sizes
     gap: Spacing.four,
   },
   titleRow: {
