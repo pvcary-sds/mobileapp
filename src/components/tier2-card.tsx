@@ -109,15 +109,15 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   price: {
-    fontFamily: FontFamily.bodySemiBold,
+    fontFamily: FontFamily.bodyMedium, // Body1 / Medium
     fontSize: 16,
     lineHeight: 24,
   },
   description: {
     marginTop: 4, // 4 below the name/price row
-    fontFamily: FontFamily.body,
-    fontSize: 14,
-    lineHeight: 20,
+    fontFamily: FontFamily.body, // Body1 / Regular
+    fontSize: 16,
+    lineHeight: 24,
   },
   button: {
     marginTop: 16, // 16 below the description
