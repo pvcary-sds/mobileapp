@@ -41,6 +41,9 @@ export const Colors = {
   warningBg: Label.lightYellow,
   infoFg: Label.darkBlue,
   infoBg: Label.lightBlue,
+  // Neutral badge — Dark Blue/700 text on Dark Blue/light fill.
+  neutralFg: Label.defaultDark, // #222244 (Dark Blue 700)
+  neutralBg: Label.defaultLight, // #F0F0F4 (Dark Blue light)
 } as const;
 
 export type ThemeColor = keyof typeof Colors;

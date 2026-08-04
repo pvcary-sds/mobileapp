@@ -100,7 +100,11 @@ export default function ProductScreen() {
 
               <View style={styles.content}>
                 <View style={styles.section}>
-                  <Text style={[styles.title, { color: theme.text }]}>{product.name}</Text>
+                  <View style={styles.titleRow}>
+                    <Text style={[styles.title, { color: theme.text }]}>{product.name}</Text>
+                    {/* TODO: make badges API-driven (product.badges) — hardcoded for now. */}
+                    <Badge label="Free shipping" />
+                  </View>
                   {!!product.shortDescription && (
                     <ThemedText themeColor="textSecondary">
                       {product.shortDescription}
@@ -185,6 +189,16 @@ function SizeChip({
   );
 }
 
+/** A neutral pill badge (e.g. "Free shipping"), shown beside the product title. */
+function Badge({ label }: { label: string }) {
+  const theme = useTheme();
+  return (
+    <View style={[styles.badge, { backgroundColor: theme.neutralBg }]}>
+      <Text style={[styles.badgeLabel, { color: theme.neutralFg }]}>{label}</Text>
+    </View>
+  );
+}
+
 function BulletSection({ title, items }: { title: string; items: string[] }) {
   if (!items || items.length === 0) return null;
   return (
@@ -211,10 +225,28 @@ const styles = StyleSheet.create({
     marginTop: 32, // 32 below the image to the title
     gap: Spacing.four,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center', // badge centered with the title
+    gap: 12,
+  },
   title: {
+    flex: 1, // take the row's width so the badge sits at the trailing edge
     fontFamily: FontFamily.title, // Crimson Text SemiBold
     fontSize: 28,
     lineHeight: 34,
+  },
+  badge: {
+    height: 28,
+    borderRadius: 14, // pill
+    paddingHorizontal: 12, // 12 leading/trailing
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeLabel: {
+    fontFamily: FontFamily.bodyMedium, // Body / Medium
+    fontSize: 14,
+    lineHeight: 20,
   },
   gallery: {
     height: HERO_HEIGHT,
