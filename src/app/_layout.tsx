@@ -87,7 +87,13 @@ export default function RootLayout() {
           <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="gallery">
-          <NativeTabs.Trigger.Icon sf="photo.on.rectangle" />
+          <NativeTabs.Trigger.Icon
+            src={{
+              default: require('../../assets/tab-icons/gallery.png'),
+              selected: require('../../assets/tab-icons/gallery-selected.png'),
+            }}
+            renderingMode="original"
+          />
           <NativeTabs.Trigger.Label>Gallery</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="cart">
