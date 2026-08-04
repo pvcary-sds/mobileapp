@@ -176,9 +176,7 @@ function SizeChip({
           borderColor: selected ? theme.text : theme.border, // Gray/black vs Gray/200
         },
       ]}>
-      <ThemedText type="small" themeColor="textSecondary">
-        ${variant.price}
-      </ThemedText>
+      <Text style={[styles.priceText, { color: theme.textTertiary }]}>${variant.price}</Text>
       {/* TODO: unit ("in") is hardcoded — the API's variant.size has no unit. */}
       <Text style={[styles.sizeText, { color: theme.text }]}>{variant.size} in</Text>
     </Pressable>
@@ -294,6 +292,11 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.two,
     borderWidth: 1, // Gray/200 (or Gray/black when selected)
     alignItems: 'flex-start', // left-align price + size
+  },
+  priceText: {
+    fontFamily: FontFamily.body, // Body / Regular
+    fontSize: 12,
+    lineHeight: 18,
   },
   sizeText: {
     fontFamily: FontFamily.bodyMedium, // Body / Medium

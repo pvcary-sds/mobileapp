@@ -14,6 +14,7 @@ import { Base, Gray, Label, Primary, withAlpha } from '@/constants/palette';
 export const Colors = {
   // Text
   text: Gray[900], // primary text
+  textTertiary: Gray[700], // supporting text a step lighter than primary (e.g. prices)
   textSecondary: Gray[500], // descriptions, captions
   textMuted: Gray[400], // hints, disabled
 
