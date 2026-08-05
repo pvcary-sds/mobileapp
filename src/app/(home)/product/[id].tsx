@@ -16,7 +16,6 @@ import { SvgXml } from 'react-native-svg';
 import { getProduct } from '@/api/catalog';
 import type { ProductVariant } from '@/api/types';
 import { ScreenState } from '@/components/screen-state';
-import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { FontFamily, Spacing } from '@/constants/theme';
 import { useAsync } from '@/hooks/use-async';
@@ -285,15 +284,16 @@ function QuantityStepper({
 }
 
 function BulletSection({ title, items }: { title: string; items: string[] }) {
+  const theme = useTheme();
   if (!items || items.length === 0) return null;
   return (
     <View style={styles.section}>
-      <ThemedText type="smallBold">{title}</ThemedText>
+      <Text style={[styles.descriptionHeading, { color: theme.text }]}>{title}</Text>
       {items.map((item, i) => (
-        <ThemedText key={i} themeColor="textSecondary">
+        <Text key={i} style={[styles.descriptionText, { color: theme.text }]}>
           {'• '}
           {item}
-        </ThemedText>
+        </Text>
       ))}
     </View>
   );
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
   },
   details: {
     marginTop: 32, // 32 below the Select button to the Description heading
-    gap: Spacing.four,
+    gap: 20, // between the Description / Features / Materials / Packaging sections
   },
   descriptionHeading: {
     fontFamily: FontFamily.title, // Title2 / SemiBold (Crimson Text)
