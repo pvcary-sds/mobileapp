@@ -11,6 +11,8 @@ import {
   View,
 } from 'react-native';
 
+import { SvgXml } from 'react-native-svg';
+
 import { getProduct } from '@/api/catalog';
 import type { ProductVariant } from '@/api/types';
 import { ScreenState } from '@/components/screen-state';
@@ -199,12 +201,24 @@ function SizeChip({
   );
 }
 
-/** A neutral pill badge (e.g. "Free shipping"), shown beside the product title. */
+// Shipping-truck icon for the Free shipping badge. `currentColor` so the theme
+// tints it (Label dark green).
+const FREE_SHIPPING_ICON = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="14.1667" cy="14.9997" r="1.66667" stroke="currentColor" stroke-width="1.25"/>
+<circle cx="5.83366" cy="14.9997" r="1.66667" stroke="currentColor" stroke-width="1.25"/>
+<path d="M4.16699 14.9767C3.25306 14.9312 2.68291 14.7952 2.27719 14.3895C1.87146 13.9838 1.73551 13.4136 1.68995 12.4997M7.50033 14.9997H12.5003M15.8337 14.9767C16.7476 14.9312 17.3177 14.7952 17.7235 14.3895C18.3337 13.7793 18.3337 12.7972 18.3337 10.833V9.16634H14.417C13.7966 9.16634 13.4864 9.16634 13.2353 9.08477C12.7279 8.91991 12.3301 8.5221 12.1652 8.0147C12.0837 7.76365 12.0837 7.45343 12.0837 6.83301C12.0837 5.90237 12.0837 5.43705 11.9613 5.06047C11.714 4.29937 11.1173 3.70266 10.3562 3.45537C9.97962 3.33301 9.5143 3.33301 8.58366 3.33301H1.66699" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1.66699 6.66602H6.66699" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1.66699 9.16602H5.00033" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M12.084 5H13.6017C14.8145 5 15.4208 5 15.9143 5.29476C16.4078 5.58952 16.6953 6.12343 17.2703 7.19125L18.334 9.16667" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+
+/** The "Free shipping" badge shown beside the product title (green, with a shipping icon). */
 function Badge({ label }: { label: string }) {
   const theme = useTheme();
   return (
-    <View style={[styles.badge, { backgroundColor: theme.neutralBg }]}>
-      <Text style={[styles.badgeLabel, { color: theme.neutralFg }]}>{label}</Text>
+    <View style={[styles.badge, { backgroundColor: theme.successBg }]}>
+      <SvgXml xml={FREE_SHIPPING_ICON} width={20} height={20} color={theme.successFg} />
+      <Text style={[styles.badgeLabel, { color: theme.successFg }]}>{label}</Text>
     </View>
   );
 }
@@ -335,11 +349,12 @@ const styles = StyleSheet.create({
     lineHeight: 34,
   },
   badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4, // 4 between the icon and the text
     height: 28,
     borderRadius: 14, // pill
     paddingHorizontal: 12, // 12 leading/trailing
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   badgeLabel: {
     fontFamily: FontFamily.bodyMedium, // Body / Medium
