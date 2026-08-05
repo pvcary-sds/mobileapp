@@ -217,7 +217,14 @@ function Badge({ label }: { label: string }) {
   );
 }
 
-/** A bordered −/value/+ quantity control (min 1). */
+const MINUS_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12H19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const PLUS_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+/**
+ * Quantity control (min 1): three 48×48 blocks (−, value, +) inside a 1px
+ * Gray/200 pill. When the count is 1 the − block is disabled — Gray/100 fill,
+ * Gray/400 icon; otherwise the icon is Gray/black.
+ */
 function QuantityStepper({
   value,
   onChange,
@@ -232,15 +239,22 @@ function QuantityStepper({
       <Pressable
         onPress={() => onChange(value - 1)}
         disabled={!canDecrement}
-        hitSlop={4}
-        style={styles.stepperButton}>
-        <Text style={[styles.stepperSign, { color: canDecrement ? theme.text : theme.textMuted }]}>
-          −
-        </Text>
+        style={[
+          styles.stepperButton,
+          !canDecrement && { backgroundColor: theme.backgroundElement }, // Gray/100 when disabled
+        ]}>
+        <SvgXml
+          xml={MINUS_ICON}
+          width={24}
+          height={24}
+          color={canDecrement ? theme.text : theme.textMuted}
+        />
       </Pressable>
-      <Text style={[styles.stepperValue, { color: theme.text }]}>{value}</Text>
-      <Pressable onPress={() => onChange(value + 1)} hitSlop={4} style={styles.stepperButton}>
-        <Text style={[styles.stepperSign, { color: theme.text }]}>+</Text>
+      <View style={styles.stepperValueBlock}>
+        <Text style={[styles.stepperValue, { color: theme.text }]}>{value}</Text>
+      </View>
+      <Pressable onPress={() => onChange(value + 1)} style={styles.stepperButton}>
+        <SvgXml xml={PLUS_ICON} width={24} height={24} color={theme.text} />
       </Pressable>
     </View>
   );
@@ -297,21 +311,21 @@ const styles = StyleSheet.create({
     height: 48,
     borderWidth: 1,
     borderRadius: Spacing.two, // 8
+    overflow: 'hidden', // clip the disabled block's fill to the rounded corners
   },
   stepperButton: {
-    width: 44,
+    width: 48,
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepperSign: {
-    fontFamily: FontFamily.bodyMedium,
-    fontSize: 20,
-    lineHeight: 24,
+  stepperValueBlock: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   stepperValue: {
-    minWidth: 24,
-    textAlign: 'center',
     fontFamily: FontFamily.bodySemiBold, // Body1 / SemiBold
     fontSize: 16,
     lineHeight: 24,
