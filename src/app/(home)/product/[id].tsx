@@ -164,7 +164,7 @@ export default function ProductScreen() {
                     <Text style={[styles.descriptionHeading, { color: theme.text }]}>
                       Description
                     </Text>
-                    <ThemedText>{longText}</ThemedText>
+                    <Text style={[styles.descriptionText, { color: theme.text }]}>{longText}</Text>
                   </View>
                 )}
 
@@ -361,6 +361,11 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.title, // Title2 / SemiBold (Crimson Text)
     fontSize: 24,
     lineHeight: 30,
+  },
+  descriptionText: {
+    fontFamily: FontFamily.body, // Body1 / Regular
+    fontSize: 16,
+    lineHeight: 24,
   },
   titleRow: {
     flexDirection: 'row',
