@@ -143,7 +143,6 @@ export default function ProductScreen() {
                 </View>
                 <Pressable
                   onPress={onContinue}
-                  disabled={!selectedSku}
                   style={[styles.selectButton, { backgroundColor: theme.primary }]}>
                   <Text style={[styles.selectLabel, { color: theme.onPrimary }]}>Select</Text>
                 </Pressable>
