@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { FlatList, StyleSheet } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet } from 'react-native';
 
 import { getTier1 } from '@/api/catalog';
 import type { CatalogItem, Category } from '@/api/types';
@@ -32,7 +32,7 @@ const ALL_CATEGORY: Category = { id: ALL, label: 'All', iconUrl: '' };
 export default function HomeScreen() {
   const router = useRouter();
   const [category, setCategory] = useState(ALL);
-  const { data, error, loading, reload } = useAsync(
+  const { data, error, loading, refreshing, reload } = useAsync(
     (signal) => getTier1('prodigi', signal),
     [],
   );
@@ -75,6 +75,8 @@ export default function HomeScreen() {
             <CatalogCard item={item} onPress={() => openTier2(item)} />
           )}
           contentContainerStyle={styles.list}
+          // Pull down to re-fetch tier1.
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}
         />
       </ScreenState>
     </ThemedView>
