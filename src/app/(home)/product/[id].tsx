@@ -44,6 +44,12 @@ export default function ProductScreen() {
     [product],
   );
 
+  // Split the flattened description into paragraphs so we can space them apart.
+  const paragraphs = useMemo(
+    () => longText.split(/\n+/).map((p) => p.trim()).filter(Boolean),
+    [longText],
+  );
+
   // Price shown in the action row: the selected size's price (or, before a
   // selection, the lowest as a starting "from" figure) times the quantity.
   const priceLabel = useMemo(() => {
@@ -159,12 +165,18 @@ export default function ProductScreen() {
               </View>
 
               <View style={styles.details}>
-                {!!longText && (
+                {paragraphs.length > 0 && (
                   <View style={styles.section}>
                     <Text style={[styles.descriptionHeading, { color: theme.text }]}>
                       Description
                     </Text>
-                    <Text style={[styles.descriptionText, { color: theme.text }]}>{longText}</Text>
+                    <View style={styles.descriptionBody}>
+                      {paragraphs.map((p, i) => (
+                        <Text key={i} style={[styles.descriptionText, { color: theme.text }]}>
+                          {p}
+                        </Text>
+                      ))}
+                    </View>
                   </View>
                 )}
 
@@ -361,6 +373,9 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.title, // Title2 / SemiBold (Crimson Text)
     fontSize: 24,
     lineHeight: 30,
+  },
+  descriptionBody: {
+    gap: 12, // between paragraphs
   },
   descriptionText: {
     fontFamily: FontFamily.body, // Body1 / Regular
