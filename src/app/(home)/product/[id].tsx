@@ -161,6 +161,9 @@ export default function ProductScreen() {
               <View style={styles.details}>
                 {!!longText && (
                   <View style={styles.section}>
+                    <Text style={[styles.descriptionHeading, { color: theme.text }]}>
+                      Description
+                    </Text>
                     <ThemedText>{longText}</ThemedText>
                   </View>
                 )}
@@ -351,8 +354,13 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   details: {
-    marginTop: Spacing.four, // 24 below the action block
+    marginTop: 32, // 32 below the Select button to the Description heading
     gap: Spacing.four,
+  },
+  descriptionHeading: {
+    fontFamily: FontFamily.title, // Title2 / SemiBold (Crimson Text)
+    fontSize: 24,
+    lineHeight: 30,
   },
   titleRow: {
     flexDirection: 'row',
