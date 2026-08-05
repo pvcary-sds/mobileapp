@@ -26,7 +26,8 @@ type Props = {
  *   image (177) → [16] name / price → 4 → description → 16 → Select (48) → [16].
  * The outer view carries the shadow (no clipping); the inner view carries the
  * border + rounded corners and clips the image. Tapping the tile or Select
- * opens the product page. Price is a placeholder (`—`) until the API returns it.
+ * opens the product page. The price range comes from the API (`priceRange`);
+ * a `—` placeholder shows until it's set.
  */
 export function Tier2Card({ item, onPress }: Props) {
   const theme = useTheme();
@@ -46,8 +47,8 @@ export function Tier2Card({ item, onPress }: Props) {
             <Text style={[styles.name, { color: theme.text }]} numberOfLines={1}>
               {item.title}
             </Text>
-            <Text style={[styles.price, { color: item.fromPrice ? theme.text : theme.textMuted }]}>
-              {item.fromPrice ? `From $${item.fromPrice}` : '—'}
+            <Text style={[styles.price, { color: item.priceRange ? theme.text : theme.textMuted }]}>
+              {item.priceRange || '—'}
             </Text>
           </View>
 

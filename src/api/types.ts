@@ -22,11 +22,10 @@ export interface CatalogItem {
   /** Category ids this item appears under (empty = only under "All"). */
   categories: string[];
   /**
-   * Lowest variant price as a decimal USD string (e.g. "29.00"), for the tier2
-   * "from $X" label. Optional — the API doesn't return it yet; the card shows a
-   * placeholder until it does.
+   * CMS-authored display price range for a tier2 category card, e.g.
+   * "$45 – $315". Empty / absent when not set (the card shows a placeholder).
    */
-  fromPrice?: string;
+  priceRange?: string;
 }
 
 /** A filter chip above the tier1 grid. `id` is stable; `label` is display text. */
