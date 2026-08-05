@@ -30,6 +30,7 @@ export default function ProductScreen() {
   const theme = useTheme();
   const [selectedSku, setSelectedSku] = useState<string | null>(null);
   const [activeImage, setActiveImage] = useState(0);
+  const [quantity, setQuantity] = useState(1);
 
   const { data: product, error, loading, reload } = useAsync(
     (signal) => getProduct(id, signal),
@@ -41,10 +42,23 @@ export default function ProductScreen() {
     [product],
   );
 
+  // Price shown in the action row: the selected size's price, or (when nothing
+  // is selected yet) the lowest price as a starting "from" figure.
+  const priceLabel = useMemo(() => {
+    if (!product || product.variants.length === 0) return '';
+    const selected = product.variants.find((v) => v.sku === selectedSku);
+    const variant =
+      selected ??
+      product.variants.reduce((min, v) =>
+        parseFloat(v.price) < parseFloat(min.price) ? v : min,
+      );
+    return variant.price;
+  }, [product, selectedSku]);
+
   const onContinue = () => {
     if (!selectedSku) return;
     // Next slice: /v1/print-area-sizes/{sku} → photo pick → upload → checkout.
-    Alert.alert('Coming next', `Selected size SKU:\n${selectedSku}`);
+    Alert.alert('Coming next', `SKU: ${selectedSku}\nQty: ${quantity}`);
   };
 
   return (
@@ -106,21 +120,40 @@ export default function ProductScreen() {
                 </View>
               </View>
 
-              <View style={styles.content}>
-                <View style={styles.section}>
-                  <Text style={[styles.sizeHeading, { color: theme.text }]}>Choose a size</Text>
-                  <View style={styles.sizeGrid}>
-                    {product.variants.map((v) => (
-                      <SizeChip
-                        key={v.sku}
-                        variant={v}
-                        selected={v.sku === selectedSku}
-                        onPress={() => setSelectedSku(v.sku)}
-                      />
-                    ))}
-                  </View>
+              <View style={[styles.section, styles.sizeSection]}>
+                <Text style={[styles.sizeHeading, { color: theme.text }]}>Choose a size</Text>
+                <View style={styles.sizeGrid}>
+                  {product.variants.map((v) => (
+                    <SizeChip
+                      key={v.sku}
+                      variant={v}
+                      selected={v.sku === selectedSku}
+                      onPress={() => setSelectedSku(v.sku)}
+                    />
+                  ))}
                 </View>
+              </View>
 
+              <View style={styles.actionBlock}>
+                <View style={styles.priceRow}>
+                  <Text style={[styles.price, { color: theme.text }]}>${priceLabel}</Text>
+                  <QuantityStepper value={quantity} onChange={setQuantity} />
+                </View>
+                <Pressable
+                  onPress={onContinue}
+                  disabled={!selectedSku}
+                  style={({ pressed }) => [
+                    styles.selectButton,
+                    {
+                      backgroundColor: theme.primary,
+                      opacity: !selectedSku ? 0.4 : pressed ? 0.85 : 1,
+                    },
+                  ]}>
+                  <Text style={[styles.selectLabel, { color: theme.onPrimary }]}>Select</Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.details}>
                 {!!longText && (
                   <View style={styles.section}>
                     <ThemedText>{longText}</ThemedText>
@@ -132,23 +165,6 @@ export default function ProductScreen() {
                 <BulletSection title="Packaging" items={product.packaging} />
               </View>
             </ScrollView>
-
-            <View style={[styles.footer, { borderTopColor: theme.border }]}>
-              <Pressable
-                onPress={onContinue}
-                disabled={!selectedSku}
-                style={[
-                  styles.cta,
-                  {
-                    backgroundColor: selectedSku ? theme.primary : theme.backgroundSelected,
-                    opacity: selectedSku ? 1 : 0.6,
-                  },
-                ]}>
-                <ThemedText type="smallBold" style={{ color: theme.onPrimary }}>
-                  {selectedSku ? 'Continue' : 'Select a size'}
-                </ThemedText>
-              </Pressable>
-            </View>
           </>
         )}
       </ScreenState>
@@ -193,6 +209,35 @@ function Badge({ label }: { label: string }) {
   );
 }
 
+/** A bordered −/value/+ quantity control (min 1). */
+function QuantityStepper({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (n: number) => void;
+}) {
+  const theme = useTheme();
+  const canDecrement = value > 1;
+  return (
+    <View style={[styles.stepper, { borderColor: theme.border }]}>
+      <Pressable
+        onPress={() => onChange(value - 1)}
+        disabled={!canDecrement}
+        hitSlop={4}
+        style={styles.stepperButton}>
+        <Text style={[styles.stepperSign, { color: canDecrement ? theme.text : theme.textMuted }]}>
+          −
+        </Text>
+      </Pressable>
+      <Text style={[styles.stepperValue, { color: theme.text }]}>{value}</Text>
+      <Pressable onPress={() => onChange(value + 1)} hitSlop={4} style={styles.stepperButton}>
+        <Text style={[styles.stepperSign, { color: theme.text }]}>+</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function BulletSection({ title, items }: { title: string; items: string[] }) {
   if (!items || items.length === 0) return null;
   return (
@@ -219,8 +264,63 @@ const styles = StyleSheet.create({
     marginTop: 32, // 32 below the image to the title
     paddingHorizontal: Spacing.three, // 16
   },
-  content: {
+  sizeSection: {
     marginTop: 20, // 20 below the title to the sizes
+  },
+  actionBlock: {
+    marginTop: 20, // 20 below the sizes
+    paddingHorizontal: Spacing.three, // 16
+    gap: 12, // between the price row and the Select button
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 48,
+  },
+  price: {
+    fontFamily: FontFamily.bodySemiBold,
+    fontSize: 18,
+    lineHeight: 24,
+  },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 48,
+    borderWidth: 1,
+    borderRadius: Spacing.two, // 8
+  },
+  stepperButton: {
+    width: 44,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperSign: {
+    fontFamily: FontFamily.bodyMedium,
+    fontSize: 20,
+    lineHeight: 24,
+  },
+  stepperValue: {
+    minWidth: 24,
+    textAlign: 'center',
+    fontFamily: FontFamily.bodyMedium,
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  selectButton: {
+    height: 48,
+    borderRadius: Spacing.two, // 8
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectLabel: {
+    fontFamily: FontFamily.bodySemiBold,
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  details: {
+    marginTop: Spacing.four, // 24 below the action block
     gap: Spacing.four,
   },
   titleRow: {
@@ -307,14 +407,5 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bodyMedium, // Body / Medium
     fontSize: 16,
     lineHeight: 24,
-  },
-  footer: {
-    padding: Spacing.three,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  cta: {
-    paddingVertical: Spacing.three,
-    borderRadius: Spacing.three,
-    alignItems: 'center',
   },
 });
