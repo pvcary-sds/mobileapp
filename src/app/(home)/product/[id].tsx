@@ -293,9 +293,9 @@ const styles = StyleSheet.create({
     height: 48,
   },
   price: {
-    fontFamily: FontFamily.bodySemiBold,
-    fontSize: 18,
-    lineHeight: 24,
+    fontFamily: FontFamily.bodySemiBold, // Body / SemiBold
+    fontSize: 32,
+    lineHeight: 42,
   },
   stepper: {
     flexDirection: 'row',
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   stepperValue: {
     minWidth: 24,
     textAlign: 'center',
-    fontFamily: FontFamily.bodyMedium,
+    fontFamily: FontFamily.bodySemiBold, // Body1 / SemiBold
     fontSize: 16,
     lineHeight: 24,
   },
