@@ -44,8 +44,8 @@ export default function ProductScreen() {
     [product],
   );
 
-  // Price shown in the action row: the selected size's price, or (when nothing
-  // is selected yet) the lowest price as a starting "from" figure.
+  // Price shown in the action row: the selected size's price (or, before a
+  // selection, the lowest as a starting "from" figure) times the quantity.
   const priceLabel = useMemo(() => {
     if (!product || product.variants.length === 0) return '';
     const selected = product.variants.find((v) => v.sku === selectedSku);
@@ -54,8 +54,8 @@ export default function ProductScreen() {
       product.variants.reduce((min, v) =>
         parseFloat(v.price) < parseFloat(min.price) ? v : min,
       );
-    return variant.price;
-  }, [product, selectedSku]);
+    return (parseFloat(variant.price) * quantity).toFixed(2);
+  }, [product, selectedSku, quantity]);
 
   const onContinue = () => {
     if (!selectedSku) return;
