@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
     lineHeight: 30,
   },
   descriptionBody: {
-    gap: 12, // between paragraphs
+    gap: 8, // between paragraphs
   },
   descriptionText: {
     fontFamily: FontFamily.body, // Body1 / Regular
