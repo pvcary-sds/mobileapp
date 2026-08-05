@@ -107,7 +107,7 @@ export default function ProductScreen() {
               </View>
 
               <View style={styles.content}>
-                <View style={[styles.section, styles.sizeSection]}>
+                <View style={styles.section}>
                   <Text style={[styles.sizeHeading, { color: theme.text }]}>Choose a size</Text>
                   <View style={styles.sizeGrid}>
                     {product.variants.map((v) => (
@@ -279,9 +279,6 @@ const styles = StyleSheet.create({
   section: {
     paddingHorizontal: Spacing.three,
     gap: Spacing.two,
-  },
-  sizeSection: {
-    gap: 4, // 4 between the heading and the sizes
   },
   sizeHeading: {
     fontFamily: FontFamily.body, // Body / Regular
