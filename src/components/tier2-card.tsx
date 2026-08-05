@@ -53,7 +53,7 @@ export function Tier2Card({ item, onPress }: Props) {
           </View>
 
           {!!item.description && (
-            <Text style={[styles.description, { color: theme.textSecondary }]} numberOfLines={2}>
+            <Text style={[styles.description, { color: theme.textSecondary }]}>
               {item.description}
             </Text>
           )}
