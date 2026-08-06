@@ -45,6 +45,12 @@
         "projectId": "bbe9376b-c215-4b2e-af33-37e1da3fc7c5"
       }
     },
-    "owner": "same-day-snaps"
+    "owner": "same-day-snaps",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/bbe9376b-c215-4b2e-af33-37e1da3fc7c5"
+    }
   }
 }
