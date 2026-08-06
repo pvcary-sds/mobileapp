@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "SameDaySnaps",
-    "slug": "mobileapp",
+    "slug": "same-day-snaps",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -39,6 +39,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "bbe9376b-c215-4b2e-af33-37e1da3fc7c5"
+      }
+    },
+    "owner": "same-day-snaps"
   }
 }
