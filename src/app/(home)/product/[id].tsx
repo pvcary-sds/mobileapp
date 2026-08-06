@@ -74,10 +74,15 @@ export default function ProductScreen() {
         width: a.width,
         height: a.height,
       }));
+      const selectedVariant = product?.variants.find((v) => v.sku === selectedSku);
       router.push({
         pathname: '/builder/[sku]',
         params: {
           sku: selectedSku,
+          // Carry the display size + unit price so the builder can label them and
+          // compute the total (unit price × photos) without a refetch.
+          size: selectedVariant ? `${selectedVariant.size} in` : '',
+          price: selectedVariant?.price ?? '',
           photos: JSON.stringify(photos),
         },
       });

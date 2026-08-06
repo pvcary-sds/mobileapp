@@ -1,14 +1,38 @@
-import { router, Stack } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
 
 import { PhotoCanvasBackground } from '@/components/photo-canvas-background';
+import {
+  CHEVRON_DOWN,
+  CHEVRON_LEFT,
+  CHEVRON_UP,
+  DELETE_ICON,
+  FILL_ICON,
+  FILTER_ICON,
+  FIT_ICON,
+  ROTATE_LANDSCAPE_ICON,
+  ROTATE_PORTRAIT_ICON,
+} from '@/constants/builder-icons';
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-const CHEVRON_LEFT = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+/** A photo picked on the PDP and passed to the builder. */
+type PickedPhoto = { uri: string; width?: number; height?: number };
 
-const DELETE_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19.5 5.5L18.8803 15.5251C18.7219 18.0864 18.6428 19.3671 18.0008 20.2879C17.6833 20.7431 17.2747 21.1273 16.8007 21.416C15.8421 22 14.559 22 11.9927 22C9.42312 22 8.1383 22 7.17905 21.4149C6.7048 21.1257 6.296 20.7408 5.97868 20.2848C5.33688 19.3626 5.25945 18.0801 5.10461 15.5152L4.5 5.5" stroke="#C12000" stroke-width="1.5" stroke-linecap="round"/><path d="M3 5.5H21M16.0557 5.5L15.3731 4.09173C14.9196 3.15626 14.6928 2.68852 14.3017 2.39681C14.215 2.3321 14.1231 2.27454 14.027 2.2247C13.5939 2 13.0741 2 12.0345 2C10.9688 2 10.436 2 9.99568 2.23412C9.8981 2.28601 9.80498 2.3459 9.71729 2.41317C9.32164 2.7167 9.10063 3.20155 8.65861 4.17126L8.05292 5.5" stroke="#C12000" stroke-width="1.5" stroke-linecap="round"/><path d="M9.5 16.5L9.5 10.5" stroke="#C12000" stroke-width="1.5" stroke-linecap="round"/><path d="M14.5 16.5L14.5 10.5" stroke="#C12000" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+/** iOS home-indicator height — the real bottom inset once the tab bar is out. */
+const HOME_INDICATOR_INSET = 34;
+
+/** Format a USD amount, e.g. 1350 → "$1,350.00". */
+function formatUSD(amount: number): string {
+  return `$${amount.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
 
 /** Back control for the modal header (a full-screen modal has no auto Back). */
 function HeaderBack() {
@@ -26,11 +50,50 @@ function HeaderBack() {
  * photos are chosen (see `docs/photo-flow.md`). Presented as a full-screen modal
  * so the tab bar is hidden; a header stays for the title + a custom Back.
  *
- * For now this is just the empty canvas (dot-grid background, edge to edge below
- * the nav bar). Placing/editing the chosen photos on it is the next step.
+ * For now this is the empty canvas (dot-grid background, edge to edge below the
+ * nav bar) plus the canvas controls. Placing/editing the chosen photos, and
+ * wiring these controls to the photo, is the next step.
  */
 export default function BuilderScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  // Passed from the PDP so we can use them without refetching: the chosen size
+  // ("11x14 in"), its unit price ("60.00"), and the picked photos.
+  const { size, price, photos } = useLocalSearchParams<{
+    size?: string;
+    price?: string;
+    photos?: string;
+  }>();
+
+  // The picked photos, parsed once. The count is the number of prints (drives
+  // the "Add N to Cart" label); each photo's dimensions set the default rotation.
+  const pickedPhotos = useMemo<PickedPhoto[]>(() => {
+    try {
+      return photos ? (JSON.parse(photos) as PickedPhoto[]) : [];
+    } catch {
+      return [];
+    }
+  }, [photos]);
+  const photoCount = Math.max(1, pickedPhotos.length);
+
+  // Total = the selected size's unit price × number of photos.
+  // TODO: recompute the unit price when the in-builder size picker is wired.
+  const totalLabel = formatUSD((Number(price) || 0) * photoCount);
+
+  // Canvas-control state.
+  const [fillMode, setFillMode] = useState<'fit' | 'fill'>('fit'); // contain vs cover
+  const [rotated, setRotated] = useState(false); // 90° off the photo's natural orientation
+  const [sizeOpen, setSizeOpen] = useState(false); // size picker open (chevron flips)
+  const [activeThumb, setActiveThumb] = useState(0); // selected photo — first is selected on load
+  const [dockHeight, setDockHeight] = useState(0); // measured; photo area sits 32 above the strip
+
+  // The photo on the canvas — the selected thumbnail (first by default).
+  const shown = pickedPhotos[activeThumb];
+  const shownNaturalLandscape = !!(shown?.width && shown?.height && shown.width > shown.height);
+  // The rotate icon reflects the orientation the photo is currently displayed in
+  // (portrait → offer rotate-to-landscape, and vice versa).
+  const displayedLandscape = shownNaturalLandscape !== rotated;
+
   return (
     <View style={styles.container}>
       <Stack.Screen
@@ -41,6 +104,18 @@ export default function BuilderScreen() {
       />
       <PhotoCanvasBackground />
 
+      {/* The photo being edited: 32 below the action row, 32 above the strip,
+          16 inset L/R. fit/fill → contain/cover; rotate → 90° transform. */}
+      {shown?.uri && (
+        <View style={[styles.photoArea, { bottom: dockHeight + 32 }]}>
+          <Image
+            source={{ uri: shown.uri }}
+            style={[styles.photo, rotated && styles.photoRotated]}
+            contentFit={fillMode === 'fill' ? 'cover' : 'contain'}
+          />
+        </View>
+      )}
+
       {/* TODO: wire delete (remove the current photo from the canvas). */}
       <Pressable
         style={[
@@ -49,6 +124,112 @@ export default function BuilderScreen() {
         ]}>
         <SvgXml xml={DELETE_ICON} width={24} height={24} />
       </Pressable>
+
+      {/* Connected controls: fit/fill · rotate · filter. */}
+      <View
+        style={[
+          styles.toolbar,
+          { borderColor: theme.borderStrong, backgroundColor: theme.background },
+        ]}>
+        <Pressable
+          style={styles.toolButton}
+          onPress={() => setFillMode((m) => (m === 'fit' ? 'fill' : 'fit'))}>
+          <SvgXml
+            xml={fillMode === 'fill' ? FILL_ICON : FIT_ICON}
+            width={24}
+            height={24}
+            color={theme.text}
+          />
+        </Pressable>
+        <Pressable
+          style={[styles.toolButton, styles.toolDivider, { borderLeftColor: theme.borderStrong }]}
+          onPress={() => setRotated((r) => !r)}>
+          <SvgXml
+            xml={displayedLandscape ? ROTATE_PORTRAIT_ICON : ROTATE_LANDSCAPE_ICON}
+            width={24}
+            height={24}
+            color={theme.text}
+          />
+        </Pressable>
+        {/* TODO: filter tap behavior (to be defined). */}
+        <Pressable
+          style={[styles.toolButton, styles.toolDivider, { borderLeftColor: theme.borderStrong }]}>
+          <SvgXml xml={FILTER_ICON} width={24} height={24} color={theme.text} />
+        </Pressable>
+      </View>
+
+      {/* Size selector — top-right. Reflects the size chosen on the PDP. */}
+      {/* TODO: wire the size changer/picker (for now the tap just flips the chevron). */}
+      <Pressable
+        onPress={() => setSizeOpen((o) => !o)}
+        style={[
+          styles.sizeSelector,
+          { borderColor: theme.text, backgroundColor: theme.background },
+        ]}>
+        <Text style={[styles.sizeSelectorText, { color: theme.text }]}>{size}</Text>
+        <SvgXml
+          xml={sizeOpen ? CHEVRON_DOWN : CHEVRON_UP}
+          width={20}
+          height={20}
+          color={theme.text}
+        />
+      </Pressable>
+
+      {/* Bottom dock: a transparent thumbnail strip 16 above the white bar. */}
+      <View
+        style={styles.bottomDock}
+        onLayout={(e) => setDockHeight(e.nativeEvent.layout.height)}>
+        {/* Selected-photos strip — transparent, 16 inset, horizontally scrollable.
+            Tapping a thumb marks it active (2px Primary/600 border). */}
+        <View style={styles.thumbStrip}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.thumbContent}>
+            {pickedPhotos.map((photo, i) => (
+              <Pressable
+                key={`${photo.uri}-${i}`}
+                onPress={() => setActiveThumb(i)}
+                style={[
+                  styles.thumb,
+                  i > 0 && styles.thumbGap,
+                  activeThumb === i && { borderWidth: 2, borderColor: theme.deleteBorder },
+                ]}>
+                <Image source={{ uri: photo.uri }} style={styles.thumbImage} contentFit="cover" />
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* White bar — holds Quantity + total and the Add to Cart CTA. This modal
+            lives inside the tab navigator, so insets.bottom is inflated by the
+            (hidden) tab bar's clearance. The modal covers the tab bar, so clamp to
+            the home-indicator height — the button sits 12 above that. (A root-stack
+            refactor would let us use insets.bottom directly.) */}
+        <View
+          style={[
+            styles.bottomBar,
+            {
+              backgroundColor: theme.background,
+              paddingBottom: 12 + Math.min(insets.bottom, HOME_INDICATOR_INSET),
+            },
+          ]}>
+          {/* Quantity + total, stacked, left-aligned. */}
+          <View style={styles.priceBlock}>
+            <Text style={[styles.quantityLabel, { color: theme.textTertiary }]}>
+              Quantity: {photoCount}
+            </Text>
+            <Text style={[styles.priceLabel, { color: theme.text }]}>{totalLabel}</Text>
+          </View>
+
+          {/* TODO: wire Add to Cart (add the built print × photoCount to the cart). */}
+          <Pressable style={[styles.addButton, { backgroundColor: theme.primary }]}>
+            <Text style={[styles.addLabel, { color: theme.onPrimary }]}>
+              Add {photoCount} to Cart
+            </Text>
+          </Pressable>
+        </View>
+      </View>
     </View>
   );
 }
@@ -56,6 +237,21 @@ export default function BuilderScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  photoArea: {
+    position: 'absolute',
+    top: 96, // 32 below the 48-tall action row at top:16 (16 + 48 + 32)
+    left: 16, // 16 leading
+    right: 16, // 16 trailing
+    // bottom = dockHeight + 32 (32 above the strip) is applied inline.
+    overflow: 'hidden', // crop 'cover' / a rotated photo to the frame
+  },
+  photo: {
+    width: '100%',
+    height: '100%',
+  },
+  photoRotated: {
+    transform: [{ rotate: '90deg' }],
   },
   deleteButton: {
     position: 'absolute',
@@ -67,6 +263,106 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  toolbar: {
+    position: 'absolute',
+    top: 16, // aligned with the delete button
+    left: 76, // 12 to the right of the delete button (16 + 48 + 12)
+    flexDirection: 'row',
+    height: 48,
+    borderWidth: 1,
+    borderRadius: 8, // rounds the outer (left + right) corners of the group
+    overflow: 'hidden',
+  },
+  toolButton: {
+    width: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toolDivider: {
+    borderLeftWidth: 1, // separates each square from the previous one
+  },
+  sizeSelector: {
+    position: 'absolute',
+    top: 16, // 16 below the nav bar
+    right: 16, // 16 from the trailing edge
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center', // centers the size text vertically (12 top/bottom)
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingLeft: 16, // size text 16 from the leading edge
+    paddingRight: 16,
+  },
+  sizeSelectorText: {
+    fontFamily: FontFamily.bodyMedium, // Body1 / Medium
+    fontSize: 16,
+    lineHeight: 24,
+    marginRight: 4, // 4 to the chevron
+  },
+  bottomDock: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    // transparent — the canvas shows through the strip and the 16 gap.
+  },
+  thumbStrip: {
+    height: 48,
+    marginHorizontal: 16, // 16 leading/trailing on the page
+    marginBottom: 16, // 16 above the white bar
+  },
+  thumbContent: {
+    flexGrow: 1, // fill the strip so few thumbs can center
+    justifyContent: 'center', // center the group when it doesn't overflow
+    alignItems: 'center',
+  },
+  thumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  thumbGap: {
+    marginLeft: 8, // 8 between thumbnails
+  },
+  thumbImage: {
+    width: '100%',
+    height: '100%',
+  },
+  bottomBar: {
+    flexDirection: 'row',
+    alignItems: 'center', // vertically center the price block against the button
+    justifyContent: 'space-between',
+    paddingTop: 12, // top gap unspecified — mirror the 12 bottom gap
+    paddingLeft: 16, // price block 16 from the leading edge
+    paddingRight: 16, // button 16 from the trailing edge
+    // paddingBottom (12 + safe-area inset) is applied inline.
+  },
+  priceBlock: {
+    flexShrink: 1, // yield to the fixed-width button if space is tight
+  },
+  quantityLabel: {
+    fontFamily: FontFamily.body, // Caption / Regular
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  priceLabel: {
+    fontFamily: FontFamily.bodySemiBold, // SemiBold
+    fontSize: 20,
+    lineHeight: 26,
+  },
+  addButton: {
+    width: 250,
+    height: 48,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addLabel: {
+    fontFamily: FontFamily.bodySemiBold, // Body / SemiBold (matches the PDP Select CTA)
+    fontSize: 16,
+    lineHeight: 24,
   },
   back: {
     flexDirection: 'row',

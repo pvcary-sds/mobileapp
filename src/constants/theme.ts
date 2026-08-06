@@ -23,9 +23,10 @@ export const Colors = {
   backgroundElement: Gray[100], // raised fills / image placeholders
   backgroundSelected: Gray[200], // pressed / subtle selected surface
   border: Gray[200], // card borders, dividers
+  borderStrong: Gray[300], // a step darker — segmented controls, emphasized dividers
 
   // Brand / action
-  primary: Brand.red, // #E62600 — brand action color (CTAs, nav tint)
+  primary: Brand.red, // #E62600 — brand action color = Primary/500 (CTAs, nav tint)
   primarySoft: Primary[50], // tinted selected background
   onPrimary: Base.white, // text/icon on a primary fill
 
