@@ -65,29 +65,37 @@ export default function ProductScreen() {
     return (parseFloat(variant.price) * quantity).toFixed(2);
   }, [product, selectedSku, quantity]);
 
-  // On Select: open the native photo picker. Dismissing it leaves the user here
-  // on the PDP — the builder only opens once a photo is chosen. The builder
-  // itself fetches the print spec (so a slow/failed Prodigi call doesn't block
-  // navigation or throw away the picked photo).
+  // On Select: open the native photo picker. For quantity > 1 it's multi-select
+  // (one photo per print) — the picker shows checkmarks and an "Add" button, so
+  // the customer confirms when done; `launchImageLibraryAsync` only resolves
+  // then. Dismissing it leaves the user here on the PDP — the builder only opens
+  // once a photo is chosen. The builder fetches the print spec itself (so a slow/
+  // failed Prodigi call doesn't block navigation or throw away the picked photos).
+  //
+  // NOTE: this is the default "perUnit" behavior. `gallery` (unlimited) and
+  // `single` come with the product's `photoSelection` field once it's live.
   const onContinue = async () => {
     if (!selectedSku || selecting) return;
     try {
       setSelecting(true);
       const picked = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsMultipleSelection: false,
+        allowsMultipleSelection: quantity > 1,
+        selectionLimit: quantity, // one photo per print
         quality: 1,
       });
-      if (picked.canceled) return; // stay on the PDP
-      const photo = picked.assets[0];
+      if (picked.canceled || picked.assets.length === 0) return; // stay on the PDP
+      const photos = picked.assets.map((a) => ({
+        uri: a.uri,
+        width: a.width,
+        height: a.height,
+      }));
       router.push({
         pathname: '/builder/[sku]',
         params: {
           sku: selectedSku,
           quantity: String(quantity),
-          photoUri: photo.uri,
-          photoWidth: String(photo.width),
-          photoHeight: String(photo.height),
+          photos: JSON.stringify(photos),
         },
       });
     } finally {
