@@ -1,7 +1,8 @@
 import { Image } from 'expo-image';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Dimensions,
   Pressable,
@@ -13,8 +14,8 @@ import {
 
 import { SvgXml } from 'react-native-svg';
 
-import { getProduct } from '@/api/catalog';
-import type { ProductVariant } from '@/api/types';
+import { getPrintAreaSizes, getProduct } from '@/api/catalog';
+import type { PrintAreaSizesResponse, ProductVariant } from '@/api/types';
 import { ScreenState } from '@/components/screen-state';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, FontFamily, Spacing } from '@/constants/theme';
@@ -25,13 +26,37 @@ import { htmlToText } from '@/lib/html';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HERO_HEIGHT = 268;
 
+/**
+ * Map a print-area-sizes response to what the photo step needs for the
+ * blurriness check: the physical print size (inches) and the recommended DPI.
+ * Prefers the `default` print area; falls back to the first (framed / multi-area
+ * products can expose more than one).
+ */
+function toPrintSpec(res: PrintAreaSizesResponse): {
+  widthIn: number | null;
+  heightIn: number | null;
+  dpiH: number | null;
+  dpiV: number | null;
+} {
+  const areas = res.printAreaSizes ?? {};
+  const area = areas.default ?? Object.values(areas)[0];
+  return {
+    widthIn: res.widthIn,
+    heightIn: res.heightIn,
+    dpiH: area?.horizontalDpi ?? null,
+    dpiV: area?.verticalDpi ?? null,
+  };
+}
+
 /** `GET /v1/products/{id}` — the product page. */
 export default function ProductScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
+  const router = useRouter();
   const [selectedSku, setSelectedSku] = useState<string | null>(null);
   const [activeImage, setActiveImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [selecting, setSelecting] = useState(false);
 
   const { data: product, error, loading, reload } = useAsync(
     (signal) => getProduct(id, signal),
@@ -62,10 +87,34 @@ export default function ProductScreen() {
     return (parseFloat(variant.price) * quantity).toFixed(2);
   }, [product, selectedSku, quantity]);
 
-  const onContinue = () => {
-    if (!selectedSku) return;
-    // Next slice: /v1/print-area-sizes/{sku} → photo pick → upload → checkout.
-    Alert.alert('Coming next', `SKU: ${selectedSku}\nQty: ${quantity}`);
+  // On Select: fetch the print resolution/DPI for the chosen SKU from Prodigi
+  // (via GET /v1/print-area-sizes/{sku}), then carry the physical size + the
+  // recommended DPI to the photo step. Later we compute the customer's photo
+  // DPI (photoPx ÷ inches) and warn if it's below these — i.e. the print would
+  // look blurry. The API reports the numbers; the warning is the client's call.
+  const onContinue = async () => {
+    if (!selectedSku || selecting) return;
+    try {
+      setSelecting(true);
+      const printAreas = await getPrintAreaSizes(selectedSku, 'prodigi');
+      const spec = toPrintSpec(printAreas);
+      router.push({
+        pathname: '/photo/[sku]',
+        params: {
+          sku: selectedSku,
+          quantity: String(quantity),
+          // Physical size (inches) + recommended DPI for the blurriness check.
+          widthIn: String(spec.widthIn ?? ''),
+          heightIn: String(spec.heightIn ?? ''),
+          recommendedDpiH: String(spec.dpiH ?? ''),
+          recommendedDpiV: String(spec.dpiV ?? ''),
+        },
+      });
+    } catch {
+      Alert.alert('Something went wrong', 'Could not load print details. Please try again.');
+    } finally {
+      setSelecting(false);
+    }
   };
 
   return (
@@ -153,18 +202,22 @@ export default function ProductScreen() {
                 </View>
                 <Pressable
                   onPress={onContinue}
-                  disabled={!selectedSku}
+                  disabled={!selectedSku || selecting}
                   style={[
                     styles.selectButton,
                     { backgroundColor: selectedSku ? theme.primary : theme.backgroundSelected },
                   ]}>
-                  <Text
-                    style={[
-                      styles.selectLabel,
-                      { color: selectedSku ? theme.onPrimary : theme.textMuted },
-                    ]}>
-                    Select
-                  </Text>
+                  {selecting ? (
+                    <ActivityIndicator color={theme.onPrimary} />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.selectLabel,
+                        { color: selectedSku ? theme.onPrimary : theme.textMuted },
+                      ]}>
+                      Select
+                    </Text>
+                  )}
                 </Pressable>
               </View>
 
