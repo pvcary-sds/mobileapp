@@ -33,7 +33,6 @@ export default function ProductScreen() {
   const router = useRouter();
   const [selectedSku, setSelectedSku] = useState<string | null>(null);
   const [activeImage, setActiveImage] = useState(0);
-  const [quantity, setQuantity] = useState(1);
   const [selecting, setSelecting] = useState(false);
 
   const { data: product, error, loading, reload } = useAsync(
@@ -52,42 +51,34 @@ export default function ProductScreen() {
     [longText],
   );
 
-  // Price shown in the action row: the selected size's price (or, before a
-  // selection, the lowest as a starting "from" figure) times the quantity.
-  const priceLabel = useMemo(() => {
-    if (!product || product.variants.length === 0) return '';
-    const selected = product.variants.find((v) => v.sku === selectedSku);
-    const variant =
-      selected ??
-      product.variants.reduce((min, v) =>
-        parseFloat(v.price) < parseFloat(min.price) ? v : min,
-      );
-    return (parseFloat(variant.price) * quantity).toFixed(2);
-  }, [product, selectedSku, quantity]);
-
-  // On Select: open the native photo picker. Dismissing it leaves the user here
-  // on the PDP — the builder only opens once a photo is chosen. The builder
-  // itself fetches the print spec (so a slow/failed Prodigi call doesn't block
-  // navigation or throw away the picked photo).
+  // On Select: open the native photo picker as unlimited multi-select — the
+  // customer picks as many photos as they want and confirms with the picker's
+  // Add/✓ (it never auto-dismisses). The number of photos is the number of
+  // prints; quantity lives in the cart, not here. Dismissing the picker leaves
+  // the user on the PDP — the builder only opens once a photo is chosen, and it
+  // fetches the print spec itself (so a slow/failed Prodigi call doesn't block
+  // navigation or throw away the picked photos).
   const onContinue = async () => {
     if (!selectedSku || selecting) return;
     try {
       setSelecting(true);
       const picked = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsMultipleSelection: false,
+        allowsMultipleSelection: true,
+        selectionLimit: 0, // unlimited — photos picked = number of prints
         quality: 1,
       });
-      if (picked.canceled) return; // stay on the PDP
-      const photo = picked.assets[0];
+      if (picked.canceled || picked.assets.length === 0) return; // stay on the PDP
+      const photos = picked.assets.map((a) => ({
+        uri: a.uri,
+        width: a.width,
+        height: a.height,
+      }));
       router.push({
         pathname: '/builder/[sku]',
         params: {
           sku: selectedSku,
-          quantity: String(quantity),
-          photoUri: photo.uri,
-          photoWidth: String(photo.width),
-          photoHeight: String(photo.height),
+          photos: JSON.stringify(photos),
         },
       });
     } finally {
@@ -174,10 +165,6 @@ export default function ProductScreen() {
               </View>
 
               <View style={styles.actionBlock}>
-                <View style={styles.priceRow}>
-                  <Text style={[styles.price, { color: theme.text }]}>${priceLabel}</Text>
-                  <QuantityStepper value={quantity} onChange={setQuantity} />
-                </View>
                 <Pressable
                   onPress={onContinue}
                   disabled={!selectedSku || selecting}
@@ -292,48 +279,6 @@ function Badge({ label }: { label: string }) {
   );
 }
 
-const MINUS_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12H19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-const PLUS_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-
-/**
- * Quantity control (min 1): three 48×48 blocks (−, value, +) inside a 1px
- * Gray/200 pill. When the count is 1 the − block is disabled — Gray/100 fill,
- * Gray/400 icon; otherwise the icon is Gray/black.
- */
-function QuantityStepper({
-  value,
-  onChange,
-}: {
-  value: number;
-  onChange: (n: number) => void;
-}) {
-  const theme = useTheme();
-  const canDecrement = value > 1;
-  return (
-    <View style={[styles.stepper, { borderColor: theme.border }]}>
-      <Pressable
-        onPress={() => onChange(value - 1)}
-        disabled={!canDecrement}
-        style={[
-          styles.stepperButton,
-          !canDecrement && { backgroundColor: theme.backgroundElement }, // Gray/100 when disabled
-        ]}>
-        <SvgXml
-          xml={MINUS_ICON}
-          width={24}
-          height={24}
-          color={canDecrement ? theme.text : theme.textMuted}
-        />
-      </Pressable>
-      <View style={styles.stepperValueBlock}>
-        <Text style={[styles.stepperValue, { color: theme.text }]}>{value}</Text>
-      </View>
-      <Pressable onPress={() => onChange(value + 1)} style={styles.stepperButton}>
-        <SvgXml xml={PLUS_ICON} width={24} height={24} color={theme.text} />
-      </Pressable>
-    </View>
-  );
-}
 
 function BulletSection({ title, items }: { title: string; items: string[] }) {
   const theme = useTheme();
@@ -367,45 +312,8 @@ const styles = StyleSheet.create({
     marginTop: 20, // 20 below the title to the sizes
   },
   actionBlock: {
-    marginTop: 20, // 20 below the sizes
+    marginTop: 20, // 20 below the sizes to the Select button
     paddingHorizontal: Spacing.three, // 16
-    gap: 12, // between the price row and the Select button
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    height: 48,
-  },
-  price: {
-    fontFamily: FontFamily.bodySemiBold, // Body / SemiBold
-    fontSize: 32,
-    lineHeight: 42,
-  },
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 48,
-    borderWidth: 1,
-    borderRadius: Spacing.two, // 8
-    overflow: 'hidden', // clip the disabled block's fill to the rounded corners
-  },
-  stepperButton: {
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepperValueBlock: {
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepperValue: {
-    fontFamily: FontFamily.bodySemiBold, // Body1 / SemiBold
-    fontSize: 16,
-    lineHeight: 24,
   },
   selectButton: {
     height: 48,
