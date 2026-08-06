@@ -1,167 +1,375 @@
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
-import { Stack, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SvgXml } from 'react-native-svg';
 
-import { getPrintAreaSizes } from '@/api/catalog';
-import type { PrintAreaSizesResponse } from '@/api/types';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { FontFamily, Spacing } from '@/constants/theme';
-import { useAsync } from '@/hooks/use-async';
+import { PhotoCanvasBackground } from '@/components/photo-canvas-background';
+import {
+  CHEVRON_DOWN,
+  CHEVRON_LEFT,
+  CHEVRON_UP,
+  DELETE_ICON,
+  FILL_ICON,
+  FILTER_ICON,
+  FIT_ICON,
+  ROTATE_LANDSCAPE_ICON,
+  ROTATE_PORTRAIT_ICON,
+} from '@/constants/builder-icons';
+import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-type Photo = { uri: string; width: number; height: number };
+/** A photo picked on the PDP and passed to the builder. */
+type PickedPhoto = { uri: string; width?: number; height?: number };
 
-/** Physical size + recommended DPI from the `default` print area (or the first). */
-function toPrintSpec(res: PrintAreaSizesResponse) {
-  const areas = res.printAreaSizes ?? {};
-  const area = areas.default ?? Object.values(areas)[0];
-  return {
-    widthIn: res.widthIn,
-    heightIn: res.heightIn,
-    dpiH: area?.horizontalDpi ?? null,
-    dpiV: area?.verticalDpi ?? null,
-  };
+/** iOS home-indicator height — the real bottom inset once the tab bar is out. */
+const HOME_INDICATOR_INSET = 34;
+
+/** Format a USD amount, e.g. 1350 → "$1,350.00". */
+function formatUSD(amount: number): string {
+  return `$${amount.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
-function parsePhotos(raw: string | undefined): Photo[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+/** Back control for the modal header (a full-screen modal has no auto Back). */
+function HeaderBack() {
+  const theme = useTheme();
+  return (
+    <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
+      <SvgXml xml={CHEVRON_LEFT} width={24} height={24} color={theme.text} />
+      <Text style={[styles.backLabel, { color: theme.text }]}>Back</Text>
+    </Pressable>
+  );
 }
 
 /**
- * Product builder — reached from the PDP once a size is chosen AND photos are
- * selected (the native picker runs on the PDP; dismissing it leaves the user on
- * the PDP). Receives one photo per print (`quantity`).
+ * Product builder — the photo editor. Reached from the PDP once a size and
+ * photos are chosen (see `docs/photo-flow.md`). Presented as a full-screen modal
+ * so the tab bar is hidden; a header stays for the title + a custom Back.
  *
- * The print spec (physical size + recommended DPI from `/v1/print-area-sizes`)
- * is fetched here — it only powers the advisory blurriness warning, so a slow/
- * failed Prodigi call shows a retry instead of blocking the flow. UI is rough —
- * the real builder comes next.
+ * For now this is the empty canvas (dot-grid background, edge to edge below the
+ * nav bar) plus the canvas controls. Placing/editing the chosen photos, and
+ * wiring these controls to the photo, is the next step.
  */
 export default function BuilderScreen() {
-  const { sku, photos: photosParam } = useLocalSearchParams<{
-    sku: string;
-    photos: string;
-  }>();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  // Passed from the PDP so we can use them without refetching: the chosen size
+  // ("11x14 in"), its unit price ("60.00"), and the picked photos.
+  const { size, price, photos } = useLocalSearchParams<{
+    size?: string;
+    price?: string;
+    photos?: string;
+  }>();
 
-  const [photos, setPhotos] = useState<Photo[]>(() => parsePhotos(photosParam));
-
-  const { data: printAreas, error, loading, reload } = useAsync(
-    (signal) => getPrintAreaSizes(sku, 'prodigi', signal),
-    [sku],
-  );
-
-  const changePhotos = useCallback(async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsMultipleSelection: true,
-      selectionLimit: 0, // unlimited — photos picked = number of prints
-      quality: 1,
-    });
-    if (!result.canceled && result.assets.length > 0) {
-      setPhotos(result.assets.map((a) => ({ uri: a.uri, width: a.width, height: a.height })));
+  // The picked photos, parsed once. The count is the number of prints (drives
+  // the "Add N to Cart" label); each photo's dimensions set the default rotation.
+  const pickedPhotos = useMemo<PickedPhoto[]>(() => {
+    try {
+      return photos ? (JSON.parse(photos) as PickedPhoto[]) : [];
+    } catch {
+      return [];
     }
-  }, []);
+  }, [photos]);
+  const photoCount = Math.max(1, pickedPhotos.length);
 
-  const spec = printAreas ? toPrintSpec(printAreas) : null;
+  // Total = the selected size's unit price × number of photos.
+  // TODO: recompute the unit price when the in-builder size picker is wired.
+  const totalLabel = formatUSD((Number(price) || 0) * photoCount);
 
-  // Blurriness check (API rule): photo DPI at this size = px ÷ inches per axis;
-  // low quality when either axis is below the recommended DPI.
-  const assess = (photo: Photo) => {
-    const dpiH = spec?.widthIn ? Math.round(photo.width / spec.widthIn) : null;
-    const dpiV = spec?.heightIn ? Math.round(photo.height / spec.heightIn) : null;
-    const low =
-      dpiH !== null && dpiV !== null && !!spec?.dpiH && !!spec?.dpiV &&
-      (dpiH < spec.dpiH || dpiV < spec.dpiV);
-    return { dpiH, dpiV, low };
-  };
+  // Canvas-control state.
+  const [fillMode, setFillMode] = useState<'fit' | 'fill'>('fit'); // contain vs cover
+  const [rotated, setRotated] = useState(false); // 90° off the photo's natural orientation
+  const [sizeOpen, setSizeOpen] = useState(false); // size picker open (chevron flips)
+  const [activeThumb, setActiveThumb] = useState(0); // selected photo — first is selected on load
+  const [dockHeight, setDockHeight] = useState(0); // measured; photo area sits 32 above the strip
+
+  // The photo on the canvas — the selected thumbnail (first by default).
+  const shown = pickedPhotos[activeThumb];
+  const shownNaturalLandscape = !!(shown?.width && shown?.height && shown.width > shown.height);
+  // The rotate icon reflects the orientation the photo is currently displayed in
+  // (portrait → offer rotate-to-landscape, and vice versa).
+  const displayedLandscape = shownNaturalLandscape !== rotated;
 
   return (
-    <ThemedView style={styles.container}>
-      <Stack.Screen options={{ title: 'Customize', headerBackTitle: 'Back' }} />
+    <View style={styles.container}>
+      <Stack.Screen
+        options={{
+          title: 'Customize',
+          headerLeft: () => <HeaderBack />,
+        }}
+      />
+      <PhotoCanvasBackground />
 
-      <ScrollView contentContainerStyle={styles.scroll}>
-        {loading ? (
-          <ThemedText themeColor="textSecondary">Checking print quality…</ThemedText>
-        ) : error ? (
-          <View style={styles.qualityRow}>
-            <ThemedText themeColor="textSecondary">Couldn&apos;t check photo quality.</ThemedText>
-            <Pressable onPress={reload} hitSlop={8}>
-              <ThemedText style={{ color: theme.primary }}>Retry</ThemedText>
-            </Pressable>
-          </View>
-        ) : null}
+      {/* The photo being edited: 32 below the action row, 32 above the strip,
+          16 inset L/R. fit/fill → contain/cover; rotate → 90° transform. */}
+      {shown?.uri && (
+        <View style={[styles.photoArea, { bottom: dockHeight + 32 }]}>
+          <Image
+            source={{ uri: shown.uri }}
+            style={[styles.photo, rotated && styles.photoRotated]}
+            contentFit={fillMode === 'fill' ? 'cover' : 'contain'}
+          />
+        </View>
+      )}
 
-        {photos.map((photo, i) => {
-          const q = assess(photo);
-          return (
-            <View key={`${photo.uri}-${i}`} style={styles.card}>
-              <Image source={{ uri: photo.uri }} style={styles.preview} contentFit="contain" />
-              <ThemedText themeColor="textSecondary">
-                {photo.width} × {photo.height} px
-                {spec
-                  ? ` → ${q.dpiH ?? '—'} × ${q.dpiV ?? '—'} DPI (recommended ${spec.dpiH ?? '—'} × ${spec.dpiV ?? '—'})`
-                  : ''}
-              </ThemedText>
-              {q.low ? (
-                <ThemedText style={{ color: theme.errorFg }}>
-                  ⚠︎ This photo may look blurry at this size.
-                </ThemedText>
-              ) : null}
-            </View>
-          );
-        })}
-      </ScrollView>
-
-      <Pressable onPress={changePhotos} style={[styles.button, { backgroundColor: theme.primary }]}>
-        <ThemedText style={[styles.buttonLabel, { color: theme.onPrimary }]}>
-          {photos.length > 1 ? 'Choose different photos' : 'Choose a different photo'}
-        </ThemedText>
+      {/* TODO: wire delete (remove the current photo from the canvas). */}
+      <Pressable
+        style={[
+          styles.deleteButton,
+          { borderColor: theme.deleteBorder, backgroundColor: theme.background },
+        ]}>
+        <SvgXml xml={DELETE_ICON} width={24} height={24} />
       </Pressable>
-    </ThemedView>
+
+      {/* Connected controls: fit/fill · rotate · filter. */}
+      <View
+        style={[
+          styles.toolbar,
+          { borderColor: theme.borderStrong, backgroundColor: theme.background },
+        ]}>
+        <Pressable
+          style={styles.toolButton}
+          onPress={() => setFillMode((m) => (m === 'fit' ? 'fill' : 'fit'))}>
+          <SvgXml
+            xml={fillMode === 'fill' ? FILL_ICON : FIT_ICON}
+            width={24}
+            height={24}
+            color={theme.text}
+          />
+        </Pressable>
+        <Pressable
+          style={[styles.toolButton, styles.toolDivider, { borderLeftColor: theme.borderStrong }]}
+          onPress={() => setRotated((r) => !r)}>
+          <SvgXml
+            xml={displayedLandscape ? ROTATE_PORTRAIT_ICON : ROTATE_LANDSCAPE_ICON}
+            width={24}
+            height={24}
+            color={theme.text}
+          />
+        </Pressable>
+        {/* TODO: filter tap behavior (to be defined). */}
+        <Pressable
+          style={[styles.toolButton, styles.toolDivider, { borderLeftColor: theme.borderStrong }]}>
+          <SvgXml xml={FILTER_ICON} width={24} height={24} color={theme.text} />
+        </Pressable>
+      </View>
+
+      {/* Size selector — top-right. Reflects the size chosen on the PDP. */}
+      {/* TODO: wire the size changer/picker (for now the tap just flips the chevron). */}
+      <Pressable
+        onPress={() => setSizeOpen((o) => !o)}
+        style={[
+          styles.sizeSelector,
+          { borderColor: theme.text, backgroundColor: theme.background },
+        ]}>
+        <Text style={[styles.sizeSelectorText, { color: theme.text }]}>{size}</Text>
+        <SvgXml
+          xml={sizeOpen ? CHEVRON_DOWN : CHEVRON_UP}
+          width={20}
+          height={20}
+          color={theme.text}
+        />
+      </Pressable>
+
+      {/* Bottom dock: a transparent thumbnail strip 16 above the white bar. */}
+      <View
+        style={styles.bottomDock}
+        onLayout={(e) => setDockHeight(e.nativeEvent.layout.height)}>
+        {/* Selected-photos strip — transparent, 16 inset, horizontally scrollable.
+            Tapping a thumb marks it active (2px Primary/600 border). */}
+        <View style={styles.thumbStrip}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.thumbContent}>
+            {pickedPhotos.map((photo, i) => (
+              <Pressable
+                key={`${photo.uri}-${i}`}
+                onPress={() => setActiveThumb(i)}
+                style={[
+                  styles.thumb,
+                  i > 0 && styles.thumbGap,
+                  activeThumb === i && { borderWidth: 2, borderColor: theme.deleteBorder },
+                ]}>
+                <Image source={{ uri: photo.uri }} style={styles.thumbImage} contentFit="cover" />
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* White bar — holds Quantity + total and the Add to Cart CTA. This modal
+            lives inside the tab navigator, so insets.bottom is inflated by the
+            (hidden) tab bar's clearance. The modal covers the tab bar, so clamp to
+            the home-indicator height — the button sits 12 above that. (A root-stack
+            refactor would let us use insets.bottom directly.) */}
+        <View
+          style={[
+            styles.bottomBar,
+            {
+              backgroundColor: theme.background,
+              paddingBottom: 12 + Math.min(insets.bottom, HOME_INDICATOR_INSET),
+            },
+          ]}>
+          {/* Quantity + total, stacked, left-aligned. */}
+          <View style={styles.priceBlock}>
+            <Text style={[styles.quantityLabel, { color: theme.textTertiary }]}>
+              Quantity: {photoCount}
+            </Text>
+            <Text style={[styles.priceLabel, { color: theme.text }]}>{totalLabel}</Text>
+          </View>
+
+          {/* TODO: wire Add to Cart (add the built print × photoCount to the cart). */}
+          <Pressable style={[styles.addButton, { backgroundColor: theme.primary }]}>
+            <Text style={[styles.addLabel, { color: theme.onPrimary }]}>
+              Add {photoCount} to Cart
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: Spacing.three,
-    gap: Spacing.three,
   },
-  scroll: {
-    gap: Spacing.three,
+  photoArea: {
+    position: 'absolute',
+    top: 96, // 32 below the 48-tall action row at top:16 (16 + 48 + 32)
+    left: 16, // 16 leading
+    right: 16, // 16 trailing
+    // bottom = dockHeight + 32 (32 above the strip) is applied inline.
+    overflow: 'hidden', // crop 'cover' / a rotated photo to the frame
   },
-  card: {
-    gap: Spacing.two,
-  },
-  preview: {
+  photo: {
     width: '100%',
-    height: 320,
-    borderRadius: 12,
+    height: '100%',
   },
-  button: {
+  photoRotated: {
+    transform: [{ rotate: '90deg' }],
+  },
+  deleteButton: {
+    position: 'absolute',
+    top: 16, // 16 below the nav bar
+    left: 16, // 16 from the left edge
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toolbar: {
+    position: 'absolute',
+    top: 16, // aligned with the delete button
+    left: 76, // 12 to the right of the delete button (16 + 48 + 12)
+    flexDirection: 'row',
+    height: 48,
+    borderWidth: 1,
+    borderRadius: 8, // rounds the outer (left + right) corners of the group
+    overflow: 'hidden',
+  },
+  toolButton: {
+    width: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toolDivider: {
+    borderLeftWidth: 1, // separates each square from the previous one
+  },
+  sizeSelector: {
+    position: 'absolute',
+    top: 16, // 16 below the nav bar
+    right: 16, // 16 from the trailing edge
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center', // centers the size text vertically (12 top/bottom)
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingLeft: 16, // size text 16 from the leading edge
+    paddingRight: 16,
+  },
+  sizeSelectorText: {
+    fontFamily: FontFamily.bodyMedium, // Body1 / Medium
+    fontSize: 16,
+    lineHeight: 24,
+    marginRight: 4, // 4 to the chevron
+  },
+  bottomDock: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    // transparent — the canvas shows through the strip and the 16 gap.
+  },
+  thumbStrip: {
+    height: 48,
+    marginHorizontal: 16, // 16 leading/trailing on the page
+    marginBottom: 16, // 16 above the white bar
+  },
+  thumbContent: {
+    flexGrow: 1, // fill the strip so few thumbs can center
+    justifyContent: 'center', // center the group when it doesn't overflow
+    alignItems: 'center',
+  },
+  thumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  thumbGap: {
+    marginLeft: 8, // 8 between thumbnails
+  },
+  thumbImage: {
+    width: '100%',
+    height: '100%',
+  },
+  bottomBar: {
+    flexDirection: 'row',
+    alignItems: 'center', // vertically center the price block against the button
+    justifyContent: 'space-between',
+    paddingTop: 12, // top gap unspecified — mirror the 12 bottom gap
+    paddingLeft: 16, // price block 16 from the leading edge
+    paddingRight: 16, // button 16 from the trailing edge
+    // paddingBottom (12 + safe-area inset) is applied inline.
+  },
+  priceBlock: {
+    flexShrink: 1, // yield to the fixed-width button if space is tight
+  },
+  quantityLabel: {
+    fontFamily: FontFamily.body, // Caption / Regular
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  priceLabel: {
+    fontFamily: FontFamily.bodySemiBold, // SemiBold
+    fontSize: 20,
+    lineHeight: 26,
+  },
+  addButton: {
+    width: 250,
     height: 48,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  buttonLabel: {
-    fontFamily: FontFamily.bodySemiBold,
+  addLabel: {
+    fontFamily: FontFamily.bodySemiBold, // Body / SemiBold (matches the PDP Select CTA)
     fontSize: 16,
     lineHeight: 24,
   },
-  qualityRow: {
+  back: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.two,
+  },
+  backLabel: {
+    fontFamily: FontFamily.bodyMedium,
+    fontSize: 17,
   },
 });
