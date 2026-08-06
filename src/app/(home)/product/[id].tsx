@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
@@ -87,19 +88,30 @@ export default function ProductScreen() {
     return (parseFloat(variant.price) * quantity).toFixed(2);
   }, [product, selectedSku, quantity]);
 
-  // On Select: fetch the print resolution/DPI for the chosen SKU from Prodigi
-  // (via GET /v1/print-area-sizes/{sku}), then carry the physical size + the
-  // recommended DPI to the photo step. Later we compute the customer's photo
-  // DPI (photoPx ÷ inches) and warn if it's below these — i.e. the print would
-  // look blurry. The API reports the numbers; the warning is the client's call.
+  // On Select:
+  //   1. Open the native photo picker. Dismissing it leaves the user here on the
+  //      PDP — the builder only ever opens once a photo is chosen.
+  //   2. Fetch the print resolution/DPI for the chosen SKU from Prodigi
+  //      (GET /v1/print-area-sizes/{sku}).
+  //   3. Open the builder with the photo + spec. The spec's recommended DPI is
+  //      what the builder compares the photo's DPI (px ÷ inches) against to warn
+  //      about blurriness. The API reports the numbers; the warning is ours.
   const onContinue = async () => {
     if (!selectedSku || selecting) return;
     try {
       setSelecting(true);
+      const picked = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: false,
+        quality: 1,
+      });
+      if (picked.canceled) return; // stay on the PDP
+      const photo = picked.assets[0];
+
       const printAreas = await getPrintAreaSizes(selectedSku, 'prodigi');
       const spec = toPrintSpec(printAreas);
       router.push({
-        pathname: '/photo/[sku]',
+        pathname: '/builder/[sku]',
         params: {
           sku: selectedSku,
           quantity: String(quantity),
@@ -108,6 +120,10 @@ export default function ProductScreen() {
           heightIn: String(spec.heightIn ?? ''),
           recommendedDpiH: String(spec.dpiH ?? ''),
           recommendedDpiV: String(spec.dpiV ?? ''),
+          // The chosen photo.
+          photoUri: photo.uri,
+          photoWidth: String(photo.width),
+          photoHeight: String(photo.height),
         },
       });
     } catch {
