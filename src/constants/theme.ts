@@ -33,6 +33,9 @@ export const Colors = {
   overlayContent: Gray[0], // dots / controls sitting on a photo
   overlayLight: withAlpha(Gray[0], 0.1), // translucent light pill/scrim (Gray/0 @ 10%)
 
+  // Destructive (delete) control border — Primary/600.
+  deleteBorder: Primary[600],
+
   // Status (Label pairs)
   successFg: Label.darkGreen,
   successBg: Label.lightGreen,
