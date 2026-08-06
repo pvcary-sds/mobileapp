@@ -29,8 +29,9 @@ Point it somewhere else without rebuilding by exporting `EXPO_PUBLIC_API_BASE`
 (e.g. a local API tunnel) — it overrides everything below.
 
 > The current tab bar uses `NativeTabs` (real native tab bar → Liquid Glass on
-> iOS 26). Stripe checkout will later require a **development build**
-> (`npx expo run:ios`) instead of Expo Go — not needed for the browse flow.
+> iOS 26). Running in the simulator uses Expo Go, but **physical devices need a
+> development build** (this project is on Expo SDK 57, newer than the store's
+> Expo Go) — see [Install on a physical device](#install-on-a-physical-device-development-build).
 
 ---
 
@@ -119,21 +120,65 @@ Build profiles live in [`eas.json`](./eas.json):
 | `staging` | staging | internal test builds | `main` |
 | `production` | production | store submission | `release` |
 
-One-time setup (needs an Expo account):
+The project is already linked to EAS (`extra.eas.projectId` in [`app.json`](./app.json)),
+so you just need an Expo account and to log in. We invoke the CLI with `npx` to
+skip a global install:
 
 ```bash
-npm i -g eas-cli
-eas login
-eas init            # links the project, writes the EAS projectId
+npx eas-cli@latest login
 ```
 
 Then:
 
 ```bash
-eas build --profile staging     --platform ios   # from main
-eas build --profile production  --platform ios   # from release
-eas submit --profile production  --platform ios
+npx eas-cli@latest build --profile staging     --platform ios   # from main
+npx eas-cli@latest build --profile production  --platform ios   # from release
+npx eas-cli@latest submit --profile production  --platform ios
 ```
+
+### Install on a physical device (development build)
+
+Expo Go **can't run this app on a real device** — the project is on Expo SDK 57,
+newer than the store's Expo Go (it only works in the *simulator*, where
+`expo start` side-loads a matching Expo Go). Use a **development build**: a small
+standalone app that still connects to the Metro dev server, so fast refresh,
+`--tunnel`, and the env pill all work. Rebuild only when native code/deps change;
+JS changes hot-reload over the dev server.
+
+**Android** (produces an installable APK):
+
+```bash
+npx eas-cli@latest login                                          # one-time
+npx eas-cli@latest build --profile development --platform android
+```
+
+1. Say **yes** to generating an Android keystore (EAS manages it).
+2. The build runs on Expo's servers (~10–20 min), then prints an **install
+   link + QR**.
+3. On the phone: open the link → download the APK → install (allow "install from
+   unknown apps" when prompted).
+4. Run it — start the dev server and open **SameDaySnaps** (not Expo Go):
+   ```bash
+   npx expo start --dev-client --tunnel
+   ```
+   It talks to **staging** (the `development` profile); switch with the env pill.
+
+**iOS** (needs a paid Apple Developer account): register the device *before*
+building, then build —
+
+```bash
+npx eas-cli@latest device:create                              # register the iPhone
+npx eas-cli@latest build --profile development --platform ios # prompts for Apple ID
+```
+
+Install the result on the iPhone (trust it in **Settings → General → VPN &
+Device Management** if prompted), then run the same `expo start --dev-client
+--tunnel`.
+
+> **Node note:** EAS's config loader can't transpile a *TypeScript* `app.config.*`
+> under very new Node (25.x) — that's why the dynamic config is plain JS
+> ([`app.config.js`](./app.config.js)). If you hit `Cannot read properties of
+> undefined (reading 'CommonJS')`, switch to Node LTS (`nvm use 22`).
 
 > **TODO:** wire EAS to build automatically on push to `main` (staging) and
 > `release` (production) via the EAS GitHub app, mirroring the API's
