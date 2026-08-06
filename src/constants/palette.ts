@@ -27,7 +27,7 @@ export const Primary = {
   200: '#F9DBAF',
   300: '#F7B27A',
   400: '#F38744',
-  500: '#EF6820',
+  500: '#E62600', // brand primary red — the primary action color (NOT orange)
   600: '#E04F16',
   700: '#B93815',
   800: '#932F19',
