@@ -4,7 +4,6 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Dimensions,
   Pressable,
   ScrollView,
@@ -15,8 +14,8 @@ import {
 
 import { SvgXml } from 'react-native-svg';
 
-import { getPrintAreaSizes, getProduct } from '@/api/catalog';
-import type { PrintAreaSizesResponse, ProductVariant } from '@/api/types';
+import { getProduct } from '@/api/catalog';
+import type { ProductVariant } from '@/api/types';
 import { ScreenState } from '@/components/screen-state';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, FontFamily, Spacing } from '@/constants/theme';
@@ -26,28 +25,6 @@ import { htmlToText } from '@/lib/html';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HERO_HEIGHT = 268;
-
-/**
- * Map a print-area-sizes response to what the photo step needs for the
- * blurriness check: the physical print size (inches) and the recommended DPI.
- * Prefers the `default` print area; falls back to the first (framed / multi-area
- * products can expose more than one).
- */
-function toPrintSpec(res: PrintAreaSizesResponse): {
-  widthIn: number | null;
-  heightIn: number | null;
-  dpiH: number | null;
-  dpiV: number | null;
-} {
-  const areas = res.printAreaSizes ?? {};
-  const area = areas.default ?? Object.values(areas)[0];
-  return {
-    widthIn: res.widthIn,
-    heightIn: res.heightIn,
-    dpiH: area?.horizontalDpi ?? null,
-    dpiV: area?.verticalDpi ?? null,
-  };
-}
 
 /** `GET /v1/products/{id}` — the product page. */
 export default function ProductScreen() {
@@ -88,14 +65,10 @@ export default function ProductScreen() {
     return (parseFloat(variant.price) * quantity).toFixed(2);
   }, [product, selectedSku, quantity]);
 
-  // On Select:
-  //   1. Open the native photo picker. Dismissing it leaves the user here on the
-  //      PDP — the builder only ever opens once a photo is chosen.
-  //   2. Fetch the print resolution/DPI for the chosen SKU from Prodigi
-  //      (GET /v1/print-area-sizes/{sku}).
-  //   3. Open the builder with the photo + spec. The spec's recommended DPI is
-  //      what the builder compares the photo's DPI (px ÷ inches) against to warn
-  //      about blurriness. The API reports the numbers; the warning is ours.
+  // On Select: open the native photo picker. Dismissing it leaves the user here
+  // on the PDP — the builder only opens once a photo is chosen. The builder
+  // itself fetches the print spec (so a slow/failed Prodigi call doesn't block
+  // navigation or throw away the picked photo).
   const onContinue = async () => {
     if (!selectedSku || selecting) return;
     try {
@@ -107,27 +80,16 @@ export default function ProductScreen() {
       });
       if (picked.canceled) return; // stay on the PDP
       const photo = picked.assets[0];
-
-      const printAreas = await getPrintAreaSizes(selectedSku, 'prodigi');
-      const spec = toPrintSpec(printAreas);
       router.push({
         pathname: '/builder/[sku]',
         params: {
           sku: selectedSku,
           quantity: String(quantity),
-          // Physical size (inches) + recommended DPI for the blurriness check.
-          widthIn: String(spec.widthIn ?? ''),
-          heightIn: String(spec.heightIn ?? ''),
-          recommendedDpiH: String(spec.dpiH ?? ''),
-          recommendedDpiV: String(spec.dpiV ?? ''),
-          // The chosen photo.
           photoUri: photo.uri,
           photoWidth: String(photo.width),
           photoHeight: String(photo.height),
         },
       });
-    } catch {
-      Alert.alert('Something went wrong', 'Could not load print details. Please try again.');
     } finally {
       setSelecting(false);
     }
