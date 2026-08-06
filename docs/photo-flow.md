@@ -11,17 +11,17 @@ repo's `API.md`.
 
 ```
 Browse (tier1) → category (tier2) → product page (PDP)
-      → choose a size + quantity
-      → Select → native photo picker → pick a photo
-      → Customize (builder): preview, quality check, swap photo
+      → choose a size → Select
+      → native photo picker (multi-select) → pick photos
+      → Customize (builder): previews, quality check, swap photos
       → [add to cart / checkout — future]
 ```
 
 1. **Browse.** tier1 landing → tap a category → tier2 sub-catalog → tap a product → **PDP**.
-2. **PDP.** Pick a **size** (a `variant`, each carrying a Prodigi `sku`) and a **quantity**.
-3. **Select.** Opens the **native photo picker** (iOS PHPicker / Android photo picker).
-4. **Pick a photo.** Only then does the **builder** ("Customize") open.
-5. **Builder.** Shows the photo, runs the **print-quality check**, and lets the customer swap the photo. Add-to-cart / checkout is the next slice.
+2. **PDP.** Pick a **size** (a `variant`, each carrying a Prodigi `sku`). There's **no quantity** here — see below.
+3. **Select.** Opens the **native photo picker** (iOS PHPicker / Android photo picker) as **multi-select**.
+4. **Pick photos.** Only then does the **builder** ("Customize") open.
+5. **Builder.** Shows the photos, runs the **print-quality check** on each, and lets the customer swap them. Add-to-cart / checkout is the next slice.
 
 ### Two rules that shape the flow
 
@@ -53,22 +53,26 @@ print size they picked.
 
 ---
 
-## Photo-selection modes (`photoSelection`)
+## How many photos — photos = quantity
 
-A per-product field on the product API that decides **how many photos** the
-picker lets the customer choose. Authored in Storyblok on the product; defaults
-to `perUnit`.
+The picker is **always unlimited multi-select** (`allowsMultipleSelection: true`,
+`selectionLimit: 0`). The customer picks as many photos as they want and confirms
+with the picker's **Add / ✓** — it never auto-dismisses. **The number of photos
+picked is the number of prints**, so there's no quantity control on the PDP
+(quantity lives in the **cart**).
 
-| Mode | Meaning | Picker | Quantity | Example |
-|---|---|---|---|---|
-| `perUnit` *(default)* | one photo per unit | select **`quantity`** photos | stepper = number of prints | acrylic, canvas, framed |
-| `gallery` | unlimited; **one print per photo** | select **any number** | stepper hidden — count = number of prints | Prints |
-| `single` | one photo, printed N times | select **1** | stepper = copies | — |
+Why this model:
+- It's the low-friction, industry-standard photo-commerce flow ("pick your
+  photos, each becomes a print") — no premature "how many?" decision.
+- One consistent picker for every product (one wall-art piece *or* a batch of
+  Prints — same gesture), and a consistent ✓ confirm.
+- iOS can't show a ✓ confirm for a *1-photo* limit (a `selectionLimit` of 1 is
+  single-select / auto-dismiss); unlimited selection sidesteps that entirely.
 
-> **Status:** the API field ships in the product response; the **app-side
-> multi-select is not built yet** — the app currently always single-selects.
-> Setting `photoSelection` in Storyblok is safe now (it just isn't consumed
-> until the app work lands).
+> **Future — "copies of one photo".** Ordering N copies of the *same* photo
+> (e.g. wallet prints) is a different shape: pick **1** photo + a **copies**
+> control in the builder. If/when a product needs it, that'd be a per-product
+> flag; for now every product is "one print per photo".
 
 ---
 
@@ -86,21 +90,20 @@ a print that can't ship. **Not built yet.**
 
 | Concern | Location |
 |---|---|
-| PDP — size/quantity, Select → picker → navigate | `src/app/(home)/product/[id].tsx` |
-| Builder — fetch print spec, quality check, re-pick | `src/app/(home)/builder/[sku].tsx` |
+| PDP — size, Select → picker (multi) → navigate | `src/app/(home)/product/[id].tsx` |
+| Builder — fetch print spec, per-photo quality check, re-pick | `src/app/(home)/builder/[sku].tsx` |
 | API client — `getProduct`, `getPrintAreaSizes` | `src/api/catalog.ts` |
 | Async fetch + loading/error/retry | `src/hooks/use-async.ts` |
 | Product / variant / print-area types | `src/api/types.ts` |
 
-API side (see the api repo): `GET /v1/products/{id}` (PDP content, incl.
-`photoSelection`), `GET /v1/print-area-sizes/{sku}` (resolution + DPI).
+API side (see the api repo): `GET /v1/products/{id}` (PDP content),
+`GET /v1/print-area-sizes/{sku}` (resolution + DPI).
 
 ---
 
 ## Status / TODO
 
 - ✅ PDP → picker → builder; cancel-picker → PDP; builder-fetched quality check with Retry.
-- ✅ `photoSelection` on the product API (`perUnit` / `gallery` / `single`).
-- ⬜ App multi-select consuming `photoSelection` (pick `quantity` / unlimited).
+- ✅ Unlimited multi-select (photos = quantity); no PDP quantity control.
 - ⬜ `shipsTo` = US guard (API).
-- ⬜ Builder UI (crop / fit), add-to-cart, checkout.
+- ⬜ Builder UI (crop / fit), add-to-cart, checkout (quantity in cart).

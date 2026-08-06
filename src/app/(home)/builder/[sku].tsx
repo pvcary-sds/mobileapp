@@ -47,15 +47,13 @@ function parsePhotos(raw: string | undefined): Photo[] {
  * the real builder comes next.
  */
 export default function BuilderScreen() {
-  const { sku, quantity, photos: photosParam } = useLocalSearchParams<{
+  const { sku, photos: photosParam } = useLocalSearchParams<{
     sku: string;
-    quantity: string;
     photos: string;
   }>();
   const theme = useTheme();
 
   const [photos, setPhotos] = useState<Photo[]>(() => parsePhotos(photosParam));
-  const limit = parseInt(quantity, 10) || 1;
 
   const { data: printAreas, error, loading, reload } = useAsync(
     (signal) => getPrintAreaSizes(sku, 'prodigi', signal),
@@ -65,14 +63,14 @@ export default function BuilderScreen() {
   const changePhotos = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsMultipleSelection: limit > 1,
-      selectionLimit: limit,
+      allowsMultipleSelection: true,
+      selectionLimit: 0, // unlimited — photos picked = number of prints
       quality: 1,
     });
     if (!result.canceled && result.assets.length > 0) {
       setPhotos(result.assets.map((a) => ({ uri: a.uri, width: a.width, height: a.height })));
     }
-  }, [limit]);
+  }, []);
 
   const spec = printAreas ? toPrintSpec(printAreas) : null;
 
@@ -126,7 +124,7 @@ export default function BuilderScreen() {
 
       <Pressable onPress={changePhotos} style={[styles.button, { backgroundColor: theme.primary }]}>
         <ThemedText style={[styles.buttonLabel, { color: theme.onPrimary }]}>
-          {limit > 1 ? 'Choose different photos' : 'Choose a different photo'}
+          {photos.length > 1 ? 'Choose different photos' : 'Choose a different photo'}
         </ThemedText>
       </Pressable>
     </ThemedView>
