@@ -1,8 +1,9 @@
 import { Image } from 'expo-image';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
-  Alert,
+  ActivityIndicator,
   Dimensions,
   Pressable,
   ScrollView,
@@ -29,9 +30,11 @@ const HERO_HEIGHT = 268;
 export default function ProductScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
+  const router = useRouter();
   const [selectedSku, setSelectedSku] = useState<string | null>(null);
   const [activeImage, setActiveImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [selecting, setSelecting] = useState(false);
 
   const { data: product, error, loading, reload } = useAsync(
     (signal) => getProduct(id, signal),
@@ -62,10 +65,34 @@ export default function ProductScreen() {
     return (parseFloat(variant.price) * quantity).toFixed(2);
   }, [product, selectedSku, quantity]);
 
-  const onContinue = () => {
-    if (!selectedSku) return;
-    // Next slice: /v1/print-area-sizes/{sku} → photo pick → upload → checkout.
-    Alert.alert('Coming next', `SKU: ${selectedSku}\nQty: ${quantity}`);
+  // On Select: open the native photo picker. Dismissing it leaves the user here
+  // on the PDP — the builder only opens once a photo is chosen. The builder
+  // itself fetches the print spec (so a slow/failed Prodigi call doesn't block
+  // navigation or throw away the picked photo).
+  const onContinue = async () => {
+    if (!selectedSku || selecting) return;
+    try {
+      setSelecting(true);
+      const picked = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: false,
+        quality: 1,
+      });
+      if (picked.canceled) return; // stay on the PDP
+      const photo = picked.assets[0];
+      router.push({
+        pathname: '/builder/[sku]',
+        params: {
+          sku: selectedSku,
+          quantity: String(quantity),
+          photoUri: photo.uri,
+          photoWidth: String(photo.width),
+          photoHeight: String(photo.height),
+        },
+      });
+    } finally {
+      setSelecting(false);
+    }
   };
 
   return (
@@ -153,18 +180,22 @@ export default function ProductScreen() {
                 </View>
                 <Pressable
                   onPress={onContinue}
-                  disabled={!selectedSku}
+                  disabled={!selectedSku || selecting}
                   style={[
                     styles.selectButton,
                     { backgroundColor: selectedSku ? theme.primary : theme.backgroundSelected },
                   ]}>
-                  <Text
-                    style={[
-                      styles.selectLabel,
-                      { color: selectedSku ? theme.onPrimary : theme.textMuted },
-                    ]}>
-                    Select
-                  </Text>
+                  {selecting ? (
+                    <ActivityIndicator color={theme.onPrimary} />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.selectLabel,
+                        { color: selectedSku ? theme.onPrimary : theme.textMuted },
+                      ]}>
+                      Select
+                    </Text>
+                  )}
                 </Pressable>
               </View>
 
