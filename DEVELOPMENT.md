@@ -189,4 +189,5 @@ Device Management** if prompted), then run the same `expo start --dev-client
 ## See also
 
 - [`README.md`](./README.md) — project overview & layout
+- [`docs/photo-flow.md`](./docs/photo-flow.md) — the size → photo → builder flow (picker, quality check, `photoSelection`)
 - SDS API `API.md` (api repo) — the full API contract this app consumes
