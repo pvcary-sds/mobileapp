@@ -1,3 +1,4 @@
+import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
@@ -7,7 +8,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
 
 import { PhotoCanvasBackground } from '@/components/photo-canvas-background';
-import { SegmentedControl } from '@/components/segmented-control';
 import {
   CHEVRON_DOWN,
   CHEVRON_LEFT,
@@ -335,9 +335,10 @@ export default function BuilderScreen() {
               the top; close X at 16 leading / 12 top. */}
           <View style={styles.filterHeader}>
             <SegmentedControl
-              segments={['Effects', 'Adjust']}
-              value={filterTab}
-              onChange={setFilterTab}
+              values={['Effects', 'Adjust']}
+              selectedIndex={filterTab}
+              onChange={(e) => setFilterTab(e.nativeEvent.selectedSegmentIndex)}
+              style={styles.filterTabs}
             />
             <Pressable
               onPress={() => setFilterOpen(false)}
@@ -552,6 +553,9 @@ const styles = StyleSheet.create({
     height: 48,
     paddingTop: 8, // segmented control 8 from the top
     alignItems: 'center', // center the segmented control horizontally
+  },
+  filterTabs: {
+    width: 220, // centered; native control fills the width it's given
   },
   filterClose: {
     position: 'absolute',
