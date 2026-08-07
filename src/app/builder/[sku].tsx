@@ -22,8 +22,20 @@ import {
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** A photo picked on the PDP and passed to the builder. */
-type PickedPhoto = { uri: string; width?: number; height?: number };
+/** A raw photo as picked (from the PDP or the in-builder picker). */
+type RawPhoto = { uri: string; width?: number; height?: number };
+
+/** A photo on the canvas, carrying its own edit state so rotation / fit-fill are
+ *  per-photo (not shared across the whole list). */
+type PickedPhoto = RawPhoto & {
+  rotated: boolean; // 90° off the photo's natural (EXIF-correct) orientation
+  fillMode: 'fit' | 'fill'; // contain vs cover
+};
+
+/** Seed a freshly-picked photo with its default (unrotated, fit) edit state. */
+function toPhoto(a: RawPhoto): PickedPhoto {
+  return { uri: a.uri, width: a.width, height: a.height, rotated: false, fillMode: 'fit' };
+}
 
 /** Format a USD amount, e.g. 1350 → "$1,350.00". */
 function formatUSD(amount: number): string {
@@ -66,12 +78,13 @@ export default function BuilderScreen() {
     photos?: string;
   }>();
 
-  // Seed the picked photos from the route param into local state so the delete
-  // control can remove them. The count is the number of prints (drives the
-  // "Add N to Cart" label); each photo's dimensions set the default rotation.
+  // Seed the picked photos from the route param into local state (with default
+  // per-photo edit state) so they can be edited/removed. The count is the number
+  // of prints (drives the "Add N to Cart" label).
   const [photos, setPhotos] = useState<PickedPhoto[]>(() => {
     try {
-      return photosParam ? (JSON.parse(photosParam) as PickedPhoto[]) : [];
+      const raw = photosParam ? (JSON.parse(photosParam) as RawPhoto[]) : [];
+      return raw.map(toPhoto);
     } catch {
       return [];
     }
@@ -82,19 +95,24 @@ export default function BuilderScreen() {
   // TODO: recompute the unit price when the in-builder size picker is wired.
   const totalLabel = formatUSD((Number(price) || 0) * photoCount);
 
-  // Canvas-control state.
-  const [fillMode, setFillMode] = useState<'fit' | 'fill'>('fit'); // contain vs cover
-  const [rotated, setRotated] = useState(false); // 90° off the photo's natural orientation
   const [sizeOpen, setSizeOpen] = useState(false); // size picker open (chevron flips)
   const [activeThumb, setActiveThumb] = useState(0); // selected photo — first is selected on load
   const [dockHeight, setDockHeight] = useState(0); // measured; photo area sits 32 above the strip
 
-  // The photo on the canvas — the selected thumbnail (first by default).
+  // The photo on the canvas — the selected thumbnail (first by default). Its
+  // fit/fill and rotation are its OWN, so switching photos never carries another
+  // photo's edits over (a fresh photo shows in its natural orientation).
   const shown = photos[activeThumb];
+  const fillMode = shown?.fillMode ?? 'fit';
+  const rotated = shown?.rotated ?? false;
   const shownNaturalLandscape = !!(shown?.width && shown?.height && shown.width > shown.height);
   // The rotate icon reflects the orientation the photo is currently displayed in
   // (portrait → offer rotate-to-landscape, and vice versa).
   const displayedLandscape = shownNaturalLandscape !== rotated;
+
+  // Patch the active photo's edit state (rotation / fit-fill).
+  const patchActive = (patch: Partial<PickedPhoto>) =>
+    setPhotos((prev) => prev.map((p, i) => (i === activeThumb ? { ...p, ...patch } : p)));
 
   // Delete: confirm, then remove the active photo. Removing the last one leaves
   // nothing to build, so go back; otherwise keep focus on the slot (the next
@@ -125,7 +143,7 @@ export default function BuilderScreen() {
       quality: 1,
     });
     if (picked.canceled || picked.assets.length === 0) return;
-    const added = picked.assets.map((a) => ({ uri: a.uri, width: a.width, height: a.height }));
+    const added = picked.assets.map(toPhoto);
     setPhotos((prev) => [...prev, ...added]);
   };
 
@@ -169,7 +187,7 @@ export default function BuilderScreen() {
         ]}>
         <Pressable
           style={styles.toolButton}
-          onPress={() => setFillMode((m) => (m === 'fit' ? 'fill' : 'fit'))}>
+          onPress={() => patchActive({ fillMode: fillMode === 'fit' ? 'fill' : 'fit' })}>
           <SvgXml
             xml={fillMode === 'fill' ? FILL_ICON : FIT_ICON}
             width={24}
@@ -179,7 +197,7 @@ export default function BuilderScreen() {
         </Pressable>
         <Pressable
           style={[styles.toolButton, styles.toolDivider, { borderLeftColor: theme.borderStrong }]}
-          onPress={() => setRotated((r) => !r)}>
+          onPress={() => patchActive({ rotated: !rotated })}>
           <SvgXml
             xml={displayedLandscape ? ROTATE_PORTRAIT_ICON : ROTATE_LANDSCAPE_ICON}
             width={24}
@@ -200,7 +218,7 @@ export default function BuilderScreen() {
         onPress={() => setSizeOpen((o) => !o)}
         style={[
           styles.sizeSelector,
-          { borderColor: theme.text, backgroundColor: theme.background },
+          { borderColor: theme.borderStrong, backgroundColor: theme.background },
         ]}>
         <Text style={[styles.sizeSelectorText, { color: theme.text }]}>{size}</Text>
         <SvgXml
