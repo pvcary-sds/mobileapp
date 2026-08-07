@@ -46,6 +46,11 @@ export const Brand = {
   black: '#000000',
 } as const;
 
+/** Light Blue scale. */
+export const LightBlue = {
+  100: '#EAF8FD',
+} as const;
+
 /** Dark Blue scale (brand navy). */
 export const DarkBlue = {
   light: '#F0F0F4',

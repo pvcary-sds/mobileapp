@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { StyleSheet } from 'react-native';
 import { Circle, Defs, Pattern, Rect, Svg } from 'react-native-svg';
 
@@ -11,9 +12,10 @@ const DOT_RADIUS = 1.7;
 
 /**
  * Full-bleed canvas background for the photo builder. Fills its parent (top to
- * bottom, edge to edge).
+ * bottom, edge to edge). Memoized — it has no props, so it renders once and
+ * doesn't re-render (or flash) when the builder re-renders on every photo switch.
  */
-export function PhotoCanvasBackground() {
+export const PhotoCanvasBackground = memo(function PhotoCanvasBackground() {
   const theme = useTheme();
   return (
     <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
@@ -26,4 +28,4 @@ export function PhotoCanvasBackground() {
       <Rect width="100%" height="100%" fill="url(#dot-grid)" />
     </Svg>
   );
-}
+});
