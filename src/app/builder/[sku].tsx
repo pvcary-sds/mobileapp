@@ -7,6 +7,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
 
+import { AdjustSlider } from '@/components/adjust-slider';
 import { PhotoCanvasBackground } from '@/components/photo-canvas-background';
 import {
   BRIGHTNESS_ICON,
@@ -140,7 +141,14 @@ export default function BuilderScreen() {
   const [dockHeight, setDockHeight] = useState(0); // measured; photo area sits 32 above the strip
   const [filterOpen, setFilterOpen] = useState(false); // filter bottom sheet
   const [filterTab, setFilterTab] = useState(0); // 0 = Effects, 1 = Adjust
-  const [filterSnapshot, setFilterSnapshot] = useState('none'); // filter when the sheet opened
+  // Edit state captured when the sheet opens, so the confirm check enables only
+  // once Effects or Adjust actually changes.
+  const [sheetSnapshot, setSheetSnapshot] = useState({
+    filter: 'none',
+    brightness: 0,
+    contrast: 0,
+    saturation: 0,
+  });
   const [adjustSelected, setAdjustSelected] = useState(0); // which Adjust tile drives the slider
 
   // The photo on the canvas — the selected thumbnail (first by default). Its
@@ -161,13 +169,23 @@ export default function BuilderScreen() {
   // Open the filter sheet, snapshotting the current filter so the confirm check
   // can enable only once something actually changes.
   const openFilters = () => {
-    setFilterSnapshot(shown?.filter ?? 'none');
+    setSheetSnapshot({
+      filter: shown?.filter ?? 'none',
+      brightness: shown?.brightness ?? 0,
+      contrast: shown?.contrast ?? 0,
+      saturation: shown?.saturation ?? 0,
+    });
     setFilterTab(0);
     setAdjustSelected(0);
     setFilterOpen(true);
   };
-  // TODO: also compare Adjust values once that tab exists.
-  const filterChanged = (shown?.filter ?? 'none') !== filterSnapshot;
+  // Enables the confirm check: any Effects (filter) or Adjust value changed.
+  const filterChanged =
+    !!shown &&
+    (shown.filter !== sheetSnapshot.filter ||
+      shown.brightness !== sheetSnapshot.brightness ||
+      shown.contrast !== sheetSnapshot.contrast ||
+      shown.saturation !== sheetSnapshot.saturation);
 
   // Delete: confirm, then remove the active photo. Removing the last one leaves
   // nothing to build, so go back; otherwise keep focus on the slot (the next
@@ -358,7 +376,7 @@ export default function BuilderScreen() {
             {
               backgroundColor: theme.background,
               borderTopColor: theme.border,
-              paddingBottom: 46 + insets.bottom,
+              paddingBottom: insets.bottom, // each tab adds its own bottom gap below
             },
           ]}>
           {/* Header (48 tall) — Effects/Adjust segmented control centered 8 from
@@ -441,24 +459,37 @@ export default function BuilderScreen() {
               })}
             </ScrollView>
           ) : (
-            /* Adjust: Brightness / Contrast / Saturation tiles — same top offset as
-               the filters; the selected one drives the slider (coming next). */
-            <View style={styles.adjustTiles}>
-              {ADJUSTMENTS.map((a, i) => {
-                const selected = adjustSelected === i;
-                return (
-                  <Pressable
-                    key={a.id}
-                    onPress={() => setAdjustSelected(i)}
-                    style={[styles.adjustTile, { borderColor: selected ? theme.text : theme.border }]}>
-                    <SvgXml xml={a.icon} width={32} height={32} color={theme.text} />
-                    <Text style={[styles.adjustTitle, { color: theme.text }]} numberOfLines={1}>
-                      {a.name}: {shown?.[a.id] ?? 0}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <>
+              {/* Adjust: Brightness / Contrast / Saturation tiles — same top offset
+                  as the filters; the selected one drives the slider below. */}
+              <View style={styles.adjustTiles}>
+                {ADJUSTMENTS.map((a, i) => {
+                  const selected = adjustSelected === i;
+                  return (
+                    <Pressable
+                      key={a.id}
+                      onPress={() => setAdjustSelected(i)}
+                      style={[
+                        styles.adjustTile,
+                        { borderColor: selected ? theme.text : theme.border },
+                      ]}>
+                      <SvgXml xml={a.icon} width={32} height={32} color={theme.text} />
+                      <Text style={[styles.adjustTitle, { color: theme.text }]} numberOfLines={1}>
+                        {a.name}: {shown?.[a.id] ?? 0}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <View style={styles.adjustSlider}>
+                <AdjustSlider
+                  value={shown?.[ADJUSTMENTS[adjustSelected].id] ?? 0}
+                  onChange={(v) =>
+                    patchActive({ [ADJUSTMENTS[adjustSelected].id]: v } as Partial<PickedPhoto>)
+                  }
+                />
+              </View>
+            </>
           )}
         </View>
       )}
@@ -659,8 +690,14 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: 'center',
   },
+  adjustSlider: {
+    marginTop: 24, // 24 below the tiles
+    marginBottom: 24, // 24 above the sheet bottom
+    marginHorizontal: 16, // 16 leading/trailing
+  },
   filterScroll: {
     marginTop: 24, // 24 below the header → tiles 72 from the sheet's top
+    marginBottom: 46, // 46 above the sheet bottom (was the sheet's own padding)
   },
   filterTiles: {
     paddingLeft: 16, // 16 leading
