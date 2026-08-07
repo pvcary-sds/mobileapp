@@ -9,7 +9,7 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
-import { Base, Brand, Gray, Label, Primary, withAlpha } from '@/constants/palette';
+import { Base, Brand, Gray, Label, LightBlue, Primary, withAlpha } from '@/constants/palette';
 
 export const Colors = {
   // Text
@@ -24,6 +24,7 @@ export const Colors = {
   backgroundSelected: Gray[200], // pressed / subtle selected surface
   border: Gray[200], // card borders, dividers
   borderStrong: Gray[300], // a step darker — segmented controls, emphasized dividers
+  lightBlueSurface: LightBlue[100], // LightBlue/100 — soft blue tile (size "Show more")
 
   // Brand / action
   primary: Brand.red, // #E62600 — brand action color = Primary/500 (CTAs, nav tint)

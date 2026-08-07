@@ -28,7 +28,7 @@ const HERO_HEIGHT = 268;
 
 // Show at most this many size chips before collapsing the rest behind a
 // "Show N more" toggle tile.
-const COLLAPSED_SIZE_COUNT = 7;
+const COLLAPSED_SIZE_COUNT = 6;
 
 /** `GET /v1/products/{id}` — the product page. */
 export default function ProductScreen() {
@@ -181,10 +181,12 @@ export default function ProductScreen() {
                       onPress={() => setSizesExpanded((e) => !e)}
                       style={[
                         styles.sizeToggle,
-                        { borderColor: theme.border, backgroundColor: theme.background },
+                        { borderColor: theme.border, backgroundColor: theme.lightBlueSurface },
                       ]}>
-                      <Text style={[styles.sizeToggleText, { color: theme.primary }]}>
-                        Show {product.variants.length - COLLAPSED_SIZE_COUNT}{' '}
+                      {/* Two lines: "Show" / "N more" (or "N less"). */}
+                      <Text style={[styles.sizeToggleText, { color: theme.text }]}>Show</Text>
+                      <Text style={[styles.sizeToggleText, { color: theme.text }]}>
+                        {product.variants.length - COLLAPSED_SIZE_COUNT}{' '}
                         {sizesExpanded ? 'less' : 'more'}
                       </Text>
                     </Pressable>
@@ -450,17 +452,16 @@ const styles = StyleSheet.create({
   sizeToggle: {
     minWidth: 76,
     minHeight: 66, // match the two-line SizeChip height (12 + 18 + 24 + 12)
-    paddingHorizontal: Spacing.three,
+    paddingHorizontal: 20, // 20 leading/trailing of the text
     borderRadius: Spacing.two,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'flex-start', // left-align the two lines (like the chips)
+    justifyContent: 'center', // vertically center within the tile
   },
   sizeToggleText: {
-    fontFamily: FontFamily.bodyMedium, // Body / Medium
+    fontFamily: FontFamily.bodySemiBold, // Body / SemiBold
     fontSize: 16,
-    lineHeight: 24,
-    textAlign: 'center',
+    lineHeight: 20,
   },
   priceText: {
     fontFamily: FontFamily.body, // Body / Regular
