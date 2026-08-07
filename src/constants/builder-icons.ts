@@ -33,3 +33,6 @@ export const PLUS_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fill="
 
 // Close (X) — dismisses the filter sheet.
 export const CLOSE_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+// Check — confirms filter-sheet changes (a filled glyph, tinted via currentColor).
+export const CHECK_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M19.4472 5.49307C19.7271 5.18782 20.2015 5.16731 20.5068 5.44718C20.812 5.72708 20.8325 6.20144 20.5527 6.50675L9.55268 18.5067C9.41452 18.6574 9.22091 18.7454 9.01654 18.7499C8.81203 18.7544 8.61432 18.6748 8.46967 18.5302L3.46967 13.5302C3.17678 13.2373 3.17678 12.7625 3.46967 12.4696C3.76256 12.1767 4.23732 12.1767 4.53022 12.4696L8.97553 16.9149L19.4472 5.49307Z" fill="currentColor"/></svg>`;

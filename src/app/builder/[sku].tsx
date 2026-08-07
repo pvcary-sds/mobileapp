@@ -9,6 +9,7 @@ import { SvgXml } from 'react-native-svg';
 
 import { PhotoCanvasBackground } from '@/components/photo-canvas-background';
 import {
+  CHECK_ICON,
   CHEVRON_DOWN,
   CHEVRON_LEFT,
   CHEVRON_UP,
@@ -123,6 +124,7 @@ export default function BuilderScreen() {
   const [dockHeight, setDockHeight] = useState(0); // measured; photo area sits 32 above the strip
   const [filterOpen, setFilterOpen] = useState(false); // filter bottom sheet
   const [filterTab, setFilterTab] = useState(0); // 0 = Effects, 1 = Adjust
+  const [filterSnapshot, setFilterSnapshot] = useState('none'); // filter when the sheet opened
 
   // The photo on the canvas — the selected thumbnail (first by default). Its
   // fit/fill and rotation are its OWN, so switching photos never carries another
@@ -135,9 +137,19 @@ export default function BuilderScreen() {
   // (portrait → offer rotate-to-landscape, and vice versa).
   const displayedLandscape = shownNaturalLandscape !== rotated;
 
-  // Patch the active photo's edit state (rotation / fit-fill).
+  // Patch the active photo's edit state (rotation / fit-fill / filter).
   const patchActive = (patch: Partial<PickedPhoto>) =>
     setPhotos((prev) => prev.map((p, i) => (i === activeThumb ? { ...p, ...patch } : p)));
+
+  // Open the filter sheet, snapshotting the current filter so the confirm check
+  // can enable only once something actually changes.
+  const openFilters = () => {
+    setFilterSnapshot(shown?.filter ?? 'none');
+    setFilterTab(0);
+    setFilterOpen(true);
+  };
+  // TODO: also compare Adjust values once that tab exists.
+  const filterChanged = (shown?.filter ?? 'none') !== filterSnapshot;
 
   // Delete: confirm, then remove the active photo. Removing the last one leaves
   // nothing to build, so go back; otherwise keep focus on the slot (the next
@@ -234,7 +246,7 @@ export default function BuilderScreen() {
         </Pressable>
         {/* Filter — opens the filter sheet. */}
         <Pressable
-          onPress={() => setFilterOpen(true)}
+          onPress={openFilters}
           style={[styles.toolButton, styles.toolDivider, { borderLeftColor: theme.borderStrong }]}>
           <SvgXml xml={FILTER_ICON} width={24} height={24} color={theme.text} />
         </Pressable>
@@ -345,6 +357,20 @@ export default function BuilderScreen() {
               hitSlop={8}
               style={styles.filterClose}>
               <SvgXml xml={CLOSE_ICON} width={24} height={24} color={theme.text} />
+            </Pressable>
+            {/* Confirm — disabled (Gray/300) until a value changes, then Gray/black. */}
+            {/* TODO: on confirm, commit the change (currently applied live) + close. */}
+            <Pressable
+              onPress={() => setFilterOpen(false)}
+              disabled={!filterChanged}
+              hitSlop={8}
+              style={styles.filterCheck}>
+              <SvgXml
+                xml={CHECK_ICON}
+                width={24}
+                height={24}
+                color={filterChanged ? theme.text : theme.iconDisabled}
+              />
             </Pressable>
           </View>
           {filterTab === 0 ? (
@@ -561,6 +587,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 12, // X 12 from the top
     left: 16, // X 16 from the leading
+  },
+  filterCheck: {
+    position: 'absolute',
+    top: 12, // check 12 from the top
+    right: 16, // check 16 from the trailing
   },
   filterEmpty: {
     marginTop: 24, // matches the tiles' marginTop

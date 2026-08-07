@@ -40,6 +40,9 @@ export const Colors = {
   // Selected indicator — Primary/600 stroke + Primary/700 label.
   selectedBorder: Primary[600],
   selectedText: Primary[700],
+  iconDisabled: Gray[300], // Gray/300 — a disabled icon/control
+
+
 
   // Status (Label pairs)
   successFg: Label.darkGreen,
