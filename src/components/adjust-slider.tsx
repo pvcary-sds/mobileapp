@@ -26,6 +26,7 @@ export function AdjustSlider({
   const [width, setWidth] = useState(0);
   // Refs so the PanResponder (created once) always reads the latest values.
   const widthRef = useRef(0);
+  const trackLeftRef = useRef(0); // container's absolute left, measured on grant
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
@@ -40,8 +41,15 @@ export function AdjustSlider({
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (e) => setFromX(e.nativeEvent.locationX),
-      onPanResponderMove: (e) => setFromX(e.nativeEvent.locationX),
+      onPanResponderGrant: (e) => {
+        // The children are non-interactive, so the container is the touch target
+        // and locationX is container-relative — derive its absolute left once.
+        trackLeftRef.current = e.nativeEvent.pageX - e.nativeEvent.locationX;
+        setFromX(e.nativeEvent.locationX);
+      },
+      // Use the absolute touch X (reliable) minus the container's left, rather
+      // than move-event locationX (which re-bases per sub-view → jumps).
+      onPanResponderMove: (_e, g) => setFromX(g.moveX - trackLeftRef.current),
     }),
   ).current;
 
@@ -60,16 +68,21 @@ export function AdjustSlider({
   return (
     <View style={styles.container} onLayout={onLayout} {...pan.panHandlers}>
       {/* Track (Gray/200) */}
-      <View style={[styles.track, { backgroundColor: theme.border }]} />
+      <View pointerEvents="none" style={[styles.track, { backgroundColor: theme.border }]} />
       {/* Fill from center to the thumb (Primary/500) */}
-      <View style={[styles.fill, { backgroundColor: theme.primary, left: fillLeft, width: fillWidth }]} />
-      {/* Thumb */}
       <View
+        pointerEvents="none"
+        style={[styles.fill, { backgroundColor: theme.primary, left: fillLeft, width: fillWidth }]}
+      />
+      {/* Thumb — white; once off-center (non-zero) it gets a Primary/500 core. */}
+      <View
+        pointerEvents="none"
         style={[
           styles.thumb,
           { left: thumbX - THUMB / 2, backgroundColor: theme.background, borderColor: theme.border },
-        ]}
-      />
+        ]}>
+        {value !== 0 && <View style={[styles.thumbCore, { backgroundColor: theme.primary }]} />}
+      </View>
     </View>
   );
 }
@@ -96,11 +109,18 @@ const styles = StyleSheet.create({
     height: THUMB,
     borderRadius: THUMB / 2,
     borderWidth: 1,
+    alignItems: 'center', // center the inner core
+    justifyContent: 'center',
     // subtle lift
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
     shadowRadius: 2,
     elevation: 2,
+  },
+  thumbCore: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
 });
