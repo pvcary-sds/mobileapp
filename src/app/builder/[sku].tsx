@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
 
 import { PhotoCanvasBackground } from '@/components/photo-canvas-background';
+import { SegmentedControl } from '@/components/segmented-control';
 import {
   CHEVRON_DOWN,
   CHEVRON_LEFT,
@@ -121,6 +122,7 @@ export default function BuilderScreen() {
   const [activeThumb, setActiveThumb] = useState(0); // selected photo — first is selected on load
   const [dockHeight, setDockHeight] = useState(0); // measured; photo area sits 32 above the strip
   const [filterOpen, setFilterOpen] = useState(false); // filter bottom sheet
+  const [filterTab, setFilterTab] = useState(0); // 0 = Effects, 1 = Adjust
 
   // The photo on the canvas — the selected thumbnail (first by default). Its
   // fit/fill and rotation are its OWN, so switching photos never carries another
@@ -329,48 +331,62 @@ export default function BuilderScreen() {
               paddingBottom: 46 + insets.bottom,
             },
           ]}>
-          {/* Header (48 tall) — close X at 16 leading / 12 top. */}
+          {/* Header (48 tall) — Effects/Adjust segmented control centered 8 from
+              the top; close X at 16 leading / 12 top. */}
           <View style={styles.filterHeader}>
-            <Pressable onPress={() => setFilterOpen(false)} hitSlop={8}>
+            <SegmentedControl
+              segments={['Effects', 'Adjust']}
+              value={filterTab}
+              onChange={setFilterTab}
+            />
+            <Pressable
+              onPress={() => setFilterOpen(false)}
+              hitSlop={8}
+              style={styles.filterClose}>
               <SvgXml xml={CLOSE_ICON} width={24} height={24} color={theme.text} />
             </Pressable>
           </View>
-          {/* Filter tiles — 24 below the header, 16 leading, horizontally scrollable.
-              Each previews the active photo; the selected one gets a Primary/600
-              stroke + Primary/700 title. */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.filterScroll}
-            contentContainerStyle={styles.filterTiles}>
-            {FILTERS.map((f) => {
-              const selected = (shown?.filter ?? 'none') === f.id;
-              return (
-                <Pressable
-                  key={f.id}
-                  onPress={() => patchActive({ filter: f.id })}
-                  style={styles.filterTile}>
-                  <Image
-                    source={{ uri: shown?.uri }}
-                    style={[
-                      styles.filterThumb,
-                      { backgroundColor: theme.backgroundElement },
-                      selected && { borderWidth: 2, borderColor: theme.selectedBorder },
-                    ]}
-                    contentFit="cover"
-                  />
-                  <Text
-                    style={[
-                      styles.filterTitle,
-                      { color: selected ? theme.selectedText : theme.textTertiary },
-                    ]}
-                    numberOfLines={1}>
-                    {f.name}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+          {filterTab === 0 ? (
+            /* Effects: filter tiles — 24 below the header, 16 leading, scrollable.
+               Each previews the active photo; the selected one gets a Primary/600
+               stroke + Primary/700 title. */
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.filterScroll}
+              contentContainerStyle={styles.filterTiles}>
+              {FILTERS.map((f) => {
+                const selected = (shown?.filter ?? 'none') === f.id;
+                return (
+                  <Pressable
+                    key={f.id}
+                    onPress={() => patchActive({ filter: f.id })}
+                    style={styles.filterTile}>
+                    <Image
+                      source={{ uri: shown?.uri }}
+                      style={[
+                        styles.filterThumb,
+                        { backgroundColor: theme.backgroundElement },
+                        selected && { borderWidth: 2, borderColor: theme.selectedBorder },
+                      ]}
+                      contentFit="cover"
+                    />
+                    <Text
+                      style={[
+                        styles.filterTitle,
+                        { color: selected ? theme.selectedText : theme.textTertiary },
+                      ]}
+                      numberOfLines={1}>
+                      {f.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          ) : (
+            /* Adjust: blank for now (keeps the sheet height stable). */
+            <View style={styles.filterEmpty} />
+          )}
         </View>
       )}
     </View>
@@ -534,8 +550,17 @@ const styles = StyleSheet.create({
   },
   filterHeader: {
     height: 48,
-    paddingTop: 12, // X 12 from the top
-    paddingLeft: 16, // X 16 from the leading
+    paddingTop: 8, // segmented control 8 from the top
+    alignItems: 'center', // center the segmented control horizontally
+  },
+  filterClose: {
+    position: 'absolute',
+    top: 12, // X 12 from the top
+    left: 16, // X 16 from the leading
+  },
+  filterEmpty: {
+    marginTop: 24, // matches the tiles' marginTop
+    height: 102, // matches a tile's height so the sheet doesn't jump
   },
   filterScroll: {
     marginTop: 24, // 24 below the header → tiles 72 from the sheet's top
