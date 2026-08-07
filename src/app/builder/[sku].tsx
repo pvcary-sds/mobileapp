@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
 
@@ -58,22 +58,23 @@ export default function BuilderScreen() {
   const insets = useSafeAreaInsets();
   // Passed from the PDP so we can use them without refetching: the chosen size
   // ("11x14 in"), its unit price ("60.00"), and the picked photos.
-  const { size, price, photos } = useLocalSearchParams<{
+  const { size, price, photos: photosParam } = useLocalSearchParams<{
     size?: string;
     price?: string;
     photos?: string;
   }>();
 
-  // The picked photos, parsed once. The count is the number of prints (drives
-  // the "Add N to Cart" label); each photo's dimensions set the default rotation.
-  const pickedPhotos = useMemo<PickedPhoto[]>(() => {
+  // Seed the picked photos from the route param into local state so the delete
+  // control can remove them. The count is the number of prints (drives the
+  // "Add N to Cart" label); each photo's dimensions set the default rotation.
+  const [photos, setPhotos] = useState<PickedPhoto[]>(() => {
     try {
-      return photos ? (JSON.parse(photos) as PickedPhoto[]) : [];
+      return photosParam ? (JSON.parse(photosParam) as PickedPhoto[]) : [];
     } catch {
       return [];
     }
-  }, [photos]);
-  const photoCount = Math.max(1, pickedPhotos.length);
+  });
+  const photoCount = Math.max(1, photos.length);
 
   // Total = the selected size's unit price × number of photos.
   // TODO: recompute the unit price when the in-builder size picker is wired.
@@ -87,11 +88,31 @@ export default function BuilderScreen() {
   const [dockHeight, setDockHeight] = useState(0); // measured; photo area sits 32 above the strip
 
   // The photo on the canvas — the selected thumbnail (first by default).
-  const shown = pickedPhotos[activeThumb];
+  const shown = photos[activeThumb];
   const shownNaturalLandscape = !!(shown?.width && shown?.height && shown.width > shown.height);
   // The rotate icon reflects the orientation the photo is currently displayed in
   // (portrait → offer rotate-to-landscape, and vice versa).
   const displayedLandscape = shownNaturalLandscape !== rotated;
+
+  // Delete: confirm, then remove the active photo. Removing the last one leaves
+  // nothing to build, so go back; otherwise keep focus on the slot (the next
+  // photo shifts into it), clamping when the last photo was the one removed.
+  const confirmRemove = () => {
+    if (photos.length <= 1) {
+      router.back();
+      return;
+    }
+    const removeAt = activeThumb;
+    setPhotos((prev) => prev.filter((_, i) => i !== removeAt));
+    setActiveThumb((i) => Math.min(i, photos.length - 2));
+  };
+
+  const onDeletePress = () => {
+    Alert.alert('Remove this photo?', 'It’ll be taken out of your order — you can add it back anytime.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: confirmRemove },
+    ]);
+  };
 
   return (
     <View style={styles.container}>
@@ -115,8 +136,9 @@ export default function BuilderScreen() {
         </View>
       )}
 
-      {/* TODO: wire delete (remove the current photo from the canvas). */}
+      {/* Delete the active photo (confirms first). */}
       <Pressable
+        onPress={onDeletePress}
         style={[
           styles.deleteButton,
           { borderColor: theme.deleteBorder, backgroundColor: theme.background },
@@ -185,7 +207,7 @@ export default function BuilderScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.thumbContent}>
-            {pickedPhotos.map((photo, i) => (
+            {photos.map((photo, i) => (
               <Pressable
                 key={`${photo.uri}-${i}`}
                 onPress={() => setActiveThumb(i)}
