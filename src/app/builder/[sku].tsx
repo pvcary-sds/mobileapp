@@ -2,7 +2,7 @@ import SegmentedControl from '@react-native-segmented-control/segmented-control'
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
@@ -382,31 +382,43 @@ export default function BuilderScreen() {
               showsHorizontalScrollIndicator={false}
               style={styles.filterScroll}
               contentContainerStyle={styles.filterTiles}>
-              {FILTERS.map((f) => {
+              {FILTERS.map((f, i) => {
                 const selected = (shown?.filter ?? 'none') === f.id;
                 return (
-                  <Pressable
-                    key={f.id}
-                    onPress={() => patchActive({ filter: f.id })}
-                    style={styles.filterTile}>
-                    <Image
-                      source={{ uri: shown?.uri }}
-                      style={[
-                        styles.filterThumb,
-                        { backgroundColor: theme.backgroundElement },
-                        selected && { borderWidth: 2, borderColor: theme.selectedBorder },
-                      ]}
-                      contentFit="cover"
-                    />
-                    <Text
-                      style={[
-                        styles.filterTitle,
-                        { color: selected ? theme.selectedText : theme.textTertiary },
-                      ]}
-                      numberOfLines={1}>
-                      {f.name}
-                    </Text>
-                  </Pressable>
+                  <Fragment key={f.id}>
+                    <Pressable
+                      onPress={() => patchActive({ filter: f.id })}
+                      style={styles.filterTile}>
+                      <Image
+                        source={{ uri: shown?.uri }}
+                        style={[
+                          styles.filterThumb,
+                          { backgroundColor: theme.backgroundElement },
+                          selected && { borderWidth: 2, borderColor: theme.selectedBorder },
+                        ]}
+                        contentFit="cover"
+                      />
+                      <Text
+                        style={[
+                          styles.filterTitle,
+                          { color: selected ? theme.selectedText : theme.textTertiary },
+                        ]}
+                        numberOfLines={1}>
+                        {f.name}
+                      </Text>
+                    </Pressable>
+                    {/* Divider after "None" (the reset), centered with the tiles. */}
+                    {i === 0 && (
+                      <View style={styles.filterSeparator}>
+                        <View
+                          style={[
+                            styles.filterSeparatorLine,
+                            { backgroundColor: theme.borderStrong },
+                          ]}
+                        />
+                      </View>
+                    )}
+                  </Fragment>
                 );
               })}
             </ScrollView>
@@ -608,6 +620,14 @@ const styles = StyleSheet.create({
   filterTile: {
     width: 80, // image width; title centers below
     alignItems: 'center',
+  },
+  filterSeparator: {
+    height: 80, // matches the tile image so the line centers with the tiles
+    justifyContent: 'center',
+  },
+  filterSeparatorLine: {
+    width: 2,
+    height: 32, // Gray/300, applied inline
   },
   filterThumb: {
     width: 80,
