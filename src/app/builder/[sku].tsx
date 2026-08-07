@@ -9,11 +9,13 @@ import { SvgXml } from 'react-native-svg';
 
 import { PhotoCanvasBackground } from '@/components/photo-canvas-background';
 import {
+  BRIGHTNESS_ICON,
   CHECK_ICON,
   CHEVRON_DOWN,
   CHEVRON_LEFT,
   CHEVRON_UP,
   CLOSE_ICON,
+  CONTRAST_ICON,
   DELETE_ICON,
   FILL_ICON,
   FILTER_ICON,
@@ -21,6 +23,7 @@ import {
   PLUS_ICON,
   ROTATE_LANDSCAPE_ICON,
   ROTATE_PORTRAIT_ICON,
+  SATURATION_ICON,
 } from '@/constants/builder-icons';
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -56,9 +59,9 @@ function toPhoto(a: RawPhoto): PickedPhoto {
 
 // Adjust tab controls — each maps to a per-photo value above.
 const ADJUSTMENTS = [
-  { id: 'brightness', name: 'Brightness' },
-  { id: 'contrast', name: 'Contrast' },
-  { id: 'saturation', name: 'Saturation' },
+  { id: 'brightness', name: 'Brightness', icon: BRIGHTNESS_ICON },
+  { id: 'contrast', name: 'Contrast', icon: CONTRAST_ICON },
+  { id: 'saturation', name: 'Saturation', icon: SATURATION_ICON },
 ] as const;
 
 // Filters for the filter sheet. "None" is the reset to the original. Previews /
@@ -448,9 +451,7 @@ export default function BuilderScreen() {
                     key={a.id}
                     onPress={() => setAdjustSelected(i)}
                     style={[styles.adjustTile, { borderColor: selected ? theme.text : theme.border }]}>
-                    <View
-                      style={[styles.adjustThumb, { backgroundColor: theme.backgroundElement }]}
-                    />
+                    <SvgXml xml={a.icon} width={32} height={32} color={theme.text} />
                     <Text style={[styles.adjustTitle, { color: theme.text }]} numberOfLines={1}>
                       {a.name}: {shown?.[a.id] ?? 0}
                     </Text>
@@ -650,11 +651,6 @@ const styles = StyleSheet.create({
     paddingVertical: 13, // 13 above the image, 13 below the title → 80 tall
     borderWidth: 1, // Gray/200 idle, Gray/black selected
     borderRadius: 8,
-  },
-  adjustThumb: {
-    width: 32,
-    height: 32,
-    borderRadius: 8, // placeholder image
   },
   adjustTitle: {
     marginTop: 4, // 4 below the image
