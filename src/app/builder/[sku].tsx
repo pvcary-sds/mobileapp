@@ -162,9 +162,11 @@ export default function BuilderScreen() {
       {shown?.uri && (
         <View style={[styles.photoArea, { bottom: dockHeight + 32 }]}>
           <Image
+            key={shown.uri}
             source={{ uri: shown.uri }}
             style={[styles.photo, rotated && styles.photoRotated]}
             contentFit={fillMode === 'fill' ? 'cover' : 'contain'}
+            transition={0}
           />
         </View>
       )}
