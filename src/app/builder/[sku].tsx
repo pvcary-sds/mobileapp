@@ -23,9 +23,6 @@ import { useTheme } from '@/hooks/use-theme';
 /** A photo picked on the PDP and passed to the builder. */
 type PickedPhoto = { uri: string; width?: number; height?: number };
 
-/** iOS home-indicator height — the real bottom inset once the tab bar is out. */
-const HOME_INDICATOR_INSET = 34;
-
 /** Format a USD amount, e.g. 1350 → "$1,350.00". */
 function formatUSD(amount: number): string {
   return `$${amount.toLocaleString('en-US', {
@@ -34,7 +31,8 @@ function formatUSD(amount: number): string {
   })}`;
 }
 
-/** Back control for the modal header (a full-screen modal has no auto Back). */
+/** Header Back — a labeled "Back" matching the browse screens (over the native
+ *  back button that the push would otherwise show). */
 function HeaderBack() {
   const theme = useTheme();
   return (
@@ -47,12 +45,13 @@ function HeaderBack() {
 
 /**
  * Product builder — the photo editor. Reached from the PDP once a size and
- * photos are chosen (see `docs/photo-flow.md`). Presented as a full-screen modal
- * so the tab bar is hidden; a header stays for the title + a custom Back.
+ * photos are chosen (see `docs/photo-flow.md`). Lives at the root of the
+ * navigation tree (a sibling of the `(tabs)` group), so it pushes OVER the tab
+ * bar with a natural right-to-left slide; a header carries the title + a Back.
  *
- * For now this is the empty canvas (dot-grid background, edge to edge below the
- * nav bar) plus the canvas controls. Placing/editing the chosen photos, and
- * wiring these controls to the photo, is the next step.
+ * Shows the active photo on a dot-grid canvas with the fit/fill, rotate, and
+ * (todo) filter controls, a size selector, a scrollable thumbnail strip of the
+ * chosen photos, and the Quantity/total + Add-to-Cart bar.
  */
 export default function BuilderScreen() {
   const theme = useTheme();
@@ -201,17 +200,15 @@ export default function BuilderScreen() {
           </ScrollView>
         </View>
 
-        {/* White bar — holds Quantity + total and the Add to Cart CTA. This modal
-            lives inside the tab navigator, so insets.bottom is inflated by the
-            (hidden) tab bar's clearance. The modal covers the tab bar, so clamp to
-            the home-indicator height — the button sits 12 above that. (A root-stack
-            refactor would let us use insets.bottom directly.) */}
+        {/* White bar — holds Quantity + total and the Add to Cart CTA. The CTA
+            sits 12 above the home indicator (this screen pushes over the tabs
+            from the root stack, so insets.bottom is the true safe-area inset). */}
         <View
           style={[
             styles.bottomBar,
             {
               backgroundColor: theme.background,
-              paddingBottom: 12 + Math.min(insets.bottom, HOME_INDICATOR_INSET),
+              paddingBottom: 12 + insets.bottom,
             },
           ]}>
           {/* Quantity + total, stacked, left-aligned. */}

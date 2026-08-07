@@ -10,13 +10,12 @@ import {
   DMSans_700Bold,
 } from '@expo-google-fonts/dm-sans';
 import { useFonts } from 'expo-font';
-import { DefaultTheme, ThemeProvider } from 'expo-router';
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 
 import { initEnvironmentAsync } from '@/api/environment';
-import { Colors, NativeFontFamily } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 
 /** Single (light) navigation theme, tinted from the app palette. */
 const navigationTheme = {
@@ -33,17 +32,13 @@ const navigationTheme = {
 };
 
 /**
- * Root navigator: a NATIVE bottom tab bar — Home, Gallery, Cart, Orders.
+ * Root navigator: a Stack hosting the tab group (`(tabs)`) plus full-screen
+ * screens that push OVER the tabs. Keeping the native tab bar inside this Stack
+ * (rather than at the root) is what lets the builder push in from the right and
+ * cover the tab bar — a natural push, not a bottom-up modal.
  *
- * `NativeTabs` renders the platform's real tab bar, so on **iOS 26 it's Liquid
- * Glass** (blur, morph, scroll-edge effects) for free, with SF Symbol icons; on
- * Android it's the native Material tab bar. The Home tab (`(home)` route group)
- * hosts the browse stack, which draws its own headers. `(home)` is a group, so
- * it adds no URL segment — the browse screens keep their paths.
- *
- * The app is a single light theme. Tab items are neutral — selected is near-black
- * (text), unselected is Gray 500 (textSecondary); the orange primary is reserved
- * for actions (CTAs, selected chips), not the tab bar.
+ * Fonts, the dev-environment bootstrap, and the navigation theme live here so
+ * they wrap the whole app.
  */
 export default function RootLayout() {
   // Brand fonts: DM Sans (body) + Crimson Text (title).
@@ -67,56 +62,13 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={navigationTheme}>
-      <NativeTabs
-        iconColor={{ default: Colors.textSecondary, selected: Colors.text }}
-        titlePositionAdjustment={{ vertical: 8 }} // best-effort 8px icon↔label gap
-        labelStyle={{
-          // unselected: Body Medium 12, Gray 500
-          default: { color: Colors.textSecondary, fontFamily: NativeFontFamily.bodyMedium, fontSize: 12 },
-          // selected: Body SemiBold 12, near-black (text)
-          selected: { color: Colors.text, fontFamily: NativeFontFamily.bodySemiBold, fontSize: 12 },
-        }}>
-        <NativeTabs.Trigger name="(home)">
-          <NativeTabs.Trigger.Icon
-            src={{
-              default: require('../../assets/tab-icons/home.png'),
-              selected: require('../../assets/tab-icons/home-selected.png'),
-            }}
-            renderingMode="original"
-          />
-          <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="gallery">
-          <NativeTabs.Trigger.Icon
-            src={{
-              default: require('../../assets/tab-icons/gallery.png'),
-              selected: require('../../assets/tab-icons/gallery-selected.png'),
-            }}
-            renderingMode="original"
-          />
-          <NativeTabs.Trigger.Label>Gallery</NativeTabs.Trigger.Label>
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="cart">
-          <NativeTabs.Trigger.Icon
-            src={{
-              default: require('../../assets/tab-icons/cart.png'),
-              selected: require('../../assets/tab-icons/cart-selected.png'),
-            }}
-            renderingMode="original"
-          />
-          <NativeTabs.Trigger.Label>Cart</NativeTabs.Trigger.Label>
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="orders">
-          <NativeTabs.Trigger.Icon
-            src={{
-              default: require('../../assets/tab-icons/orders.png'),
-              selected: require('../../assets/tab-icons/orders-selected.png'),
-            }}
-            renderingMode="original"
-          />
-          <NativeTabs.Trigger.Label>Orders</NativeTabs.Trigger.Label>
-        </NativeTabs.Trigger>
-      </NativeTabs>
+      <Stack screenOptions={{ headerShadowVisible: false }}>
+        {/* The tab bar and everything inside it. */}
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        {/* Full-screen photo editor — pushes over the tabs (title + custom Back
+            come from the screen itself). */}
+        <Stack.Screen name="builder/[sku]" options={{ title: '', headerBackTitle: 'Back' }} />
+      </Stack>
       <StatusBar style="dark" />
     </ThemeProvider>
   );
