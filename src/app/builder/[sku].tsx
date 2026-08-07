@@ -473,8 +473,10 @@ export default function BuilderScreen() {
                         styles.adjustTile,
                         { borderColor: selected ? theme.text : theme.border },
                       ]}>
-                      <SvgXml xml={a.icon} width={32} height={32} color={theme.text} />
-                      <Text style={[styles.adjustTitle, { color: theme.text }]} numberOfLines={1}>
+                      <SvgXml xml={a.icon} width={32} height={32} color={theme.iconMuted} />
+                      <Text
+                        style={[styles.adjustTitle, { color: theme.textTertiary }]}
+                        numberOfLines={1}>
                         {a.name}: {shown?.[a.id] ?? 0}
                       </Text>
                     </Pressable>
@@ -679,7 +681,9 @@ const styles = StyleSheet.create({
   adjustTile: {
     flex: 1, // three equal-width tiles filling the row
     alignItems: 'center',
-    paddingVertical: 13, // 13 above the image, 13 below the title → 80 tall
+    // 12 padding + 1px border = the 13 above/below spec, and keeps the tile at
+    // exactly 80 (border adds to auto-height in RN) so both tabs are 220 tall.
+    paddingVertical: 12,
     borderWidth: 1, // Gray/200 idle, Gray/black selected
     borderRadius: 8,
   },

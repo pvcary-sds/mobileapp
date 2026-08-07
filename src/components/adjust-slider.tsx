@@ -32,9 +32,12 @@ export function AdjustSlider({
 
   const setFromX = (x: number) => {
     const w = widthRef.current;
-    if (w <= 0) return;
-    const clamped = Math.max(0, Math.min(w, x));
-    onChangeRef.current(Math.round(MIN + (clamped / w) * (MAX - MIN)));
+    if (w <= THUMB) return;
+    // The thumb center travels within [THUMB/2, w - THUMB/2] so it never spills
+    // past the edges — but the value still spans the full MIN..MAX.
+    const usable = w - THUMB;
+    const ratio = Math.max(0, Math.min(1, (x - THUMB / 2) / usable));
+    onChangeRef.current(Math.round(MIN + ratio * (MAX - MIN)));
   };
 
   const pan = useRef(
@@ -60,8 +63,9 @@ export function AdjustSlider({
   };
 
   const ratio = width > 0 ? (value - MIN) / (MAX - MIN) : 0.5;
-  const thumbX = ratio * width;
-  const centerX = width / 2;
+  // Thumb center, inset by its radius so ±100 sits flush with the edges.
+  const thumbX = THUMB / 2 + ratio * Math.max(0, width - THUMB);
+  const centerX = width / 2; // 0 lands here (= thumbX at value 0)
   const fillLeft = Math.min(centerX, thumbX); // fill spans center → thumb
   const fillWidth = Math.abs(thumbX - centerX);
 

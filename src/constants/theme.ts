@@ -14,6 +14,7 @@ import { Base, Brand, Gray, Label, LightBlue, Primary, withAlpha } from '@/const
 export const Colors = {
   // Text
   text: Gray[900], // primary text
+  iconMuted: Gray[600], // Gray/600 — muted icons (e.g. Adjust tiles)
   textTertiary: Gray[700], // supporting text a step lighter than primary (e.g. prices)
   textSecondary: Gray[500], // descriptions, captions
   textMuted: Gray[400], // hints, disabled
