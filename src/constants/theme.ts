@@ -105,6 +105,7 @@ export const FontFamily = {
  * than the expo-font key used for React Native `<Text>`.
  */
 export const NativeFontFamily = {
+  body: 'DMSans-Regular',
   bodyMedium: 'DMSans-Medium',
   bodySemiBold: 'DMSans-SemiBold',
 } as const;

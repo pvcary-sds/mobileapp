@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { useRef, useState } from 'react';
 import { LayoutChangeEvent, PanResponder, StyleSheet, View } from 'react-native';
 
@@ -27,6 +28,9 @@ export function AdjustSlider({
   // Refs so the PanResponder (created once) always reads the latest values.
   const widthRef = useRef(0);
   const trackLeftRef = useRef(0); // container's absolute left, measured on grant
+  const valueRef = useRef(value); // latest prop value
+  valueRef.current = value;
+  const lastValueRef = useRef(value); // last value we emitted (for change + haptic)
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
@@ -37,7 +41,14 @@ export function AdjustSlider({
     // past the edges — but the value still spans the full MIN..MAX.
     const usable = w - THUMB;
     const ratio = Math.max(0, Math.min(1, (x - THUMB / 2) / usable));
-    onChangeRef.current(Math.round(MIN + ratio * (MAX - MIN)));
+    const v = Math.round(MIN + ratio * (MAX - MIN));
+    if (v === lastValueRef.current) return; // unchanged — skip re-render/haptic
+    if (v === 0) {
+      // Medium impact when snapping onto the neutral center.
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    }
+    lastValueRef.current = v;
+    onChangeRef.current(v);
   };
 
   const pan = useRef(
@@ -45,6 +56,7 @@ export function AdjustSlider({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (e) => {
+        lastValueRef.current = valueRef.current; // re-sync in case the photo changed
         // The children are non-interactive, so the container is the touch target
         // and locationX is container-relative — derive its absolute left once.
         trackLeftRef.current = e.nativeEvent.pageX - e.nativeEvent.locationX;

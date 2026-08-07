@@ -26,7 +26,7 @@ import {
   ROTATE_PORTRAIT_ICON,
   SATURATION_ICON,
 } from '@/constants/builder-icons';
-import { FontFamily } from '@/constants/theme';
+import { FontFamily, NativeFontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /** A raw photo as picked (from the PDP or the in-builder picker). */
@@ -387,6 +387,13 @@ export default function BuilderScreen() {
               selectedIndex={filterTab}
               onChange={(e) => setFilterTab(e.nativeEvent.selectedSegmentIndex)}
               style={styles.filterTabs}
+              // Grey/black; unselected Body/Regular 14, selected Body SemiBold 14.
+              fontStyle={{ color: theme.text, fontFamily: NativeFontFamily.body, fontSize: 14 }}
+              activeFontStyle={{
+                color: theme.text,
+                fontFamily: NativeFontFamily.bodySemiBold,
+                fontSize: 14,
+              }}
             />
             <Pressable
               onPress={() => setFilterOpen(false)}
