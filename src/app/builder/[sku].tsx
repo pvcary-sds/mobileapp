@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -14,6 +15,7 @@ import {
   FILL_ICON,
   FILTER_ICON,
   FIT_ICON,
+  PLUS_ICON,
   ROTATE_LANDSCAPE_ICON,
   ROTATE_PORTRAIT_ICON,
 } from '@/constants/builder-icons';
@@ -112,6 +114,19 @@ export default function BuilderScreen() {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', style: 'destructive', onPress: confirmRemove },
     ]);
+  };
+
+  // Add more photos: a fresh unlimited multi-select picker, appended to the list.
+  const onAddPhotos = async () => {
+    const picked = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit: 0,
+      quality: 1,
+    });
+    if (picked.canceled || picked.assets.length === 0) return;
+    const added = picked.assets.map((a) => ({ uri: a.uri, width: a.width, height: a.height }));
+    setPhotos((prev) => [...prev, ...added]);
   };
 
   return (
@@ -219,6 +234,15 @@ export default function BuilderScreen() {
                 <Image source={{ uri: photo.uri }} style={styles.thumbImage} contentFit="cover" />
               </Pressable>
             ))}
+            {/* Add-photo tile — opens a fresh picker to append more photos. */}
+            <Pressable
+              onPress={onAddPhotos}
+              style={[
+                styles.addTile,
+                { borderColor: theme.borderStrong, backgroundColor: theme.background },
+              ]}>
+              <SvgXml xml={PLUS_ICON} width={24} height={24} color={theme.text} />
+            </Pressable>
           </ScrollView>
         </View>
 
@@ -344,6 +368,15 @@ const styles = StyleSheet.create({
   },
   thumbGap: {
     marginLeft: 8, // 8 between thumbnails
+  },
+  addTile: {
+    width: 48,
+    height: 48,
+    marginLeft: 8, // 8 after the last photo
+    borderRadius: 8,
+    borderWidth: 2, // Gray/300
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   thumbImage: {
     width: '100%',
