@@ -34,6 +34,9 @@ type PickedPhoto = RawPhoto & {
   rotated: boolean; // 90° off the photo's natural (EXIF-correct) orientation
   fillMode: 'fit' | 'fill'; // contain vs cover
   filter: string; // selected filter id ('none' = original)
+  brightness: number; // Adjust values, neutral at 0
+  contrast: number;
+  saturation: number;
 };
 
 /** Seed a freshly-picked photo with its default edit state. */
@@ -45,8 +48,18 @@ function toPhoto(a: RawPhoto): PickedPhoto {
     rotated: false,
     fillMode: 'fit',
     filter: 'none',
+    brightness: 0,
+    contrast: 0,
+    saturation: 0,
   };
 }
+
+// Adjust tab controls — each maps to a per-photo value above.
+const ADJUSTMENTS = [
+  { id: 'brightness', name: 'Brightness' },
+  { id: 'contrast', name: 'Contrast' },
+  { id: 'saturation', name: 'Saturation' },
+] as const;
 
 // Filters for the filter sheet. "None" is the reset to the original. Previews /
 // actual color grading come later.
@@ -125,6 +138,7 @@ export default function BuilderScreen() {
   const [filterOpen, setFilterOpen] = useState(false); // filter bottom sheet
   const [filterTab, setFilterTab] = useState(0); // 0 = Effects, 1 = Adjust
   const [filterSnapshot, setFilterSnapshot] = useState('none'); // filter when the sheet opened
+  const [adjustSelected, setAdjustSelected] = useState(0); // which Adjust tile drives the slider
 
   // The photo on the canvas — the selected thumbnail (first by default). Its
   // fit/fill and rotation are its OWN, so switching photos never carries another
@@ -146,6 +160,7 @@ export default function BuilderScreen() {
   const openFilters = () => {
     setFilterSnapshot(shown?.filter ?? 'none');
     setFilterTab(0);
+    setAdjustSelected(0);
     setFilterOpen(true);
   };
   // TODO: also compare Adjust values once that tab exists.
@@ -423,8 +438,26 @@ export default function BuilderScreen() {
               })}
             </ScrollView>
           ) : (
-            /* Adjust: blank for now (keeps the sheet height stable). */
-            <View style={styles.filterEmpty} />
+            /* Adjust: Brightness / Contrast / Saturation tiles — same top offset as
+               the filters; the selected one drives the slider (coming next). */
+            <View style={styles.adjustTiles}>
+              {ADJUSTMENTS.map((a, i) => {
+                const selected = adjustSelected === i;
+                return (
+                  <Pressable
+                    key={a.id}
+                    onPress={() => setAdjustSelected(i)}
+                    style={[styles.adjustTile, { borderColor: selected ? theme.text : theme.border }]}>
+                    <View
+                      style={[styles.adjustThumb, { backgroundColor: theme.backgroundElement }]}
+                    />
+                    <Text style={[styles.adjustTitle, { color: theme.text }]} numberOfLines={1}>
+                      {a.name}: {shown?.[a.id] ?? 0}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           )}
         </View>
       )}
@@ -605,9 +638,30 @@ const styles = StyleSheet.create({
     top: 12, // check 12 from the top
     right: 16, // check 16 from the trailing
   },
-  filterEmpty: {
-    marginTop: 24, // matches the tiles' marginTop
-    height: 102, // matches a tile's height so the sheet doesn't jump
+  adjustTiles: {
+    flexDirection: 'row',
+    marginTop: 24, // same top offset as the filter tiles (72 from the sheet top)
+    paddingHorizontal: 16, // 16 leading/trailing
+    gap: 8, // 8 between tiles
+  },
+  adjustTile: {
+    flex: 1, // three equal-width tiles filling the row
+    alignItems: 'center',
+    paddingVertical: 13, // 13 above the image, 13 below the title → 80 tall
+    borderWidth: 1, // Gray/200 idle, Gray/black selected
+    borderRadius: 8,
+  },
+  adjustThumb: {
+    width: 32,
+    height: 32,
+    borderRadius: 8, // placeholder image
+  },
+  adjustTitle: {
+    marginTop: 4, // 4 below the image
+    fontFamily: FontFamily.body, // Caption / Regular
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   filterScroll: {
     marginTop: 24, // 24 below the header → tiles 72 from the sheet's top
