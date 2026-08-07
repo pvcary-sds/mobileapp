@@ -26,6 +26,10 @@ import { htmlToText } from '@/lib/html';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HERO_HEIGHT = 268;
 
+// Show at most this many size chips before collapsing the rest behind a
+// "Show N more" toggle tile.
+const COLLAPSED_SIZE_COUNT = 7;
+
 /** `GET /v1/products/{id}` — the product page. */
 export default function ProductScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -34,6 +38,7 @@ export default function ProductScreen() {
   const [selectedSku, setSelectedSku] = useState<string | null>(null);
   const [activeImage, setActiveImage] = useState(0);
   const [selecting, setSelecting] = useState(false);
+  const [sizesExpanded, setSizesExpanded] = useState(false); // "Show N more" size chips
 
   const { data: product, error, loading, reload } = useAsync(
     (signal) => getProduct(id, signal),
@@ -158,7 +163,10 @@ export default function ProductScreen() {
               <View style={[styles.section, styles.sizeSection]}>
                 <Text style={[styles.sizeHeading, { color: theme.text }]}>Choose a size</Text>
                 <View style={styles.sizeGrid}>
-                  {product.variants.map((v) => (
+                  {(sizesExpanded
+                    ? product.variants
+                    : product.variants.slice(0, COLLAPSED_SIZE_COUNT)
+                  ).map((v) => (
                     <SizeChip
                       key={v.sku}
                       variant={v}
@@ -166,6 +174,21 @@ export default function ProductScreen() {
                       onPress={() => setSelectedSku(v.sku)}
                     />
                   ))}
+                  {/* Toggle tile — always the last tile once there are more sizes
+                      than fit. Collapsed: "Show N more"; expanded: "Show N less". */}
+                  {product.variants.length > COLLAPSED_SIZE_COUNT && (
+                    <Pressable
+                      onPress={() => setSizesExpanded((e) => !e)}
+                      style={[
+                        styles.sizeToggle,
+                        { borderColor: theme.border, backgroundColor: theme.background },
+                      ]}>
+                      <Text style={[styles.sizeToggleText, { color: theme.primary }]}>
+                        Show {product.variants.length - COLLAPSED_SIZE_COUNT}{' '}
+                        {sizesExpanded ? 'less' : 'more'}
+                      </Text>
+                    </Pressable>
+                  )}
                 </View>
               </View>
 
@@ -423,6 +446,21 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.two,
     borderWidth: 1, // Gray/200 (or Gray/black when selected)
     alignItems: 'flex-start', // left-align price + size
+  },
+  sizeToggle: {
+    minWidth: 76,
+    minHeight: 66, // match the two-line SizeChip height (12 + 18 + 24 + 12)
+    paddingHorizontal: Spacing.three,
+    borderRadius: Spacing.two,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sizeToggleText: {
+    fontFamily: FontFamily.bodyMedium, // Body / Medium
+    fontSize: 16,
+    lineHeight: 24,
+    textAlign: 'center',
   },
   priceText: {
     fontFamily: FontFamily.body, // Body / Regular
