@@ -31,16 +31,25 @@ type RawPhoto = { uri: string; width?: number; height?: number };
 type PickedPhoto = RawPhoto & {
   rotated: boolean; // 90° off the photo's natural (EXIF-correct) orientation
   fillMode: 'fit' | 'fill'; // contain vs cover
+  filter: string; // selected filter id ('none' = original)
 };
 
-/** Seed a freshly-picked photo with its default (unrotated, fit) edit state. */
+/** Seed a freshly-picked photo with its default edit state. */
 function toPhoto(a: RawPhoto): PickedPhoto {
-  return { uri: a.uri, width: a.width, height: a.height, rotated: false, fillMode: 'fit' };
+  return {
+    uri: a.uri,
+    width: a.width,
+    height: a.height,
+    rotated: false,
+    fillMode: 'fit',
+    filter: 'none',
+  };
 }
 
-// Placeholder filters for the filter sheet (previews come later).
+// Filters for the filter sheet. "None" is the reset to the original. Previews /
+// actual color grading come later.
 const FILTERS = [
-  { id: 'original', name: 'Original' },
+  { id: 'none', name: 'None' },
   { id: 'vivid', name: 'Vivid' },
   { id: 'noir', name: 'Noir' },
   { id: 'mono', name: 'Mono' },
@@ -264,7 +273,7 @@ export default function BuilderScreen() {
                 style={[
                   styles.thumb,
                   i > 0 && styles.thumbGap,
-                  activeThumb === i && { borderWidth: 2, borderColor: theme.deleteBorder },
+                  activeThumb === i && { borderWidth: 2, borderColor: theme.selectedBorder },
                 ]}>
                 <Image source={{ uri: photo.uri }} style={styles.thumbImage} contentFit="cover" />
               </Pressable>
@@ -326,20 +335,41 @@ export default function BuilderScreen() {
               <SvgXml xml={CLOSE_ICON} width={24} height={24} color={theme.text} />
             </Pressable>
           </View>
-          {/* Filter tiles — 24 below the header, 16 leading, horizontally scrollable. */}
+          {/* Filter tiles — 24 below the header, 16 leading, horizontally scrollable.
+              Each previews the active photo; the selected one gets a Primary/600
+              stroke + Primary/700 title. */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.filterScroll}
             contentContainerStyle={styles.filterTiles}>
-            {FILTERS.map((f) => (
-              <View key={f.id} style={styles.filterTile}>
-                <View style={[styles.filterThumb, { backgroundColor: theme.backgroundElement }]} />
-                <Text style={[styles.filterTitle, { color: theme.text }]} numberOfLines={1}>
-                  {f.name}
-                </Text>
-              </View>
-            ))}
+            {FILTERS.map((f) => {
+              const selected = (shown?.filter ?? 'none') === f.id;
+              return (
+                <Pressable
+                  key={f.id}
+                  onPress={() => patchActive({ filter: f.id })}
+                  style={styles.filterTile}>
+                  <Image
+                    source={{ uri: shown?.uri }}
+                    style={[
+                      styles.filterThumb,
+                      { backgroundColor: theme.backgroundElement },
+                      selected && { borderWidth: 2, borderColor: theme.selectedBorder },
+                    ]}
+                    contentFit="cover"
+                  />
+                  <Text
+                    style={[
+                      styles.filterTitle,
+                      { color: selected ? theme.selectedText : theme.textTertiary },
+                    ]}
+                    numberOfLines={1}>
+                    {f.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </ScrollView>
         </View>
       )}
