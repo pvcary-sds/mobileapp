@@ -11,6 +11,7 @@ import {
   CHEVRON_DOWN,
   CHEVRON_LEFT,
   CHEVRON_UP,
+  CLOSE_ICON,
   DELETE_ICON,
   FILL_ICON,
   FILTER_ICON,
@@ -36,6 +37,18 @@ type PickedPhoto = RawPhoto & {
 function toPhoto(a: RawPhoto): PickedPhoto {
   return { uri: a.uri, width: a.width, height: a.height, rotated: false, fillMode: 'fit' };
 }
+
+// Placeholder filters for the filter sheet (previews come later).
+const FILTERS = [
+  { id: 'original', name: 'Original' },
+  { id: 'vivid', name: 'Vivid' },
+  { id: 'noir', name: 'Noir' },
+  { id: 'mono', name: 'Mono' },
+  { id: 'sepia', name: 'Sepia' },
+  { id: 'warm', name: 'Warm' },
+  { id: 'cool', name: 'Cool' },
+  { id: 'fade', name: 'Fade' },
+];
 
 /** Format a USD amount, e.g. 1350 → "$1,350.00". */
 function formatUSD(amount: number): string {
@@ -98,6 +111,7 @@ export default function BuilderScreen() {
   const [sizeOpen, setSizeOpen] = useState(false); // size picker open (chevron flips)
   const [activeThumb, setActiveThumb] = useState(0); // selected photo — first is selected on load
   const [dockHeight, setDockHeight] = useState(0); // measured; photo area sits 32 above the strip
+  const [filterOpen, setFilterOpen] = useState(false); // filter bottom sheet
 
   // The photo on the canvas — the selected thumbnail (first by default). Its
   // fit/fill and rotation are its OWN, so switching photos never carries another
@@ -207,8 +221,9 @@ export default function BuilderScreen() {
             color={theme.text}
           />
         </Pressable>
-        {/* TODO: filter tap behavior (to be defined). */}
+        {/* Filter — opens the filter sheet. */}
         <Pressable
+          onPress={() => setFilterOpen(true)}
           style={[styles.toolButton, styles.toolDivider, { borderLeftColor: theme.borderStrong }]}>
           <SvgXml xml={FILTER_ICON} width={24} height={24} color={theme.text} />
         </Pressable>
@@ -293,6 +308,41 @@ export default function BuilderScreen() {
           </Pressable>
         </View>
       </View>
+
+      {/* Filter sheet — a white panel pinned to the bottom, over everything. */}
+      {filterOpen && (
+        <View
+          style={[
+            styles.filterSheet,
+            {
+              backgroundColor: theme.background,
+              borderTopColor: theme.border,
+              paddingBottom: 46 + insets.bottom,
+            },
+          ]}>
+          {/* Header (48 tall) — close X at 16 leading / 12 top. */}
+          <View style={styles.filterHeader}>
+            <Pressable onPress={() => setFilterOpen(false)} hitSlop={8}>
+              <SvgXml xml={CLOSE_ICON} width={24} height={24} color={theme.text} />
+            </Pressable>
+          </View>
+          {/* Filter tiles — 24 below the header, 16 leading, horizontally scrollable. */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterScroll}
+            contentContainerStyle={styles.filterTiles}>
+            {FILTERS.map((f) => (
+              <View key={f.id} style={styles.filterTile}>
+                <View style={[styles.filterThumb, { backgroundColor: theme.backgroundElement }]} />
+                <Text style={[styles.filterTitle, { color: theme.text }]} numberOfLines={1}>
+                  {f.name}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      )}
     </View>
   );
 }
@@ -443,5 +493,42 @@ const styles = StyleSheet.create({
   backLabel: {
     fontFamily: FontFamily.bodyMedium,
     fontSize: 17,
+  },
+  filterSheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderTopWidth: 1, // hairline to separate the sheet from the canvas
+    // backgroundColor + paddingBottom (46 + safe-area inset) applied inline.
+  },
+  filterHeader: {
+    height: 48,
+    paddingTop: 12, // X 12 from the top
+    paddingLeft: 16, // X 16 from the leading
+  },
+  filterScroll: {
+    marginTop: 24, // 24 below the header → tiles 72 from the sheet's top
+  },
+  filterTiles: {
+    paddingLeft: 16, // 16 leading
+    paddingRight: 16,
+    columnGap: 12, // between tiles (unspecified — sensible default)
+  },
+  filterTile: {
+    width: 80, // image width; title centers below
+    alignItems: 'center',
+  },
+  filterThumb: {
+    width: 80,
+    height: 80,
+    borderRadius: 8, // placeholder image
+  },
+  filterTitle: {
+    marginTop: 4, // 4 below the image
+    fontFamily: FontFamily.bodyMedium, // Caption / Medium
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
   },
 });
