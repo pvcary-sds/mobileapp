@@ -80,6 +80,42 @@ const FILTERS = [
   { id: 'fade', name: 'Fade' },
 ];
 
+/** Parse a print-size label like "8x10 in" into `[width, height]` inches (the
+ *  product's physical dimensions), or null if it can't be read. Drives the
+ *  WYSIWYG print frame's aspect ratio. */
+function parsePrintSize(size?: string): [number, number] | null {
+  if (!size) return null;
+  const m = size.match(/(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)/i);
+  if (!m) return null;
+  const w = parseFloat(m[1]);
+  const h = parseFloat(m[2]);
+  return w > 0 && h > 0 ? [w, h] : null;
+}
+
+/**
+ * The print frame's on-screen rect: the product's aspect ratio, scaled to fit
+ * inside the available canvas (`area`) and centered. Oriented to match the
+ * photo (`landscape`), so what's inside the frame is exactly what prints.
+ */
+function computeFrame(
+  size: string | undefined,
+  landscape: boolean,
+  area: { w: number; h: number },
+): { width: number; height: number; left: number; top: number } | null {
+  const dims = parsePrintSize(size);
+  if (!dims || area.w <= 0 || area.h <= 0) return null;
+  const short = Math.min(dims[0], dims[1]);
+  const long = Math.max(dims[0], dims[1]);
+  const aspect = landscape ? long / short : short / long; // width / height
+  let width = area.w;
+  let height = width / aspect;
+  if (height > area.h) {
+    height = area.h;
+    width = height * aspect;
+  }
+  return { width, height, left: (area.w - width) / 2, top: (area.h - height) / 2 };
+}
+
 /** Format a USD amount, e.g. 1350 → "$1,350.00". */
 function formatUSD(amount: number): string {
   return `$${amount.toLocaleString('en-US', {
@@ -177,6 +213,11 @@ export default function BuilderScreen() {
   // (each tile shares this image with a different color matrix).
   const filterPreviewImage = useLocalSkiaImage(shown?.uri ?? '');
 
+  // The WYSIWYG print frame: the product's aspect ratio, fit inside the measured
+  // canvas area. The photo is clipped to this — what's inside is what prints.
+  const [canvasArea, setCanvasArea] = useState({ w: 0, h: 0 });
+  const frame = computeFrame(size, displayedLandscape, canvasArea);
+
   // Patch the active photo's edit state (rotation / fit-fill / filter).
   const patchActive = (patch: Partial<PickedPhoto>) =>
     setPhotos((prev) => prev.map((p, i) => (i === activeThumb ? { ...p, ...patch } : p)));
@@ -249,15 +290,40 @@ export default function BuilderScreen() {
       <PhotoCanvasBackground />
 
       {/* The photo being edited: 32 below the action row, 32 above the strip,
-          16 inset L/R. Rendered with Skia so Effects/Adjust apply live. */}
+          16 inset L/R. The photo sits inside the print frame (the product's
+          aspect ratio) so the preview is WYSIWYG. Rendered with Skia so
+          Effects/Adjust apply live. */}
       {shown?.uri && (
-        <View style={[styles.photoArea, { bottom: dockHeight + 32 }]}>
-          <SkiaPhoto
-            uri={shown.uri}
-            fit={fillMode === 'fill' ? 'cover' : 'contain'}
-            rotated={rotated}
-            matrix={photoMatrix}
-          />
+        <View
+          style={[styles.photoArea, { bottom: dockHeight + 32 }]}
+          onLayout={(e) =>
+            setCanvasArea({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
+          }>
+          {frame ? (
+            // Outer view carries the shadow (can't clip); inner clips the photo.
+            <View
+              style={[
+                styles.printFrame,
+                { width: frame.width, height: frame.height, left: frame.left, top: frame.top },
+              ]}>
+              <View style={[styles.printFrameClip, { backgroundColor: theme.background }]}>
+                <SkiaPhoto
+                  uri={shown.uri}
+                  fit={fillMode === 'fill' ? 'cover' : 'contain'}
+                  rotated={rotated}
+                  matrix={photoMatrix}
+                />
+              </View>
+            </View>
+          ) : (
+            // Unknown size: fall back to filling the whole canvas area.
+            <SkiaPhoto
+              uri={shown.uri}
+              fit={fillMode === 'fill' ? 'cover' : 'contain'}
+              rotated={rotated}
+              matrix={photoMatrix}
+            />
+          )}
         </View>
       )}
 
@@ -544,6 +610,18 @@ const styles = StyleSheet.create({
     right: 16, // 16 trailing
     // bottom = dockHeight + 32 (32 above the strip) is applied inline.
     overflow: 'hidden', // crop 'cover' / a rotated photo to the frame
+  },
+  printFrame: {
+    position: 'absolute',
+    // Subtle shadow so the "print" reads as a physical object over the dot grid.
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  printFrameClip: {
+    flex: 1,
+    overflow: 'hidden', // clip the photo to the print boundary (the crop)
   },
   deleteButton: {
     position: 'absolute',
