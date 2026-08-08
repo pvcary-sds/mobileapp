@@ -21,7 +21,7 @@ import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
  * Note: Skia has no HEIC codec, so photos must already be JPEG/PNG. The pickers
  * request `Compatible` representation so iOS delivers JPEG (not HEIC).
  */
-function useLocalSkiaImage(uri: string): SkImage | null {
+export function useLocalSkiaImage(uri: string): SkImage | null {
   const isLocalFile = uri?.startsWith('file://');
   const remote = useImage(isLocalFile ? undefined : uri);
   const [local, setLocal] = useState<SkImage | null>(null);
@@ -48,6 +48,31 @@ function useLocalSkiaImage(uri: string): SkImage | null {
   }, [uri, isLocalFile]);
 
   return isLocalFile ? local : remote;
+}
+
+/**
+ * A small square Skia preview (e.g. the filter-strip tiles), applying `matrix`
+ * so the customer sees the effect on their own photo. Takes an already-decoded
+ * `image` so many thumbs can share one decode instead of loading it each.
+ */
+export function SkiaThumb({
+  image,
+  matrix,
+  size,
+}: {
+  image: SkImage | null;
+  matrix: number[];
+  size: number;
+}) {
+  return (
+    <Canvas style={{ width: size, height: size }}>
+      {image && (
+        <SkiaImage image={image} fit="cover" x={0} y={0} width={size} height={size}>
+          <ColorMatrix matrix={matrix} />
+        </SkiaImage>
+      )}
+    </Canvas>
+  );
 }
 
 /**
