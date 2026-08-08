@@ -98,14 +98,40 @@ export function SkiaPhoto({
 
   const ready = image && size.w > 0 && size.h > 0;
 
+  // Compute the scaled, centered draw rect ourselves rather than leaning on
+  // Skia's `fit` (which anchors, not centers, within an offset rect). The target
+  // box uses the container's dimensions swapped when rotated, so after the 90°
+  // rotation the image fills/fits the container correctly. `contain` fits inside
+  // (min scale); `cover` fills and is clipped by the frame view (max scale).
+  const iw = image?.width() ?? 0;
+  const ih = image?.height() ?? 0;
+  const targetW = rotated ? size.h : size.w;
+  const targetH = rotated ? size.w : size.h;
+  const scale =
+    iw > 0 && ih > 0
+      ? fit === 'cover'
+        ? Math.max(targetW / iw, targetH / ih)
+        : Math.min(targetW / iw, targetH / ih)
+      : 1;
+  const drawW = iw * scale;
+  const drawH = ih * scale;
+  // Centre the image in the container, then rotate the group about that same
+  // centre (via `origin`) so it stays centred whatever the rotation.
+  const cx = size.w / 2;
+  const cy = size.h / 2;
+
   return (
     <View style={StyleSheet.absoluteFill} onLayout={onLayout}>
       <Canvas style={StyleSheet.absoluteFill}>
         {ready && (
-          <Group
-            origin={{ x: size.w / 2, y: size.h / 2 }}
-            transform={rotated ? [{ rotate: Math.PI / 2 }] : undefined}>
-            <SkiaImage image={image} fit={fit} x={0} y={0} width={size.w} height={size.h}>
+          <Group origin={{ x: cx, y: cy }} transform={[{ rotate: rotated ? Math.PI / 2 : 0 }]}>
+            <SkiaImage
+              image={image}
+              fit="fill"
+              x={cx - drawW / 2}
+              y={cy - drawH / 2}
+              width={drawW}
+              height={drawH}>
               <ColorMatrix matrix={matrix} />
             </SkiaImage>
           </Group>

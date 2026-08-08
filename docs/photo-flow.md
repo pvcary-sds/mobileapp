@@ -3,7 +3,10 @@
 How a customer goes from browsing to a print-ready photo, and the mechanics
 behind it. Written for both product and engineering. Companion to
 [`DEVELOPMENT.md`](../DEVELOPMENT.md); API endpoints are specified in the API
-repo's `API.md`.
+repo's `API.md`. For a full breakdown of the **Customize (builder) screen** —
+every control, the logic, the libraries, and how the custom pieces (slider, Skia
+canvas, zoom/pan, color pipeline) were built — see
+[`customize-builder.md`](customize-builder.md).
 
 ---
 
@@ -53,6 +56,127 @@ print size they picked.
 
 ---
 
+## Print framing — edge-to-edge (WYSIWYG)
+
+**The promise:** what the customer sees inside the frame on the builder canvas is
+*exactly* what prints. Get this wrong and the printed product is cropped or
+bordered differently than the preview.
+
+### The source of truth is Prodigi's print canvas, not the label
+
+The size label (`"8x10 in"`) and the physical dimensions (`widthIn`/`heightIn`)
+are **not** what actually prints. Prodigi prints to a fixed **pixel canvas** per
+size, returned by the same endpoint as the quality check:
+
+`GET /v1/print-area-sizes/{sku}?fulfillmentType=prodigi` →
+
+```jsonc
+{
+  "widthIn": 11, "heightIn": 14,          // productDimensions — physical inches
+  "printAreaSizes": {
+    "default": {                          // area key ("default" for these products)
+      "horizontalResolution": 3417,       // ← THE print canvas: the exact pixel
+      "verticalResolution":   4317,       //   grid Prodigi prints. Aspect = this.
+      "horizontalDpi": 311, "verticalDpi": 308
+    }
+  }
+}
+```
+
+- **Frame aspect = `horizontalResolution : verticalResolution`** (e.g. `3417:4317`).
+  This is edge-to-edge accurate because it *is* the print grid.
+- **Do not use the inches or the label for the aspect.** They can disagree with
+  the pixel canvas: acrylic 11×14 is `11/14 = 0.786` by inches but `3417/4317 =
+  0.792` by pixels — a ~0.7% difference. The pixel canvas wins every time.
+- Physical inches (`widthIn`/`heightIn`) are still used — for the DPI/quality math
+  (above) and any "11 × 14 in" labelling. Just not for the frame geometry.
+
+### Fetch it per size
+
+The spec is **per sku**, so **re-fetch every time the size changes** — each size is
+a distinct variant sku. The builder fetches on mount for its sku (`useAsync`,
+keyed by `sku`); when the in-builder size picker is wired to swap variants, it
+must re-fetch on change. While it loads (or if it's unavailable) the frame falls
+back to the **nominal label** (`parsePrintSize("8x10 in")`) for a provisional
+aspect, then snaps to the real canvas once the spec arrives.
+
+### What "edge-to-edge" actually requires
+
+1. **Frame aspect** matches the pixel canvas (above).
+2. **Fill (cover)** — the photo covers the whole frame; anything outside the
+   frame is **cropped off and does not print**. This is the full-bleed / edge-to-
+   edge choice, and the sensible default for products like acrylic.
+   - **Fit (contain)** is the *other* intent: the whole photo sits inside the
+     frame with **white margins that print white** — deliberately *not* edge-to-
+     edge. Offer it, don't default to it for bleed products.
+3. **Export at exactly `horizontalResolution × verticalResolution`**, cover-
+   filling with the *same crop* as the preview, through the **same Skia pipeline**
+   (the color matrix) so preview and print can't diverge. *(Export not built yet —
+   the preview and export are designed to share `buildColorMatrix`.)*
+
+Because the on-screen frame = the pixel canvas and the export = the same crop at
+that canvas, the three stay locked together: preview ⇔ crop ⇔ print.
+
+### Orientation & the frame
+
+The frame **follows the photo**: a landscape photo → landscape frame, portrait →
+portrait, and the **rotate** control flips both together (it reorients the whole
+print, photo included). The frame is fit into the on-screen canvas area, centered,
+with a **hairline border** marking the print edge.
+
+### Positioning — pinch-zoom + pan
+
+Inside the frame the customer positions the crop with pinch + pan
+(`src/components/zoom-pan-frame.tsx`, wrapping the Skia photo):
+
+- **Pinch to zoom** — `scale ≥ 1` (1 = the base fit/fill), **capped at 5×**. **Pan**
+  to reposition which part of the photo fills the frame. Verified live on an 8×10.
+- **Clamped to the photo's on-frame footprint** — pan/zoom are bounded so the photo
+  **always covers the frame**; a print **never shows a white gap** from over-panning
+  (an aggressive pan stops at the photo edge). The clamp uses the photo's on-frame
+  size at scale 1, which the builder computes from the frame + photo pixels + the
+  current fit/fill and rotation.
+- **Per-photo and persisted** — the committed `scale` / `offsetX` / `offsetY` live on
+  each `PickedPhoto`, so they **survive switching photos** (re-seeded by photo uri)
+  and will **drive the full-res export crop**.
+- **UI-thread gestures** — `react-native-gesture-handler` (pinch + pan, run
+  simultaneously) + `reanimated` shared values, so dragging never hits the JS
+  thread. `GestureHandlerRootView` is mounted at the **root layout**
+  (`src/app/_layout.tsx`).
+- **No native rebuild needed** — both native modules are already in the dev client,
+  and `babel-preset-expo` **auto-wires the `react-native-worklets` plugin** (reanimated
+  4) when it's installed, so reanimated worklets transform with no extra Babel config.
+
+> **Preview softness at high zoom (known, cosmetic).** The preview scales the
+> frame-resolution Skia canvas, so it softens as you zoom in. The **export
+> re-renders at full print resolution**, so print quality is unaffected. A crisp
+> preview (Skia-internal transform driven by the shared values) is a possible
+> follow-up.
+
+### Bleed / safe area
+
+The `printAreaSizes` canvas is the complete image Prodigi expects; for these
+products there is **no separate bleed or safe-area field** — filling the canvas
+edge-to-edge is correct. If a future product family needs a trim/safe margin,
+confirm it per product (Prodigi documents it per SKU) before assuming the whole
+canvas is safe for edge content.
+
+### Per-product checklist (every new product/size)
+
+1. Variant `sku` → `GET /print-area-sizes/{sku}`.
+2. **Frame aspect** from `printAreaSizes.<area>` pixel resolution (fallback: label).
+3. Default **fill (cover)** for edge-to-edge; offer **fit** for a bordered look.
+4. **Export** at the exact pixel canvas, same crop, same color pipeline.
+5. **Quality check** photo px vs the canvas DPI (advisory warning).
+
+> **Worked example — acrylic 11×14 (`default` area).** Canvas `3417×4317` →
+> frame aspect `0.792` (portrait). A `4032×3024` landscape photo, rotated to
+> portrait and set to fill, covers the frame and crops the long edges; export is
+> `3417×4317`. A photo under ~`3417×4317` for its mapped axis trips the low-DPI
+> warning.
+
+---
+
 ## How many photos — photos = quantity
 
 The picker is **always unlimited multi-select** (`allowsMultipleSelection: true`,
@@ -90,8 +214,10 @@ a print that can't ship. **Not built yet.**
 
 | Concern | Location |
 |---|---|
-| PDP — size, Select → picker (multi) → navigate | `src/app/(home)/product/[id].tsx` |
-| Builder — fetch print spec, per-photo quality check, re-pick | `src/app/(home)/builder/[sku].tsx` |
+| PDP — size, Select → picker (multi) → navigate | `src/app/(tabs)/(home)/product/[id].tsx` |
+| Builder — fetch print spec, WYSIWYG frame, per-photo quality check, re-pick | `src/app/builder/[sku].tsx` |
+| WYSIWYG frame geometry — `parsePrintSize`, `computeFrame` | `src/app/builder/[sku].tsx` |
+| Skia canvas render — fit/fill/rotate, color matrix | `src/components/skia-photo.tsx` |
 | API client — `getProduct`, `getPrintAreaSizes` | `src/api/catalog.ts` |
 | Async fetch + loading/error/retry | `src/hooks/use-async.ts` |
 | Product / variant / print-area types | `src/api/types.ts` |
