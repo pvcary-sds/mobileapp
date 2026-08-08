@@ -72,6 +72,10 @@ export default function ProductScreen() {
         allowsMultipleSelection: true,
         selectionLimit: 0, // unlimited — photos picked = number of prints
         quality: 1,
+        // Deliver JPEG (not HEIC): Skia can't decode HEIC for the builder preview,
+        // and Prodigi's print API expects JPEG/PNG. `Compatible` transcodes at pick time.
+        preferredAssetRepresentationMode:
+          ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
       });
       if (picked.canceled || picked.assets.length === 0) return; // stay on the PDP
       const photos = picked.assets.map((a) => ({

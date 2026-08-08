@@ -9,7 +9,7 @@ import { SvgXml } from 'react-native-svg';
 
 import { AdjustSlider } from '@/components/adjust-slider';
 import { PhotoCanvasBackground } from '@/components/photo-canvas-background';
-import { SkiaPhoto } from '@/components/skia-photo';
+import { SkiaPhoto, SkiaThumb, useLocalSkiaImage } from '@/components/skia-photo';
 import {
   BRIGHTNESS_ICON,
   CHECK_ICON,
@@ -173,6 +173,10 @@ export default function BuilderScreen() {
     saturation: shown?.saturation ?? 0,
   });
 
+  // Decode the active photo once so every filter tile can preview its effect
+  // (each tile shares this image with a different color matrix).
+  const filterPreviewImage = useLocalSkiaImage(shown?.uri ?? '');
+
   // Patch the active photo's edit state (rotation / fit-fill / filter).
   const patchActive = (patch: Partial<PickedPhoto>) =>
     setPhotos((prev) => prev.map((p, i) => (i === activeThumb ? { ...p, ...patch } : p)));
@@ -225,6 +229,9 @@ export default function BuilderScreen() {
       allowsMultipleSelection: true,
       selectionLimit: 0,
       quality: 1,
+      // Deliver JPEG (not HEIC) — see the PDP picker for the full rationale.
+      preferredAssetRepresentationMode:
+        ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
     });
     if (picked.canceled || picked.assets.length === 0) return;
     const added = picked.assets.map(toPhoto);
@@ -442,15 +449,25 @@ export default function BuilderScreen() {
                     <Pressable
                       onPress={() => patchActive({ filter: f.id })}
                       style={styles.filterTile}>
-                      <Image
-                        source={{ uri: shown?.uri }}
+                      <View
                         style={[
                           styles.filterThumb,
                           { backgroundColor: theme.backgroundElement },
                           selected && { borderWidth: 2, borderColor: theme.selectedBorder },
-                        ]}
-                        contentFit="cover"
-                      />
+                        ]}>
+                        {/* Preview this effect on the customer's own photo (with
+                            their current adjustments), so it matches the canvas. */}
+                        <SkiaThumb
+                          image={filterPreviewImage}
+                          size={80}
+                          matrix={buildColorMatrix({
+                            filter: f.id,
+                            brightness: shown?.brightness ?? 0,
+                            contrast: shown?.contrast ?? 0,
+                            saturation: shown?.saturation ?? 0,
+                          })}
+                        />
+                      </View>
                       <Text
                         style={[
                           styles.filterTitle,
@@ -733,7 +750,8 @@ const styles = StyleSheet.create({
   filterThumb: {
     width: 80,
     height: 80,
-    borderRadius: 8, // placeholder image
+    borderRadius: 8,
+    overflow: 'hidden', // clip the Skia preview canvas to the rounded corners
   },
   filterTitle: {
     marginTop: 4, // 4 below the image
