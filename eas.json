@@ -10,6 +10,10 @@
       "channel": "development",
       "env": { "APP_ENV": "staging" }
     },
+    "development-simulator": {
+      "extends": "development",
+      "ios": { "simulator": true }
+    },
     "staging": {
       "distribution": "internal",
       "channel": "staging",
