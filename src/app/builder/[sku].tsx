@@ -9,6 +9,7 @@ import { SvgXml } from 'react-native-svg';
 
 import { AdjustSlider } from '@/components/adjust-slider';
 import { PhotoCanvasBackground } from '@/components/photo-canvas-background';
+import { SkiaPhoto } from '@/components/skia-photo';
 import {
   BRIGHTNESS_ICON,
   CHECK_ICON,
@@ -28,6 +29,7 @@ import {
 } from '@/constants/builder-icons';
 import { FontFamily, NativeFontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { buildColorMatrix } from '@/lib/color-matrix';
 
 /** A raw photo as picked (from the PDP or the in-builder picker). */
 type RawPhoto = { uri: string; width?: number; height?: number };
@@ -162,6 +164,15 @@ export default function BuilderScreen() {
   // (portrait → offer rotate-to-landscape, and vice versa).
   const displayedLandscape = shownNaturalLandscape !== rotated;
 
+  // The Effects + Adjust color matrix for the canvas preview (and, later, the
+  // full-res print render).
+  const photoMatrix = buildColorMatrix({
+    filter: shown?.filter ?? 'none',
+    brightness: shown?.brightness ?? 0,
+    contrast: shown?.contrast ?? 0,
+    saturation: shown?.saturation ?? 0,
+  });
+
   // Patch the active photo's edit state (rotation / fit-fill / filter).
   const patchActive = (patch: Partial<PickedPhoto>) =>
     setPhotos((prev) => prev.map((p, i) => (i === activeThumb ? { ...p, ...patch } : p)));
@@ -231,15 +242,14 @@ export default function BuilderScreen() {
       <PhotoCanvasBackground />
 
       {/* The photo being edited: 32 below the action row, 32 above the strip,
-          16 inset L/R. fit/fill → contain/cover; rotate → 90° transform. */}
+          16 inset L/R. Rendered with Skia so Effects/Adjust apply live. */}
       {shown?.uri && (
         <View style={[styles.photoArea, { bottom: dockHeight + 32 }]}>
-          <Image
-            key={shown.uri}
-            source={{ uri: shown.uri }}
-            style={[styles.photo, rotated && styles.photoRotated]}
-            contentFit={fillMode === 'fill' ? 'cover' : 'contain'}
-            transition={0}
+          <SkiaPhoto
+            uri={shown.uri}
+            fit={fillMode === 'fill' ? 'cover' : 'contain'}
+            rotated={rotated}
+            matrix={photoMatrix}
           />
         </View>
       )}
@@ -517,13 +527,6 @@ const styles = StyleSheet.create({
     right: 16, // 16 trailing
     // bottom = dockHeight + 32 (32 above the strip) is applied inline.
     overflow: 'hidden', // crop 'cover' / a rotated photo to the frame
-  },
-  photo: {
-    width: '100%',
-    height: '100%',
-  },
-  photoRotated: {
-    transform: [{ rotate: '90deg' }],
   },
   deleteButton: {
     position: 'absolute',
