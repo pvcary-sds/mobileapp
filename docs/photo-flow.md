@@ -123,15 +123,32 @@ with a **hairline border** marking the print edge.
 
 ### Positioning — pinch-zoom + pan
 
-Inside the frame the customer can **pinch to zoom** (scale ≥ 1, capped) and **pan**
-to choose the crop. Both are **clamped so the photo always covers the frame** — a
-print never shows a white gap from over-panning. Gestures run on the UI thread
-(`react-native-gesture-handler` + `reanimated`); the committed `scale`/`offset`
-persist **per photo** and will drive the full-res export crop. See
-`src/components/zoom-pan-frame.tsx`. (The preview scales the frame-resolution
-canvas, so it softens at high zoom; the export re-renders at full print
-resolution, so print quality is unaffected. Crisp-zoom-in-preview via a Skia-
-internal transform is a possible follow-up.)
+Inside the frame the customer positions the crop with pinch + pan
+(`src/components/zoom-pan-frame.tsx`, wrapping the Skia photo):
+
+- **Pinch to zoom** — `scale ≥ 1` (1 = the base fit/fill), **capped at 5×**. **Pan**
+  to reposition which part of the photo fills the frame. Verified live on an 8×10.
+- **Clamped to the photo's on-frame footprint** — pan/zoom are bounded so the photo
+  **always covers the frame**; a print **never shows a white gap** from over-panning
+  (an aggressive pan stops at the photo edge). The clamp uses the photo's on-frame
+  size at scale 1, which the builder computes from the frame + photo pixels + the
+  current fit/fill and rotation.
+- **Per-photo and persisted** — the committed `scale` / `offsetX` / `offsetY` live on
+  each `PickedPhoto`, so they **survive switching photos** (re-seeded by photo uri)
+  and will **drive the full-res export crop**.
+- **UI-thread gestures** — `react-native-gesture-handler` (pinch + pan, run
+  simultaneously) + `reanimated` shared values, so dragging never hits the JS
+  thread. `GestureHandlerRootView` is mounted at the **root layout**
+  (`src/app/_layout.tsx`).
+- **No native rebuild needed** — both native modules are already in the dev client,
+  and `babel-preset-expo` **auto-wires the `react-native-worklets` plugin** (reanimated
+  4) when it's installed, so reanimated worklets transform with no extra Babel config.
+
+> **Preview softness at high zoom (known, cosmetic).** The preview scales the
+> frame-resolution Skia canvas, so it softens as you zoom in. The **export
+> re-renders at full print resolution**, so print quality is unaffected. A crisp
+> preview (Skia-internal transform driven by the shared values) is a possible
+> follow-up.
 
 ### Bleed / safe area
 
