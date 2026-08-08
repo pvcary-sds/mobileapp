@@ -14,6 +14,7 @@ import { Base, Brand, Gray, Label, LightBlue, Primary, withAlpha } from '@/const
 export const Colors = {
   // Text
   text: Gray[900], // primary text
+  iconMuted: Gray[600], // Gray/600 — muted icons (e.g. Adjust tiles)
   textTertiary: Gray[700], // supporting text a step lighter than primary (e.g. prices)
   textSecondary: Gray[500], // descriptions, captions
   textMuted: Gray[400], // hints, disabled
@@ -37,6 +38,12 @@ export const Colors = {
 
   // Destructive (delete) control border — Primary/600.
   deleteBorder: Primary[600],
+  // Selected indicator — Primary/600 stroke + Primary/700 label.
+  selectedBorder: Primary[600],
+  selectedText: Primary[700],
+  iconDisabled: Gray[300], // Gray/300 — a disabled icon/control
+
+
 
   // Status (Label pairs)
   successFg: Label.darkGreen,
@@ -98,6 +105,7 @@ export const FontFamily = {
  * than the expo-font key used for React Native `<Text>`.
  */
 export const NativeFontFamily = {
+  body: 'DMSans-Regular',
   bodyMedium: 'DMSans-Medium',
   bodySemiBold: 'DMSans-SemiBold',
 } as const;

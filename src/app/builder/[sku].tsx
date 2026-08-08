@@ -1,16 +1,23 @@
+import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
 
+import { AdjustSlider } from '@/components/adjust-slider';
 import { PhotoCanvasBackground } from '@/components/photo-canvas-background';
+import { SkiaPhoto } from '@/components/skia-photo';
 import {
+  BRIGHTNESS_ICON,
+  CHECK_ICON,
   CHEVRON_DOWN,
   CHEVRON_LEFT,
   CHEVRON_UP,
+  CLOSE_ICON,
+  CONTRAST_ICON,
   DELETE_ICON,
   FILL_ICON,
   FILTER_ICON,
@@ -18,9 +25,11 @@ import {
   PLUS_ICON,
   ROTATE_LANDSCAPE_ICON,
   ROTATE_PORTRAIT_ICON,
+  SATURATION_ICON,
 } from '@/constants/builder-icons';
-import { FontFamily } from '@/constants/theme';
+import { FontFamily, NativeFontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { buildColorMatrix } from '@/lib/color-matrix';
 
 /** A raw photo as picked (from the PDP or the in-builder picker). */
 type RawPhoto = { uri: string; width?: number; height?: number };
@@ -30,12 +39,46 @@ type RawPhoto = { uri: string; width?: number; height?: number };
 type PickedPhoto = RawPhoto & {
   rotated: boolean; // 90° off the photo's natural (EXIF-correct) orientation
   fillMode: 'fit' | 'fill'; // contain vs cover
+  filter: string; // selected filter id ('none' = original)
+  brightness: number; // Adjust values, neutral at 0
+  contrast: number;
+  saturation: number;
 };
 
-/** Seed a freshly-picked photo with its default (unrotated, fit) edit state. */
+/** Seed a freshly-picked photo with its default edit state. */
 function toPhoto(a: RawPhoto): PickedPhoto {
-  return { uri: a.uri, width: a.width, height: a.height, rotated: false, fillMode: 'fit' };
+  return {
+    uri: a.uri,
+    width: a.width,
+    height: a.height,
+    rotated: false,
+    fillMode: 'fit',
+    filter: 'none',
+    brightness: 0,
+    contrast: 0,
+    saturation: 0,
+  };
 }
+
+// Adjust tab controls — each maps to a per-photo value above.
+const ADJUSTMENTS = [
+  { id: 'brightness', name: 'Brightness', icon: BRIGHTNESS_ICON },
+  { id: 'contrast', name: 'Contrast', icon: CONTRAST_ICON },
+  { id: 'saturation', name: 'Saturation', icon: SATURATION_ICON },
+] as const;
+
+// Filters for the filter sheet. "None" is the reset to the original. Previews /
+// actual color grading come later.
+const FILTERS = [
+  { id: 'none', name: 'None' },
+  { id: 'vivid', name: 'Vivid' },
+  { id: 'noir', name: 'Noir' },
+  { id: 'mono', name: 'Mono' },
+  { id: 'sepia', name: 'Sepia' },
+  { id: 'warm', name: 'Warm' },
+  { id: 'cool', name: 'Cool' },
+  { id: 'fade', name: 'Fade' },
+];
 
 /** Format a USD amount, e.g. 1350 → "$1,350.00". */
 function formatUSD(amount: number): string {
@@ -98,6 +141,17 @@ export default function BuilderScreen() {
   const [sizeOpen, setSizeOpen] = useState(false); // size picker open (chevron flips)
   const [activeThumb, setActiveThumb] = useState(0); // selected photo — first is selected on load
   const [dockHeight, setDockHeight] = useState(0); // measured; photo area sits 32 above the strip
+  const [filterOpen, setFilterOpen] = useState(false); // filter bottom sheet
+  const [filterTab, setFilterTab] = useState(0); // 0 = Effects, 1 = Adjust
+  // Edit state captured when the sheet opens, so the confirm check enables only
+  // once Effects or Adjust actually changes.
+  const [sheetSnapshot, setSheetSnapshot] = useState({
+    filter: 'none',
+    brightness: 0,
+    contrast: 0,
+    saturation: 0,
+  });
+  const [adjustSelected, setAdjustSelected] = useState(0); // which Adjust tile drives the slider
 
   // The photo on the canvas — the selected thumbnail (first by default). Its
   // fit/fill and rotation are its OWN, so switching photos never carries another
@@ -110,9 +164,39 @@ export default function BuilderScreen() {
   // (portrait → offer rotate-to-landscape, and vice versa).
   const displayedLandscape = shownNaturalLandscape !== rotated;
 
-  // Patch the active photo's edit state (rotation / fit-fill).
+  // The Effects + Adjust color matrix for the canvas preview (and, later, the
+  // full-res print render).
+  const photoMatrix = buildColorMatrix({
+    filter: shown?.filter ?? 'none',
+    brightness: shown?.brightness ?? 0,
+    contrast: shown?.contrast ?? 0,
+    saturation: shown?.saturation ?? 0,
+  });
+
+  // Patch the active photo's edit state (rotation / fit-fill / filter).
   const patchActive = (patch: Partial<PickedPhoto>) =>
     setPhotos((prev) => prev.map((p, i) => (i === activeThumb ? { ...p, ...patch } : p)));
+
+  // Open the filter sheet, snapshotting the current filter so the confirm check
+  // can enable only once something actually changes.
+  const openFilters = () => {
+    setSheetSnapshot({
+      filter: shown?.filter ?? 'none',
+      brightness: shown?.brightness ?? 0,
+      contrast: shown?.contrast ?? 0,
+      saturation: shown?.saturation ?? 0,
+    });
+    setFilterTab(0);
+    setAdjustSelected(0);
+    setFilterOpen(true);
+  };
+  // Enables the confirm check: any Effects (filter) or Adjust value changed.
+  const filterChanged =
+    !!shown &&
+    (shown.filter !== sheetSnapshot.filter ||
+      shown.brightness !== sheetSnapshot.brightness ||
+      shown.contrast !== sheetSnapshot.contrast ||
+      shown.saturation !== sheetSnapshot.saturation);
 
   // Delete: confirm, then remove the active photo. Removing the last one leaves
   // nothing to build, so go back; otherwise keep focus on the slot (the next
@@ -158,15 +242,14 @@ export default function BuilderScreen() {
       <PhotoCanvasBackground />
 
       {/* The photo being edited: 32 below the action row, 32 above the strip,
-          16 inset L/R. fit/fill → contain/cover; rotate → 90° transform. */}
+          16 inset L/R. Rendered with Skia so Effects/Adjust apply live. */}
       {shown?.uri && (
         <View style={[styles.photoArea, { bottom: dockHeight + 32 }]}>
-          <Image
-            key={shown.uri}
-            source={{ uri: shown.uri }}
-            style={[styles.photo, rotated && styles.photoRotated]}
-            contentFit={fillMode === 'fill' ? 'cover' : 'contain'}
-            transition={0}
+          <SkiaPhoto
+            uri={shown.uri}
+            fit={fillMode === 'fill' ? 'cover' : 'contain'}
+            rotated={rotated}
+            matrix={photoMatrix}
           />
         </View>
       )}
@@ -207,8 +290,9 @@ export default function BuilderScreen() {
             color={theme.text}
           />
         </Pressable>
-        {/* TODO: filter tap behavior (to be defined). */}
+        {/* Filter — opens the filter sheet. */}
         <Pressable
+          onPress={openFilters}
           style={[styles.toolButton, styles.toolDivider, { borderLeftColor: theme.borderStrong }]}>
           <SvgXml xml={FILTER_ICON} width={24} height={24} color={theme.text} />
         </Pressable>
@@ -249,7 +333,7 @@ export default function BuilderScreen() {
                 style={[
                   styles.thumb,
                   i > 0 && styles.thumbGap,
-                  activeThumb === i && { borderWidth: 2, borderColor: theme.deleteBorder },
+                  activeThumb === i && { borderWidth: 2, borderColor: theme.selectedBorder },
                 ]}>
                 <Image source={{ uri: photo.uri }} style={styles.thumbImage} contentFit="cover" />
               </Pressable>
@@ -293,6 +377,141 @@ export default function BuilderScreen() {
           </Pressable>
         </View>
       </View>
+
+      {/* Filter sheet — a white panel pinned to the bottom, over everything. */}
+      {filterOpen && (
+        <View
+          style={[
+            styles.filterSheet,
+            {
+              backgroundColor: theme.background,
+              borderTopColor: theme.border,
+              paddingBottom: insets.bottom, // each tab adds its own bottom gap below
+            },
+          ]}>
+          {/* Header (48 tall) — Effects/Adjust segmented control centered 8 from
+              the top; close X at 16 leading / 12 top. */}
+          <View style={styles.filterHeader}>
+            <SegmentedControl
+              values={['Effects', 'Adjust']}
+              selectedIndex={filterTab}
+              onChange={(e) => setFilterTab(e.nativeEvent.selectedSegmentIndex)}
+              style={styles.filterTabs}
+              // Grey/black; unselected Body/Regular 14, selected Body SemiBold 14.
+              fontStyle={{ color: theme.text, fontFamily: NativeFontFamily.body, fontSize: 14 }}
+              activeFontStyle={{
+                color: theme.text,
+                fontFamily: NativeFontFamily.bodySemiBold,
+                fontSize: 14,
+              }}
+            />
+            <Pressable
+              onPress={() => setFilterOpen(false)}
+              hitSlop={8}
+              style={styles.filterClose}>
+              <SvgXml xml={CLOSE_ICON} width={24} height={24} color={theme.text} />
+            </Pressable>
+            {/* Confirm — disabled (Gray/300) until a value changes, then Gray/black. */}
+            {/* TODO: on confirm, commit the change (currently applied live) + close. */}
+            <Pressable
+              onPress={() => setFilterOpen(false)}
+              disabled={!filterChanged}
+              hitSlop={8}
+              style={styles.filterCheck}>
+              <SvgXml
+                xml={CHECK_ICON}
+                width={24}
+                height={24}
+                color={filterChanged ? theme.text : theme.iconDisabled}
+              />
+            </Pressable>
+          </View>
+          {filterTab === 0 ? (
+            /* Effects: filter tiles — 24 below the header, 16 leading, scrollable.
+               Each previews the active photo; the selected one gets a Primary/600
+               stroke + Primary/700 title. */
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.filterScroll}
+              contentContainerStyle={styles.filterTiles}>
+              {FILTERS.map((f, i) => {
+                const selected = (shown?.filter ?? 'none') === f.id;
+                return (
+                  <Fragment key={f.id}>
+                    <Pressable
+                      onPress={() => patchActive({ filter: f.id })}
+                      style={styles.filterTile}>
+                      <Image
+                        source={{ uri: shown?.uri }}
+                        style={[
+                          styles.filterThumb,
+                          { backgroundColor: theme.backgroundElement },
+                          selected && { borderWidth: 2, borderColor: theme.selectedBorder },
+                        ]}
+                        contentFit="cover"
+                      />
+                      <Text
+                        style={[
+                          styles.filterTitle,
+                          { color: selected ? theme.selectedText : theme.textTertiary },
+                        ]}
+                        numberOfLines={1}>
+                        {f.name}
+                      </Text>
+                    </Pressable>
+                    {/* Divider after "None" (the reset), centered with the tiles. */}
+                    {i === 0 && (
+                      <View style={styles.filterSeparator}>
+                        <View
+                          style={[
+                            styles.filterSeparatorLine,
+                            { backgroundColor: theme.borderStrong },
+                          ]}
+                        />
+                      </View>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </ScrollView>
+          ) : (
+            <>
+              {/* Adjust: Brightness / Contrast / Saturation tiles — same top offset
+                  as the filters; the selected one drives the slider below. */}
+              <View style={styles.adjustTiles}>
+                {ADJUSTMENTS.map((a, i) => {
+                  const selected = adjustSelected === i;
+                  return (
+                    <Pressable
+                      key={a.id}
+                      onPress={() => setAdjustSelected(i)}
+                      style={[
+                        styles.adjustTile,
+                        { borderColor: selected ? theme.text : theme.border },
+                      ]}>
+                      <SvgXml xml={a.icon} width={32} height={32} color={theme.iconMuted} />
+                      <Text
+                        style={[styles.adjustTitle, { color: theme.textTertiary }]}
+                        numberOfLines={1}>
+                        {a.name}: {shown?.[a.id] ?? 0}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <View style={styles.adjustSlider}>
+                <AdjustSlider
+                  value={shown?.[ADJUSTMENTS[adjustSelected].id] ?? 0}
+                  onChange={(v) =>
+                    patchActive({ [ADJUSTMENTS[adjustSelected].id]: v } as Partial<PickedPhoto>)
+                  }
+                />
+              </View>
+            </>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -308,13 +527,6 @@ const styles = StyleSheet.create({
     right: 16, // 16 trailing
     // bottom = dockHeight + 32 (32 above the strip) is applied inline.
     overflow: 'hidden', // crop 'cover' / a rotated photo to the frame
-  },
-  photo: {
-    width: '100%',
-    height: '100%',
-  },
-  photoRotated: {
-    transform: [{ rotate: '90deg' }],
   },
   deleteButton: {
     position: 'absolute',
@@ -443,5 +655,91 @@ const styles = StyleSheet.create({
   backLabel: {
     fontFamily: FontFamily.bodyMedium,
     fontSize: 17,
+  },
+  filterSheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderTopWidth: 1, // hairline to separate the sheet from the canvas
+    // backgroundColor + paddingBottom (46 + safe-area inset) applied inline.
+  },
+  filterHeader: {
+    height: 48,
+    paddingTop: 8, // segmented control 8 from the top
+    alignItems: 'center', // center the segmented control horizontally
+  },
+  filterTabs: {
+    width: 220, // centered; native control fills the width it's given
+  },
+  filterClose: {
+    position: 'absolute',
+    top: 12, // X 12 from the top
+    left: 16, // X 16 from the leading
+  },
+  filterCheck: {
+    position: 'absolute',
+    top: 12, // check 12 from the top
+    right: 16, // check 16 from the trailing
+  },
+  adjustTiles: {
+    flexDirection: 'row',
+    marginTop: 24, // same top offset as the filter tiles (72 from the sheet top)
+    paddingHorizontal: 16, // 16 leading/trailing
+    gap: 8, // 8 between tiles
+  },
+  adjustTile: {
+    flex: 1, // three equal-width tiles filling the row
+    alignItems: 'center',
+    // 12 padding + 1px border = the 13 above/below spec, and keeps the tile at
+    // exactly 80 (border adds to auto-height in RN) so both tabs are 220 tall.
+    paddingVertical: 12,
+    borderWidth: 1, // Gray/200 idle, Gray/black selected
+    borderRadius: 8,
+  },
+  adjustTitle: {
+    marginTop: 4, // 4 below the image
+    fontFamily: FontFamily.body, // Caption / Regular
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+  adjustSlider: {
+    marginTop: 24, // 24 below the tiles
+    marginBottom: 24, // 24 above the sheet bottom
+    marginHorizontal: 16, // 16 leading/trailing
+  },
+  filterScroll: {
+    marginTop: 24, // 24 below the header → tiles 72 from the sheet's top
+    marginBottom: 46, // 46 above the sheet bottom (was the sheet's own padding)
+  },
+  filterTiles: {
+    paddingLeft: 16, // 16 leading
+    paddingRight: 16,
+    columnGap: 12, // between tiles (unspecified — sensible default)
+  },
+  filterTile: {
+    width: 80, // image width; title centers below
+    alignItems: 'center',
+  },
+  filterSeparator: {
+    height: 80, // matches the tile image so the line centers with the tiles
+    justifyContent: 'center',
+  },
+  filterSeparatorLine: {
+    width: 2,
+    height: 32, // Gray/300, applied inline
+  },
+  filterThumb: {
+    width: 80,
+    height: 80,
+    borderRadius: 8, // placeholder image
+  },
+  filterTitle: {
+    marginTop: 4, // 4 below the image
+    fontFamily: FontFamily.bodyMedium, // Caption / Medium
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
   },
 });

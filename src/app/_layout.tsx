@@ -66,8 +66,12 @@ export default function RootLayout() {
         {/* The tab bar and everything inside it. */}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         {/* Full-screen photo editor — pushes over the tabs (title + custom Back
-            come from the screen itself). */}
-        <Stack.Screen name="builder/[sku]" options={{ title: '', headerBackTitle: 'Back' }} />
+            come from the screen itself). Swipe-back is disabled so the edge
+            gesture doesn't fight horizontal drags (the Adjust slider). */}
+        <Stack.Screen
+          name="builder/[sku]"
+          options={{ title: '', headerBackTitle: 'Back', gestureEnabled: false }}
+        />
       </Stack>
       <StatusBar style="dark" />
     </ThemeProvider>
