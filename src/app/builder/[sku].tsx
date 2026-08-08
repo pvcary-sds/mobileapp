@@ -7,6 +7,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
 
+import { getPrintAreaSizes } from '@/api/catalog';
 import { AdjustSlider } from '@/components/adjust-slider';
 import { PhotoCanvasBackground } from '@/components/photo-canvas-background';
 import { SkiaPhoto, SkiaThumb, useLocalSkiaImage } from '@/components/skia-photo';
@@ -28,6 +29,7 @@ import {
   SATURATION_ICON,
 } from '@/constants/builder-icons';
 import { FontFamily, NativeFontFamily } from '@/constants/theme';
+import { useAsync } from '@/hooks/use-async';
 import { useTheme } from '@/hooks/use-theme';
 import { buildColorMatrix } from '@/lib/color-matrix';
 
@@ -96,13 +98,16 @@ function parsePrintSize(size?: string): [number, number] | null {
  * The print frame's on-screen rect: the product's aspect ratio, scaled to fit
  * inside the available canvas (`area`) and centered. Oriented to match the
  * photo (`landscape`), so what's inside the frame is exactly what prints.
+ *
+ * `dims` is the print area's ratio — ideally the exact Prodigi pixel canvas
+ * (e.g. [3417, 4317]) so the preview matches the print edge-to-edge; only the
+ * ratio matters, not the units.
  */
 function computeFrame(
-  size: string | undefined,
+  dims: [number, number] | null,
   landscape: boolean,
   area: { w: number; h: number },
 ): { width: number; height: number; left: number; top: number } | null {
-  const dims = parsePrintSize(size);
   if (!dims || area.w <= 0 || area.h <= 0) return null;
   const short = Math.min(dims[0], dims[1]);
   const long = Math.max(dims[0], dims[1]);
@@ -151,11 +156,22 @@ export default function BuilderScreen() {
   const insets = useSafeAreaInsets();
   // Passed from the PDP so we can use them without refetching: the chosen size
   // ("11x14 in"), its unit price ("60.00"), and the picked photos.
-  const { size, price, photos: photosParam } = useLocalSearchParams<{
+  const { sku, size, price, photos: photosParam } = useLocalSearchParams<{
+    sku?: string;
     size?: string;
     price?: string;
     photos?: string;
   }>();
+
+  // The authoritative print spec from Prodigi (via our API), fetched per sku —
+  // i.e. re-fetched whenever a new size is chosen. Gives the exact print pixel
+  // canvas (e.g. 3417×4317) so the frame is edge-to-edge accurate, plus the DPI
+  // for a future low-resolution warning. Falls back to the nominal size label
+  // while it loads or if it's unavailable.
+  const { data: printSpec } = useAsync(
+    (signal) => getPrintAreaSizes(sku as string, undefined, signal),
+    [sku],
+  );
 
   // Seed the picked photos from the route param into local state (with default
   // per-photo edit state) so they can be edited/removed. The count is the number
@@ -215,8 +231,17 @@ export default function BuilderScreen() {
 
   // The WYSIWYG print frame: the product's aspect ratio, fit inside the measured
   // canvas area. The photo is clipped to this — what's inside is what prints.
+  // Prefer the exact Prodigi print pixel canvas (so the crop matches the print
+  // edge-to-edge); fall back to the nominal size label until the spec loads.
+  const printPixels = printSpec?.printAreaSizes
+    ? (printSpec.printAreaSizes.default ?? Object.values(printSpec.printAreaSizes)[0])
+    : undefined;
+  const frameDims: [number, number] | null =
+    printPixels?.horizontalResolution && printPixels?.verticalResolution
+      ? [printPixels.horizontalResolution, printPixels.verticalResolution]
+      : parsePrintSize(size);
   const [canvasArea, setCanvasArea] = useState({ w: 0, h: 0 });
-  const frame = computeFrame(size, displayedLandscape, canvasArea);
+  const frame = computeFrame(frameDims, displayedLandscape, canvasArea);
 
   // Patch the active photo's edit state (rotation / fit-fill / filter).
   const patchActive = (patch: Partial<PickedPhoto>) =>
@@ -300,20 +325,26 @@ export default function BuilderScreen() {
             setCanvasArea({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
           }>
           {frame ? (
-            // Outer view carries the shadow (can't clip); inner clips the photo.
+            // The print: a hairline-bordered rect at the product's exact aspect,
+            // clipping the photo to the print boundary (the crop that prints).
             <View
               style={[
                 styles.printFrame,
-                { width: frame.width, height: frame.height, left: frame.left, top: frame.top },
+                {
+                  width: frame.width,
+                  height: frame.height,
+                  left: frame.left,
+                  top: frame.top,
+                  backgroundColor: theme.background,
+                  borderColor: theme.borderStrong,
+                },
               ]}>
-              <View style={[styles.printFrameClip, { backgroundColor: theme.background }]}>
-                <SkiaPhoto
-                  uri={shown.uri}
-                  fit={fillMode === 'fill' ? 'cover' : 'contain'}
-                  rotated={rotated}
-                  matrix={photoMatrix}
-                />
-              </View>
+              <SkiaPhoto
+                uri={shown.uri}
+                fit={fillMode === 'fill' ? 'cover' : 'contain'}
+                rotated={rotated}
+                matrix={photoMatrix}
+              />
             </View>
           ) : (
             // Unknown size: fall back to filling the whole canvas area.
@@ -613,14 +644,7 @@ const styles = StyleSheet.create({
   },
   printFrame: {
     position: 'absolute',
-    // Subtle shadow so the "print" reads as a physical object over the dot grid.
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  printFrameClip: {
-    flex: 1,
+    borderWidth: StyleSheet.hairlineWidth, // hairline outline marking the print edge
     overflow: 'hidden', // clip the photo to the print boundary (the crop)
   },
   deleteButton: {
