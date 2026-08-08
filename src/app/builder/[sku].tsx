@@ -225,6 +225,9 @@ export default function BuilderScreen() {
       allowsMultipleSelection: true,
       selectionLimit: 0,
       quality: 1,
+      // Deliver JPEG (not HEIC) — see the PDP picker for the full rationale.
+      preferredAssetRepresentationMode:
+        ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
     });
     if (picked.canceled || picked.assets.length === 0) return;
     const added = picked.assets.map(toPhoto);
