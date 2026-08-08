@@ -121,6 +121,18 @@ portrait, and the **rotate** control flips both together (it reorients the whole
 print, photo included). The frame is fit into the on-screen canvas area, centered,
 with a **hairline border** marking the print edge.
 
+### Positioning — pinch-zoom + pan
+
+Inside the frame the customer can **pinch to zoom** (scale ≥ 1, capped) and **pan**
+to choose the crop. Both are **clamped so the photo always covers the frame** — a
+print never shows a white gap from over-panning. Gestures run on the UI thread
+(`react-native-gesture-handler` + `reanimated`); the committed `scale`/`offset`
+persist **per photo** and will drive the full-res export crop. See
+`src/components/zoom-pan-frame.tsx`. (The preview scales the frame-resolution
+canvas, so it softens at high zoom; the export re-renders at full print
+resolution, so print quality is unaffected. Crisp-zoom-in-preview via a Skia-
+internal transform is a possible follow-up.)
+
 ### Bleed / safe area
 
 The `printAreaSizes` canvas is the complete image Prodigi expects; for these
