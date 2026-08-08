@@ -3,7 +3,10 @@
 How a customer goes from browsing to a print-ready photo, and the mechanics
 behind it. Written for both product and engineering. Companion to
 [`DEVELOPMENT.md`](../DEVELOPMENT.md); API endpoints are specified in the API
-repo's `API.md`.
+repo's `API.md`. For a full breakdown of the **Customize (builder) screen** —
+every control, the logic, the libraries, and how the custom pieces (slider, Skia
+canvas, zoom/pan, color pipeline) were built — see
+[`customize-builder.md`](customize-builder.md).
 
 ---
 
