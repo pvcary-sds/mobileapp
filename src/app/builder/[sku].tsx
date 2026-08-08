@@ -11,6 +11,7 @@ import { getPrintAreaSizes } from '@/api/catalog';
 import { AdjustSlider } from '@/components/adjust-slider';
 import { PhotoCanvasBackground } from '@/components/photo-canvas-background';
 import { SkiaPhoto, SkiaThumb, useLocalSkiaImage } from '@/components/skia-photo';
+import { IDENTITY_ZOOM, ZoomPanFrame } from '@/components/zoom-pan-frame';
 import {
   BRIGHTNESS_ICON,
   CHECK_ICON,
@@ -45,6 +46,9 @@ type PickedPhoto = RawPhoto & {
   brightness: number; // Adjust values, neutral at 0
   contrast: number;
   saturation: number;
+  scale: number; // pinch-zoom crop (1 = base fit/fill)
+  offsetX: number; // pan offset within the frame, in frame points
+  offsetY: number;
 };
 
 /** Seed a freshly-picked photo with its default edit state. */
@@ -59,6 +63,7 @@ function toPhoto(a: RawPhoto): PickedPhoto {
     brightness: 0,
     contrast: 0,
     saturation: 0,
+    ...IDENTITY_ZOOM,
   };
 }
 
@@ -243,6 +248,22 @@ export default function BuilderScreen() {
   const [canvasArea, setCanvasArea] = useState({ w: 0, h: 0 });
   const frame = computeFrame(frameDims, displayedLandscape, canvasArea);
 
+  // The photo's on-frame footprint at zoom 1 (accounts for fit/fill + rotate),
+  // which the zoom/pan clamp needs so panning never uncovers the frame. Null
+  // when we don't know the photo's pixel size (then zoom/pan is disabled).
+  const content = (() => {
+    if (!frame || !shown?.width || !shown?.height) return null;
+    const targetW = rotated ? frame.height : frame.width;
+    const targetH = rotated ? frame.width : frame.height;
+    const base =
+      fillMode === 'fill'
+        ? Math.max(targetW / shown.width, targetH / shown.height)
+        : Math.min(targetW / shown.width, targetH / shown.height);
+    const dispW = shown.width * base;
+    const dispH = shown.height * base;
+    return { w: rotated ? dispH : dispW, h: rotated ? dispW : dispH };
+  })();
+
   // Patch the active photo's edit state (rotation / fit-fill / filter).
   const patchActive = (patch: Partial<PickedPhoto>) =>
     setPhotos((prev) => prev.map((p, i) => (i === activeThumb ? { ...p, ...patch } : p)));
@@ -324,37 +345,51 @@ export default function BuilderScreen() {
           onLayout={(e) =>
             setCanvasArea({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
           }>
-          {frame ? (
-            // The print: a hairline-bordered rect at the product's exact aspect,
-            // clipping the photo to the print boundary (the crop that prints).
-            <View
-              style={[
-                styles.printFrame,
-                {
-                  width: frame.width,
-                  height: frame.height,
-                  left: frame.left,
-                  top: frame.top,
-                  backgroundColor: theme.background,
-                  borderColor: theme.borderStrong,
-                },
-              ]}>
+          {(() => {
+            const photo = (
               <SkiaPhoto
                 uri={shown.uri}
                 fit={fillMode === 'fill' ? 'cover' : 'contain'}
                 rotated={rotated}
                 matrix={photoMatrix}
               />
-            </View>
-          ) : (
-            // Unknown size: fall back to filling the whole canvas area.
-            <SkiaPhoto
-              uri={shown.uri}
-              fit={fillMode === 'fill' ? 'cover' : 'contain'}
-              rotated={rotated}
-              matrix={photoMatrix}
-            />
-          )}
+            );
+            if (!frame) {
+              // Unknown size: fall back to filling the whole canvas area.
+              return photo;
+            }
+            return (
+              // The print: a hairline-bordered rect at the product's exact aspect,
+              // clipping the photo to the print boundary (the crop that prints).
+              <View
+                style={[
+                  styles.printFrame,
+                  {
+                    width: frame.width,
+                    height: frame.height,
+                    left: frame.left,
+                    top: frame.top,
+                    backgroundColor: theme.background,
+                    borderColor: theme.borderStrong,
+                  },
+                ]}>
+                {content ? (
+                  <ZoomPanFrame
+                    photoKey={shown.uri}
+                    frameW={frame.width}
+                    frameH={frame.height}
+                    contentW={content.w}
+                    contentH={content.h}
+                    value={{ scale: shown.scale, offsetX: shown.offsetX, offsetY: shown.offsetY }}
+                    onCommit={(v) => patchActive(v)}>
+                    {photo}
+                  </ZoomPanFrame>
+                ) : (
+                  photo
+                )}
+              </View>
+            );
+          })()}
         </View>
       )}
 

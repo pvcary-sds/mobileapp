@@ -13,6 +13,7 @@ import { useFonts } from 'expo-font';
 import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { initEnvironmentAsync } from '@/api/environment';
 import { Colors } from '@/constants/theme';
@@ -61,19 +62,22 @@ export default function RootLayout() {
   if (!ready || !fontsLoaded) return null;
 
   return (
-    <ThemeProvider value={navigationTheme}>
-      <Stack screenOptions={{ headerShadowVisible: false }}>
-        {/* The tab bar and everything inside it. */}
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        {/* Full-screen photo editor — pushes over the tabs (title + custom Back
-            come from the screen itself). Swipe-back is disabled so the edge
-            gesture doesn't fight horizontal drags (the Adjust slider). */}
-        <Stack.Screen
-          name="builder/[sku]"
-          options={{ title: '', headerBackTitle: 'Back', gestureEnabled: false }}
-        />
-      </Stack>
-      <StatusBar style="dark" />
-    </ThemeProvider>
+    // Root for react-native-gesture-handler (the builder's pinch-zoom/pan).
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={navigationTheme}>
+        <Stack screenOptions={{ headerShadowVisible: false }}>
+          {/* The tab bar and everything inside it. */}
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          {/* Full-screen photo editor — pushes over the tabs (title + custom Back
+              come from the screen itself). Swipe-back is disabled so the edge
+              gesture doesn't fight horizontal drags (the Adjust slider). */}
+          <Stack.Screen
+            name="builder/[sku]"
+            options={{ title: '', headerBackTitle: 'Back', gestureEnabled: false }}
+          />
+        </Stack>
+        <StatusBar style="dark" />
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
