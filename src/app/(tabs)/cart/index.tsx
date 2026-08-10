@@ -7,7 +7,7 @@ import { SvgXml } from 'react-native-svg';
 import { EMPTY_CART_ILLUSTRATION } from '@/constants/illustrations';
 import { BottomTabInset, FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { useCartItems } from '@/lib/cart-store';
+import { cartStore, useCartItems } from '@/lib/cart-store';
 
 /** "Start shopping" button glyph (from Figma) — white stroke, on the primary fill. */
 const START_SHOPPING_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -18,6 +18,31 @@ const START_SHOPPING_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fil
 function formatUSD(price: string): string {
   const n = Number(price) || 0;
   return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/**
+ * Copy stepper for a cart row (32px tall). First pass — refine to the detailed
+ * spec (button/borders/colors) once it's provided.
+ */
+function QtyStepper({ value, onChange }: { value: number; onChange: (q: number) => void }) {
+  const theme = useTheme();
+  return (
+    <View style={[styles.stepper, { borderColor: theme.border }]}>
+      <Pressable
+        hitSlop={4}
+        disabled={value <= 1}
+        style={styles.stepperBtn}
+        onPress={() => onChange(value - 1)}>
+        <Text style={[styles.stepperSign, { color: value <= 1 ? theme.textMuted : theme.text }]}>
+          −
+        </Text>
+      </Pressable>
+      <Text style={[styles.stepperValue, { color: theme.text }]}>{value}</Text>
+      <Pressable hitSlop={4} style={styles.stepperBtn} onPress={() => onChange(value + 1)}>
+        <Text style={[styles.stepperSign, { color: theme.text }]}>+</Text>
+      </Pressable>
+    </View>
+  );
 }
 
 /**
@@ -80,7 +105,27 @@ export default function CartScreen() {
               </View>
               {/* Size — left-aligned, right below the title. */}
               <Text style={[styles.rowSize, { color: theme.textSecondary }]}>{item.size}</Text>
-              {/* More product details to come. */}
+
+              {/* Bottom half — Edit / Remove links (left), stepper (right), aligned
+                  to the bottom of the 80px card. */}
+              <View style={styles.rowActions}>
+                <View style={styles.rowLinks}>
+                  <Pressable hitSlop={6} onPress={() => {}}>
+                    {/* TODO: wire "Edit prints" (re-open the builder for this print). */}
+                    <Text style={[styles.editLink, { color: theme.text }]}>Edit prints</Text>
+                  </Pressable>
+                  <Pressable
+                    hitSlop={6}
+                    style={styles.removeLink}
+                    onPress={() => cartStore.remove(item.id)}>
+                    <Text style={[styles.removeText, { color: theme.deleteBorder }]}>Remove</Text>
+                  </Pressable>
+                </View>
+                <QtyStepper
+                  value={item.quantity}
+                  onChange={(q) => cartStore.setQuantity(item.id, q)}
+                />
+              </View>
             </View>
           </View>
         ))}
@@ -163,9 +208,58 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   rowSize: {
-    marginTop: 2, // right below the title
     fontFamily: FontFamily.body, // Body 2 / Regular 14/20, Gray/500
     fontSize: 14,
+    lineHeight: 20,
+  },
+  rowActions: {
+    marginTop: 4, // 4 below the size
+    height: 32, // the stepper's height; bottoms out the 80px card
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between', // links left, stepper right (spacer between)
+  },
+  rowLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  editLink: {
+    fontFamily: FontFamily.body, // Body / Regular 14/20, Gray/black
+    fontSize: 14,
+    lineHeight: 20,
+    textDecorationLine: 'underline',
+  },
+  removeLink: {
+    marginLeft: 16, // 16 to the right of "Edit prints"
+  },
+  removeText: {
+    fontFamily: FontFamily.body, // Body / Regular 14/20, Primary/600
+    fontSize: 14,
+    lineHeight: 20,
+    textDecorationLine: 'underline',
+  },
+  stepper: {
+    height: 32,
+    borderWidth: 1,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  stepperBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperValue: {
+    minWidth: 20,
+    textAlign: 'center',
+    fontFamily: FontFamily.bodyMedium,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  stepperSign: {
+    fontSize: 18,
     lineHeight: 20,
   },
 });

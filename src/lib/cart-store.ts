@@ -31,6 +31,7 @@ export type CartItem = {
   title: string; // product name, e.g. "Acrylic Prints"
   size: string; // e.g. "8x10 in"
   price: string; // unit price, USD decimal string e.g. "75.00"
+  quantity: number; // copies of this print (the row's stepper), min 1
   photo: PhotoEdit;
 };
 
@@ -51,9 +52,14 @@ export const cartStore = {
     };
   },
   /** Add one print per photo — the builder's "Add N to Cart" (photos = quantity). */
-  addPrints(product: Omit<CartItem, 'id' | 'photo'>, photos: PhotoEdit[]) {
-    const added = photos.map((photo) => ({ ...product, id: `c${++seq}`, photo }));
+  addPrints(product: Omit<CartItem, 'id' | 'quantity' | 'photo'>, photos: PhotoEdit[]) {
+    const added = photos.map((photo) => ({ ...product, id: `c${++seq}`, quantity: 1, photo }));
     items = [...items, ...added];
+    emit();
+  },
+  /** Set a row's copy count (floored at 1). */
+  setQuantity(id: string, quantity: number) {
+    items = items.map((i) => (i.id === id ? { ...i, quantity: Math.max(1, quantity) } : i));
     emit();
   },
   remove(id: string) {
