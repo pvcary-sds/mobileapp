@@ -159,6 +159,9 @@ export default function CartScreen() {
           <SvgXml xml={CONTINUE_SHOPPING_ICON} width={24} height={24} />
           <Text style={[styles.continueLabel, { color: theme.text }]}>Continue shopping</Text>
         </Pressable>
+
+        {/* 8px Gray/100 section divider, 24 below "Continue shopping". */}
+        <View style={[styles.sectionDivider, { backgroundColor: theme.backgroundElement }]} />
       </ScrollView>
     </View>
   );
@@ -225,6 +228,11 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bodySemiBold, // Body 1 / SemiBold 16/24, black
     fontSize: 16,
     lineHeight: 24,
+  },
+  sectionDivider: {
+    marginTop: 24, // 24 below "Continue shopping"
+    marginHorizontal: -16, // full-bleed (counteract the list's 16 padding)
+    height: 8, // 8px Gray/100 section separator
   },
   row: {
     flexDirection: 'row',
