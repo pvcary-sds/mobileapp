@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Fragment } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
 
@@ -126,7 +126,16 @@ export default function CartScreen() {
                   <Pressable
                     hitSlop={6}
                     style={styles.removeLink}
-                    onPress={() => cartStore.remove(item.id)}>
+                    onPress={() =>
+                      Alert.alert('Remove this product?', 'It’ll be taken out of your cart.', [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Remove',
+                          style: 'destructive',
+                          onPress: () => cartStore.remove(item.id),
+                        },
+                      ])
+                    }>
                     <Text style={[styles.removeText, { color: theme.deleteBorder }]}>Remove</Text>
                   </Pressable>
                 </View>
