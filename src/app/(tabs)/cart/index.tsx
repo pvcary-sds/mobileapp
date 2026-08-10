@@ -78,6 +78,8 @@ export default function CartScreen() {
                 </Text>
                 <Text style={[styles.rowPrice, { color: theme.text }]}>{formatUSD(item.price)}</Text>
               </View>
+              {/* Size — left-aligned, right below the title. */}
+              <Text style={[styles.rowSize, { color: theme.textSecondary }]}>{item.size}</Text>
               {/* More product details to come. */}
             </View>
           </View>
@@ -159,5 +161,11 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bodySemiBold, // Body / SemiBold 16/24
     fontSize: 16,
     lineHeight: 24,
+  },
+  rowSize: {
+    marginTop: 2, // right below the title
+    fontFamily: FontFamily.body, // Body 2 / Regular 14/20, Gray/500
+    fontSize: 14,
+    lineHeight: 20,
   },
 });
