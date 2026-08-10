@@ -32,6 +32,7 @@ import {
 import { FontFamily, NativeFontFamily } from '@/constants/theme';
 import { useAsync } from '@/hooks/use-async';
 import { useTheme } from '@/hooks/use-theme';
+import { cartStore } from '@/lib/cart-store';
 import { buildColorMatrix } from '@/lib/color-matrix';
 
 /** A raw photo as picked (from the PDP or the in-builder picker). */
@@ -325,6 +326,13 @@ export default function BuilderScreen() {
     setPhotos((prev) => [...prev, ...added]);
   };
 
+  // Add each built print to the cart (photos = quantity), then go to the Cart tab.
+  const onAddToCart = () => {
+    if (photos.length === 0) return;
+    cartStore.addPrints({ sku: sku ?? '', size: size ?? '', price: price ?? '0' }, photos);
+    router.navigate('/cart');
+  };
+
   return (
     <View style={styles.container}>
       <Stack.Screen
@@ -508,8 +516,9 @@ export default function BuilderScreen() {
             <Text style={[styles.priceLabel, { color: theme.text }]}>{totalLabel}</Text>
           </View>
 
-          {/* TODO: wire Add to Cart (add the built print × photoCount to the cart). */}
-          <Pressable style={[styles.addButton, { backgroundColor: theme.primary }]}>
+          <Pressable
+            onPress={onAddToCart}
+            style={[styles.addButton, { backgroundColor: theme.primary }]}>
             <Text style={[styles.addLabel, { color: theme.onPrimary }]}>
               Add {photoCount} to Cart
             </Text>
