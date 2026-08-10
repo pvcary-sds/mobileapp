@@ -88,8 +88,9 @@ export default function ProductScreen() {
         pathname: '/builder/[sku]',
         params: {
           sku: selectedSku,
-          // Carry the display size + unit price so the builder can label them and
-          // compute the total (unit price × photos) without a refetch.
+          // Carry the product name + display size + unit price so the builder can
+          // label them (and seed the cart) without a refetch.
+          title: product?.name ?? '',
           size: selectedVariant ? `${selectedVariant.size} in` : '',
           price: selectedVariant?.price ?? '',
           photos: JSON.stringify(photos),

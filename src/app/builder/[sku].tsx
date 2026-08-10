@@ -162,8 +162,9 @@ export default function BuilderScreen() {
   const insets = useSafeAreaInsets();
   // Passed from the PDP so we can use them without refetching: the chosen size
   // ("11x14 in"), its unit price ("60.00"), and the picked photos.
-  const { sku, size, price, photos: photosParam } = useLocalSearchParams<{
+  const { sku, title, size, price, photos: photosParam } = useLocalSearchParams<{
     sku?: string;
+    title?: string;
     size?: string;
     price?: string;
     photos?: string;
@@ -329,7 +330,10 @@ export default function BuilderScreen() {
   // Add each built print to the cart (photos = quantity), then go to the Cart tab.
   const onAddToCart = () => {
     if (photos.length === 0) return;
-    cartStore.addPrints({ sku: sku ?? '', size: size ?? '', price: price ?? '0' }, photos);
+    cartStore.addPrints(
+      { sku: sku ?? '', title: title ?? '', size: size ?? '', price: price ?? '0' },
+      photos,
+    );
     router.navigate('/cart');
   };
 

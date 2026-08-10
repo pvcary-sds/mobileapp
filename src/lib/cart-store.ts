@@ -28,6 +28,7 @@ export type PhotoEdit = {
 export type CartItem = {
   id: string;
   sku: string;
+  title: string; // product name, e.g. "Acrylic Prints"
   size: string; // e.g. "8x10 in"
   price: string; // unit price, USD decimal string e.g. "75.00"
   photo: PhotoEdit;
