@@ -40,8 +40,10 @@ export function CartIcon({ size = 24, color }: { size?: number; color?: string }
 const styles = StyleSheet.create({
   badge: {
     position: 'absolute',
-    top: -6,
-    right: -8,
+    // Kept within the icon's footprint so the header's circular Liquid Glass
+    // button (which clips its content) doesn't cut off the badge's corner.
+    top: -2,
+    right: -2,
     width: 16, // Primary/500 badge, count centered
     height: 16,
     borderRadius: 8,
