@@ -127,7 +127,7 @@ export default function CartScreen() {
                     hitSlop={6}
                     style={styles.removeLink}
                     onPress={() =>
-                      Alert.alert('Remove this product?', 'It’ll be taken out of your cart.', [
+                      Alert.alert('Remove this product?', 'This product will be removed from your cart.', [
                         { text: 'Cancel', style: 'cancel' },
                         {
                           text: 'Remove',
