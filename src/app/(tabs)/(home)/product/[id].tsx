@@ -22,6 +22,7 @@ import { BottomTabInset, FontFamily, Spacing } from '@/constants/theme';
 import { useAsync } from '@/hooks/use-async';
 import { useTheme } from '@/hooks/use-theme';
 import { htmlToText } from '@/lib/html';
+import { selectionStore } from '@/lib/selection-store';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HERO_HEIGHT = 268;
@@ -84,17 +85,12 @@ export default function ProductScreen() {
         height: a.height,
       }));
       const selectedVariant = product?.variants.find((v) => v.sku === selectedSku);
+      // Capture the full selected product for the builder + cart (labels, print
+      // spec, cart details) — the photos are transient so they ride the route.
+      if (product && selectedVariant) selectionStore.set(product, selectedVariant);
       router.push({
         pathname: '/builder/[sku]',
-        params: {
-          sku: selectedSku,
-          // Carry the product name + display size + unit price so the builder can
-          // label them (and seed the cart) without a refetch.
-          title: product?.name ?? '',
-          size: selectedVariant ? `${selectedVariant.size} in` : '',
-          price: selectedVariant?.price ?? '',
-          photos: JSON.stringify(photos),
-        },
+        params: { sku: selectedSku, photos: JSON.stringify(photos) },
       });
     } finally {
       setSelecting(false);

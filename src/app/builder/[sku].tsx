@@ -34,6 +34,7 @@ import { useAsync } from '@/hooks/use-async';
 import { useTheme } from '@/hooks/use-theme';
 import { cartStore } from '@/lib/cart-store';
 import { buildColorMatrix } from '@/lib/color-matrix';
+import { useSelection } from '@/lib/selection-store';
 
 /** A raw photo as picked (from the PDP or the in-builder picker). */
 type RawPhoto = { uri: string; width?: number; height?: number };
@@ -162,13 +163,16 @@ export default function BuilderScreen() {
   const insets = useSafeAreaInsets();
   // Passed from the PDP so we can use them without refetching: the chosen size
   // ("11x14 in"), its unit price ("60.00"), and the picked photos.
-  const { sku, title, size, price, photos: photosParam } = useLocalSearchParams<{
+  const { sku, photos: photosParam } = useLocalSearchParams<{
     sku?: string;
-    title?: string;
-    size?: string;
-    price?: string;
     photos?: string;
   }>();
+  // Product details come from the selection store (set on the PDP), so the full
+  // product flows through cleanly rather than via route-param strings.
+  const selection = useSelection();
+  const title = selection?.product.name ?? '';
+  const size = selection ? `${selection.variant.size} in` : '';
+  const price = selection?.variant.price ?? '';
 
   // The authoritative print spec from Prodigi (via our API), fetched per sku —
   // i.e. re-fetched whenever a new size is chosen. Gives the exact print pixel
@@ -330,10 +334,7 @@ export default function BuilderScreen() {
   // Add each built print to the cart (photos = quantity), then go to the Cart tab.
   const onAddToCart = () => {
     if (photos.length === 0) return;
-    cartStore.addPrints(
-      { sku: sku ?? '', title: title ?? '', size: size ?? '', price: price ?? '0' },
-      photos,
-    );
+    cartStore.addPrints({ sku: sku ?? '', title, size, price: price || '0' }, photos);
     router.navigate('/cart');
   };
 
