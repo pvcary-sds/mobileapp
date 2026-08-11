@@ -162,6 +162,9 @@ export default function CartScreen() {
 
         {/* 8px Gray/100 section divider, 24 below "Continue shopping". */}
         <View style={[styles.sectionDivider, { backgroundColor: theme.backgroundElement }]} />
+
+        {/* "Promo code" — same title style as "Your products", 24 below the divider. */}
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Promo code</Text>
       </ScrollView>
     </View>
   );
@@ -233,6 +236,12 @@ const styles = StyleSheet.create({
     marginTop: 24, // 24 below "Continue shopping"
     marginHorizontal: -16, // full-bleed (counteract the list's 16 padding)
     height: 8, // 8px Gray/100 section separator
+  },
+  sectionTitle: {
+    marginTop: 24, // 24 below the divider
+    fontFamily: FontFamily.bodySemiBold, // Title 1 / SemiBold 24/32 (matches "Your products")
+    fontSize: 24,
+    lineHeight: 32,
   },
   row: {
     flexDirection: 'row',
