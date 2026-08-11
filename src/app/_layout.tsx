@@ -65,7 +65,8 @@ export default function RootLayout() {
     // Root for react-native-gesture-handler (the builder's pinch-zoom/pan).
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider value={navigationTheme}>
-        <Stack screenOptions={{ headerShadowVisible: false }}>
+        {/* Default nav-bar separator (hairline under the title) is kept, app-wide. */}
+        <Stack>
           {/* The tab bar and everything inside it. */}
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           {/* Full-screen photo editor — pushes over the tabs (title + custom Back
