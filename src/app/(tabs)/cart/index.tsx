@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   header: {
     marginTop: 24, // 24 below the nav bar
     marginHorizontal: 16, // standard content inset
-    fontFamily: FontFamily.bodySemiBold, // Title 1 / SemiBold
+    fontFamily: FontFamily.title, // Title / SemiBold (Crimson Text) 24/32
     fontSize: 24,
     lineHeight: 32,
   },
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     marginTop: 24, // 24 below the divider
-    fontFamily: FontFamily.bodySemiBold, // Title 1 / SemiBold 24/32 (matches "Your products")
+    fontFamily: FontFamily.title, // Title / SemiBold (Crimson Text) 24/32, matches "Your products"
     fontSize: 24,
     lineHeight: 32,
   },
