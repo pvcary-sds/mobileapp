@@ -28,6 +28,17 @@ function formatUSD(price: string): string {
 }
 
 /**
+ * "Offers for you" coupons. Hardcoded for now.
+ * TODO: make coupons API-driven (Prodigi) — fetch available offers rather than
+ * shipping this static list.
+ */
+const COUPONS = [
+  { code: 'WELCOME20', description: '20% Off First Order' },
+  { code: 'SAVE15', description: '$15 Off Orders Over $75' },
+  { code: 'FREESHIP', description: 'Free Shipping' },
+];
+
+/**
  * Copy stepper for a cart row (32px tall). First pass — refine to the detailed
  * spec (button/borders/colors) once it's provided.
  */
@@ -90,15 +101,14 @@ export default function CartScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* "Your products: N items" — Title 1 / SemiBold 24/32, 24 below the nav bar. */}
-      <Text style={[styles.header, { color: theme.text }]}>
-        Your products: {count} {count === 1 ? 'item' : 'items'}
-      </Text>
-
-      {/* The cart rows — 20 below the header, 16 leading/trailing. */}
+      {/* Everything scrolls together, header included. */}
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 16 }]}>
+        {/* "Your products: N items" — Title 1 / SemiBold 24/32. */}
+        <Text style={[styles.header, { color: theme.text }]}>
+          Your products: {count} {count === 1 ? 'item' : 'items'}
+        </Text>
         {items.map((item, i) => (
           <Fragment key={item.id}>
             {/* 20px · 1px Gray/200 divider · 20px between products. */}
@@ -228,6 +238,42 @@ export default function CartScreen() {
 
         {/* 8px Gray/100 spacer, 24 below the promo field (same as above). */}
         <View style={[styles.sectionDivider, { backgroundColor: theme.backgroundElement }]} />
+
+        {/* "Offers for you" — coupons in a horizontal scroll. */}
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Offers for you</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.couponScroll}
+          contentContainerStyle={styles.couponScrollContent}>
+          {COUPONS.map((c, i) => (
+            <View
+              key={c.code}
+              style={[
+                styles.coupon,
+                i > 0 && styles.couponGap,
+                { backgroundColor: theme.brandSurface, borderColor: theme.strokeFaint },
+              ]}>
+              <View>
+                <Text style={[styles.couponDesc, { color: theme.textTertiary }]}>
+                  {c.description}
+                </Text>
+                <Text style={[styles.couponCode, { color: theme.text }]}>{c.code}</Text>
+              </View>
+              <Pressable
+                style={[
+                  styles.couponApply,
+                  { backgroundColor: theme.background, borderColor: theme.textTertiary },
+                ]}
+                onPress={() => setPromo(c.code)}>
+                <Text style={[styles.couponApplyText, { color: theme.text }]}>Apply Code</Text>
+              </Pressable>
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* 8px Gray/100 spacer, 24 below the coupons. */}
+        <View style={[styles.sectionDivider, { backgroundColor: theme.backgroundElement }]} />
       </ScrollView>
     </View>
   );
@@ -266,14 +312,13 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   header: {
-    marginTop: 24, // 24 below the nav bar
-    marginHorizontal: 16, // standard content inset
+    marginBottom: 20, // 20 above the first product
     fontFamily: FontFamily.title, // Title / SemiBold (Crimson Text) 24/32
     fontSize: 24,
     lineHeight: 32,
   },
   list: {
-    paddingTop: 20, // 20 below the header
+    paddingTop: 24, // 24 below the nav bar (the header)
     paddingHorizontal: 16, // 16 leading / trailing
   },
   divider: {
@@ -299,6 +344,47 @@ const styles = StyleSheet.create({
     marginTop: 24, // 24 below "Continue shopping"
     marginHorizontal: -16, // full-bleed (counteract the list's 16 padding)
     height: 8, // 8px Gray/100 section separator
+  },
+  couponScroll: {
+    marginTop: 20, // 20 below the "Offers for you" title
+    marginHorizontal: -16, // full-bleed so coupons scroll to the edges
+  },
+  couponScrollContent: {
+    paddingHorizontal: 16, // first coupon 16 from the leading edge
+  },
+  couponGap: {
+    marginLeft: 12, // 12 between coupons
+  },
+  coupon: {
+    width: 240,
+    height: 148,
+    borderWidth: 1, // Additional stroke/10
+    borderRadius: 8,
+    padding: 16, // 16 top/leading/trailing/bottom
+    justifyContent: 'space-between', // description/code at top, button at bottom
+  },
+  couponDesc: {
+    fontFamily: FontFamily.bodyMedium, // Body 2 / Medium 14/20, Gray/700
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  couponCode: {
+    marginTop: 4, // 4 below the description
+    fontFamily: FontFamily.titleBold, // Title 2 / Bold (Crimson Text) 20/30, Gray/black
+    fontSize: 20,
+    lineHeight: 30,
+  },
+  couponApply: {
+    height: 40,
+    borderWidth: 1, // Gray/700 stroke on white
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  couponApplyText: {
+    fontFamily: FontFamily.bodySemiBold, // Body 2 / SemiBold 14/20, Gray/black
+    fontSize: 14,
+    lineHeight: 20,
   },
   sectionTitle: {
     marginTop: 24, // 24 below the divider
