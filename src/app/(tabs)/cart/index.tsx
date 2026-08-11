@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { Fragment } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Fragment, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
 
@@ -60,6 +60,7 @@ export default function CartScreen() {
   const insets = useSafeAreaInsets();
   const items = useCartItems();
   const count = items.length;
+  const [promo, setPromo] = useState('');
   // On a tab screen the bottom inset already spans the floating tab bar, so the
   // CTA sits 24 above it.
   const aboveTabBar = insets.bottom + 24;
@@ -165,6 +166,28 @@ export default function CartScreen() {
 
         {/* "Promo code" — same title style as "Your products", 24 below the divider. */}
         <Text style={[styles.sectionTitle, { color: theme.text }]}>Promo code</Text>
+
+        {/* Promo field + attached Apply button — one Gray/200-stroked, 8px-radius
+            container, 16 below the title. */}
+        <View style={[styles.promoField, { borderColor: theme.border }]}>
+          <TextInput
+            style={[styles.promoInput, { color: theme.text }]}
+            value={promo}
+            onChangeText={setPromo}
+            placeholder="Enter code"
+            placeholderTextColor={theme.textSecondary}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            returnKeyType="done"
+          />
+          <Pressable
+            style={[styles.promoApply, { borderLeftColor: theme.border }]}
+            onPress={() => {
+              /* TODO: validate + apply the promo code. */
+            }}>
+            <Text style={[styles.promoApplyText, { color: theme.text }]}>Apply</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </View>
   );
@@ -242,6 +265,32 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.title, // Title / SemiBold (Crimson Text) 24/32, matches "Your products"
     fontSize: 24,
     lineHeight: 32,
+  },
+  promoField: {
+    marginTop: 16, // 16 below the "Promo code" title
+    height: 48,
+    borderWidth: 1, // Gray/200 stroke around the whole field + button
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'hidden', // clip the attached button to the 8px radius
+  },
+  promoInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    fontFamily: FontFamily.body, // Body 1 / Regular 16 (placeholder Gray/500)
+    fontSize: 16,
+  },
+  promoApply: {
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    borderLeftWidth: 1, // divider between the input and the attached button
+  },
+  promoApplyText: {
+    fontFamily: FontFamily.bodySemiBold, // first pass — refine to the Apply spec
+    fontSize: 16,
+    lineHeight: 24,
   },
   row: {
     flexDirection: 'row',
