@@ -298,13 +298,15 @@ export default function CartScreen() {
           </View>
           <View style={styles.summaryRow}>
             <Text style={[styles.summaryLabel, { color: theme.text }]}>Promo code</Text>
-            <Text style={[styles.summaryValue, { color: theme.text }]}>
+            <Text style={[styles.summaryValue, { color: theme.discount }]}>
               {formatUSD(promoDiscount)}
             </Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={[styles.summaryLabel, { color: theme.text }]}>Discounts</Text>
-            <Text style={[styles.summaryValue, { color: theme.text }]}>{formatUSD(discounts)}</Text>
+            <Text style={[styles.summaryValue, { color: theme.discount }]}>
+              {formatUSD(discounts)}
+            </Text>
           </View>
         </View>
 
@@ -452,7 +454,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   summaryValue: {
-    fontFamily: FontFamily.body, // Body 1 / Regular 16/24
+    fontFamily: FontFamily.bodySemiBold, // Body 1 / SemiBold 16/24
     fontSize: 16,
     lineHeight: 24,
   },

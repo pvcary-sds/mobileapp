@@ -51,6 +51,9 @@ export const Colors = {
   brandSurface: Brand.lightBackground, // #F5F5F0
   strokeFaint: Stroke[10], // black @ 10% — "Additional stroke/10"
 
+  // Discount / savings amounts (promo, discounts) — Primary/600.
+  discount: Primary[600],
+
 
 
   // Status (Label pairs)
