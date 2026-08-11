@@ -67,6 +67,11 @@ export const cartStore = {
     items = items.map((i) => (i.id === id ? { ...i, quantity: Math.max(1, quantity) } : i));
     emit();
   },
+  /** Patch an item in place (e.g. after re-editing it in the builder). */
+  update(id: string, patch: Partial<Omit<CartItem, 'id'>>) {
+    items = items.map((i) => (i.id === id ? { ...i, ...patch } : i));
+    emit();
+  },
   remove(id: string) {
     items = items.filter((i) => i.id !== id);
     emit();

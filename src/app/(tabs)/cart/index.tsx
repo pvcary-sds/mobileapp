@@ -154,7 +154,11 @@ export default function CartScreen() {
                       selectionStore.set(item.selection.product, item.selection.variant);
                       router.navigate({
                         pathname: '/builder/[sku]',
-                        params: { sku: item.sku, photos: JSON.stringify([item.photo]) },
+                        params: {
+                          sku: item.sku,
+                          editId: item.id, // edit this cart item in place (don't add a new one)
+                          photos: JSON.stringify([item.photo]),
+                        },
                       });
                     }}>
                     <Text style={[styles.editLink, { color: theme.text }]}>Edit prints</Text>

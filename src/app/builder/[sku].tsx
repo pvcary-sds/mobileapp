@@ -166,8 +166,9 @@ export default function BuilderScreen() {
   const insets = useSafeAreaInsets();
   // Passed from the PDP so we can use them without refetching: the chosen size
   // ("11x14 in"), its unit price ("60.00"), and the picked photos.
-  const { sku, photos: photosParam } = useLocalSearchParams<{
+  const { sku, editId, photos: photosParam } = useLocalSearchParams<{
     sku?: string;
+    editId?: string; // set when re-editing an existing cart item (replace, don't append)
     photos?: string;
   }>();
   // Product details come from the selection store (set on the PDP), so the full
@@ -334,20 +335,25 @@ export default function BuilderScreen() {
     setPhotos((prev) => [...prev, ...added]);
   };
 
-  // Add each built print to the cart (photos = quantity), then go to the Cart tab.
-  const onAddToCart = () => {
+  // Commit to the cart, then go to the Cart tab. Editing an existing item (editId)
+  // replaces its photo in place; otherwise each photo is added as a new print.
+  const onSubmit = () => {
     if (photos.length === 0 || !selection) return;
-    cartStore.addPrints(
-      {
-        productId: selection.product.id,
-        sku: sku ?? '',
-        title,
-        size,
-        price: price || '0',
-        selection,
-      },
-      photos,
-    );
+    const product = {
+      productId: selection.product.id,
+      sku: sku ?? '',
+      title,
+      size,
+      price: price || '0',
+      selection,
+    };
+    if (editId) {
+      cartStore.update(editId, { ...product, photo: photos[0] });
+      // Any extra photos added while editing become new prints.
+      if (photos.length > 1) cartStore.addPrints(product, photos.slice(1));
+    } else {
+      cartStore.addPrints(product, photos);
+    }
     router.navigate('/cart');
   };
 
@@ -535,10 +541,10 @@ export default function BuilderScreen() {
           </View>
 
           <Pressable
-            onPress={onAddToCart}
+            onPress={onSubmit}
             style={[styles.addButton, { backgroundColor: theme.primary }]}>
             <Text style={[styles.addLabel, { color: theme.onPrimary }]}>
-              Add {photoCount} to Cart
+              {editId ? 'Save changes' : `Add ${photoCount} to Cart`}
             </Text>
           </Pressable>
         </View>
