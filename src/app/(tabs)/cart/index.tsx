@@ -5,6 +5,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
 
+import { CLOSE_ICON } from '@/constants/builder-icons';
 import { EMPTY_CART_ILLUSTRATION } from '@/constants/illustrations';
 import { BottomTabInset, FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -61,6 +62,8 @@ export default function CartScreen() {
   const items = useCartItems();
   const count = items.length;
   const [promo, setPromo] = useState('');
+  const [promoFocused, setPromoFocused] = useState(false);
+  const hasPromo = promo.length > 0;
   const applyDisabled = promo.trim().length === 0; // no code entered → Apply is disabled
   // On a tab screen the bottom inset already spans the floating tab bar, so the
   // CTA sits 24 above it.
@@ -168,27 +171,44 @@ export default function CartScreen() {
         {/* "Promo code" — same title style as "Your products", 24 below the divider. */}
         <Text style={[styles.sectionTitle, { color: theme.text }]}>Promo code</Text>
 
-        {/* Promo field + attached Apply button — one Gray/200-stroked, 8px-radius
-            container, 16 below the title. */}
-        <View style={[styles.promoField, { borderColor: theme.border }]}>
-          <TextInput
-            style={[styles.promoInput, { color: theme.text }]}
-            value={promo}
-            onChangeText={setPromo}
-            placeholder="Enter code"
-            placeholderTextColor={theme.textSecondary}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            returnKeyType="done"
-          />
+        {/* Promo field + attached Apply button, 16 below the title. Two boxes so
+            the input's stroke can highlight (Gray/400) on focus independently. */}
+        <View style={styles.promoField}>
+          {/* Input box — rounded left; stroke goes Gray/400 while focused. */}
+          <View
+            style={[
+              styles.promoInputBox,
+              { borderColor: promoFocused ? theme.textMuted : theme.border },
+            ]}>
+            <TextInput
+              style={[styles.promoInput, { color: theme.text }]}
+              value={promo}
+              onChangeText={setPromo}
+              onFocus={() => setPromoFocused(true)}
+              onBlur={() => setPromoFocused(false)}
+              placeholder="Enter code"
+              placeholderTextColor={theme.textSecondary}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              returnKeyType="done"
+            />
+            {/* Clear (X) — shown while there's text; 16 from the Apply button. */}
+            {hasPromo && (
+              <Pressable hitSlop={6} style={styles.promoClear} onPress={() => setPromo('')}>
+                <SvgXml xml={CLOSE_ICON} width={24} height={24} color={theme.textSecondary} />
+              </Pressable>
+            )}
+          </View>
+
+          {/* Apply box — rounded right, attached. Disabled: Gray/100 fill +
+              Gray/400 text. Active: Brand/Light Blue 3 fill + Brand/Dark Blue text. */}
           <Pressable
             disabled={applyDisabled}
             style={[
-              styles.promoApply,
+              styles.promoApplyBox,
               {
-                borderLeftColor: theme.border,
-                // Disabled (no code): Gray/100 fill. Enabled: transparent.
-                backgroundColor: applyDisabled ? theme.backgroundElement : 'transparent',
+                borderColor: theme.border,
+                backgroundColor: applyDisabled ? theme.backgroundElement : theme.promoActiveBg,
               },
             ]}
             onPress={() => {
@@ -197,7 +217,7 @@ export default function CartScreen() {
             <Text
               style={[
                 styles.promoApplyText,
-                { color: applyDisabled ? theme.textMuted : theme.text },
+                { color: applyDisabled ? theme.textMuted : theme.promoActiveText },
               ]}>
               Apply
             </Text>
@@ -283,28 +303,41 @@ const styles = StyleSheet.create({
   },
   promoField: {
     marginTop: 16, // 16 below the "Promo code" title
+    flexDirection: 'row',
+    alignItems: 'stretch',
+  },
+  promoInputBox: {
+    flex: 1,
     height: 48,
-    borderWidth: 1, // Gray/200 stroke around the whole field + button
-    borderRadius: 8,
+    borderWidth: 1, // Gray/200 (Gray/400 while focused)
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    overflow: 'hidden', // clip the attached button to the 8px radius
+    paddingLeft: 16,
+    paddingRight: 16, // the clear (X) sits 16 from the Apply button
+    overflow: 'hidden',
   },
   promoInput: {
     flex: 1,
-    paddingHorizontal: 16,
     fontFamily: FontFamily.body, // Body 1 / Regular 16 (placeholder Gray/500)
     fontSize: 16,
   },
-  promoApply: {
-    paddingVertical: 12, // 12 top/bottom (24 text → 48, matching the field)
-    paddingHorizontal: 16, // 16 leading/trailing
+  promoClear: {
+    marginLeft: 8, // gap from the entered text
+  },
+  promoApplyBox: {
+    height: 48,
+    marginLeft: -1, // overlap the input's right edge → single 1px seam
+    borderWidth: 1,
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
+    paddingHorizontal: 16, // 16 leading/trailing (12 top/bottom → 48 via height)
     justifyContent: 'center',
     alignItems: 'center',
-    borderLeftWidth: 1, // divider between the input and the attached button
   },
   promoApplyText: {
-    fontFamily: FontFamily.bodySemiBold, // first pass — refine to the Apply spec
+    fontFamily: FontFamily.bodySemiBold, // Body 1 / SemiBold 16/24
     fontSize: 16,
     lineHeight: 24,
   },

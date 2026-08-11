@@ -43,6 +43,10 @@ export const Colors = {
   selectedText: Primary[700],
   iconDisabled: Gray[300], // Gray/300 — a disabled icon/control
 
+  // Active promo "Apply" — Brand/Light Blue 3 fill + Brand/Dark Blue text.
+  promoActiveBg: Brand.lightBlue3,
+  promoActiveText: Brand.darkBlue,
+
 
 
   // Status (Label pairs)
