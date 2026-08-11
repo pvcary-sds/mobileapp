@@ -118,10 +118,8 @@ export default function CartScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom }]}>
-        {/* "Your products: N items" — Title 1 / SemiBold 24/32. */}
-        <Text style={[styles.header, { color: theme.text }]}>
-          Your products: {count} {count === 1 ? 'item' : 'items'}
-        </Text>
+        {/* "Your products" — Title 1 / SemiBold 24/32. */}
+        <Text style={[styles.header, { color: theme.text }]}>Your products</Text>
         {items.map((item, i) => (
           <Fragment key={item.id}>
             {/* 20px · 1px Gray/200 divider · 20px between products. */}
