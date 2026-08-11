@@ -32,7 +32,9 @@ import {
 import { FontFamily, NativeFontFamily } from '@/constants/theme';
 import { useAsync } from '@/hooks/use-async';
 import { useTheme } from '@/hooks/use-theme';
+import { cartStore } from '@/lib/cart-store';
 import { buildColorMatrix } from '@/lib/color-matrix';
+import { useSelection } from '@/lib/selection-store';
 
 /** A raw photo as picked (from the PDP or the in-builder picker). */
 type RawPhoto = { uri: string; width?: number; height?: number };
@@ -51,19 +53,22 @@ type PickedPhoto = RawPhoto & {
   offsetY: number;
 };
 
-/** Seed a freshly-picked photo with its default edit state. */
-function toPhoto(a: RawPhoto): PickedPhoto {
+/** Seed a picked photo's edit state — defaults for a fresh pick, or the saved
+ *  edits when re-opening a cart item to edit (so the crop/filter carry over). */
+function toPhoto(a: RawPhoto & Partial<PickedPhoto>): PickedPhoto {
   return {
     uri: a.uri,
     width: a.width,
     height: a.height,
-    rotated: false,
-    fillMode: 'fit',
-    filter: 'none',
-    brightness: 0,
-    contrast: 0,
-    saturation: 0,
-    ...IDENTITY_ZOOM,
+    rotated: a.rotated ?? false,
+    fillMode: a.fillMode ?? 'fit',
+    filter: a.filter ?? 'none',
+    brightness: a.brightness ?? 0,
+    contrast: a.contrast ?? 0,
+    saturation: a.saturation ?? 0,
+    scale: a.scale ?? IDENTITY_ZOOM.scale,
+    offsetX: a.offsetX ?? IDENTITY_ZOOM.offsetX,
+    offsetY: a.offsetY ?? IDENTITY_ZOOM.offsetY,
   };
 }
 
@@ -161,12 +166,17 @@ export default function BuilderScreen() {
   const insets = useSafeAreaInsets();
   // Passed from the PDP so we can use them without refetching: the chosen size
   // ("11x14 in"), its unit price ("60.00"), and the picked photos.
-  const { sku, size, price, photos: photosParam } = useLocalSearchParams<{
+  const { sku, editId, photos: photosParam } = useLocalSearchParams<{
     sku?: string;
-    size?: string;
-    price?: string;
+    editId?: string; // set when re-editing an existing cart item (replace, don't append)
     photos?: string;
   }>();
+  // Product details come from the selection store (set on the PDP), so the full
+  // product flows through cleanly rather than via route-param strings.
+  const selection = useSelection();
+  const title = selection?.product.name ?? '';
+  const size = selection ? `${selection.variant.size} in` : '';
+  const price = selection?.variant.price ?? '';
 
   // The authoritative print spec from Prodigi (via our API), fetched per sku —
   // i.e. re-fetched whenever a new size is chosen. Gives the exact print pixel
@@ -323,6 +333,28 @@ export default function BuilderScreen() {
     if (picked.canceled || picked.assets.length === 0) return;
     const added = picked.assets.map(toPhoto);
     setPhotos((prev) => [...prev, ...added]);
+  };
+
+  // Commit to the cart, then go to the Cart tab. Editing an existing item (editId)
+  // replaces its photo in place; otherwise each photo is added as a new print.
+  const onSubmit = () => {
+    if (photos.length === 0 || !selection) return;
+    const product = {
+      productId: selection.product.id,
+      sku: sku ?? '',
+      title,
+      size,
+      price: price || '0',
+      selection,
+    };
+    if (editId) {
+      cartStore.update(editId, { ...product, photo: photos[0] });
+      // Any extra photos added while editing become new prints.
+      if (photos.length > 1) cartStore.addPrints(product, photos.slice(1));
+    } else {
+      cartStore.addPrints(product, photos);
+    }
+    router.navigate('/cart');
   };
 
   return (
@@ -508,10 +540,11 @@ export default function BuilderScreen() {
             <Text style={[styles.priceLabel, { color: theme.text }]}>{totalLabel}</Text>
           </View>
 
-          {/* TODO: wire Add to Cart (add the built print × photoCount to the cart). */}
-          <Pressable style={[styles.addButton, { backgroundColor: theme.primary }]}>
+          <Pressable
+            onPress={onSubmit}
+            style={[styles.addButton, { backgroundColor: theme.primary }]}>
             <Text style={[styles.addLabel, { color: theme.onPrimary }]}>
-              Add {photoCount} to Cart
+              {editId ? 'Save changes' : `Add ${photoCount} to Cart`}
             </Text>
           </Pressable>
         </View>

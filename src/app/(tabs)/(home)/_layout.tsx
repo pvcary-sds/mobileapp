@@ -15,13 +15,13 @@ function HeaderCartButton() {
 
 /**
  * The Home tab's stack: the browse flow. Titles for the dynamic routes are set
- * inside each screen once its data loads. `headerShadowVisible: false` drops the
- * hairline under the nav bar for a cleaner custom look. On the landing screen the
- * dev env switcher sits top-left; the cart action sits top-right.
+ * inside each screen once its data loads. The default nav-bar separator (hairline
+ * under the title) is kept — consistent app-wide. On the landing screen the dev
+ * env switcher sits top-left; the cart action sits top-right.
  */
 export default function HomeStackLayout() {
   return (
-    <Stack screenOptions={{ headerShadowVisible: false }}>
+    <Stack>
       <Stack.Screen
         name="index"
         options={{
