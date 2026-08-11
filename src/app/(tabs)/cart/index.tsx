@@ -225,6 +225,9 @@ export default function CartScreen() {
             </Text>
           </Pressable>
         </View>
+
+        {/* 8px Gray/100 spacer, 24 below the promo field (same as above). */}
+        <View style={[styles.sectionDivider, { backgroundColor: theme.backgroundElement }]} />
       </ScrollView>
     </View>
   );
