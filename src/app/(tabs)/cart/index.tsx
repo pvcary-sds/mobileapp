@@ -61,6 +61,7 @@ export default function CartScreen() {
   const items = useCartItems();
   const count = items.length;
   const [promo, setPromo] = useState('');
+  const applyDisabled = promo.trim().length === 0; // no code entered → Apply is disabled
   // On a tab screen the bottom inset already spans the floating tab bar, so the
   // CTA sits 24 above it.
   const aboveTabBar = insets.bottom + 24;
@@ -181,11 +182,25 @@ export default function CartScreen() {
             returnKeyType="done"
           />
           <Pressable
-            style={[styles.promoApply, { borderLeftColor: theme.border }]}
+            disabled={applyDisabled}
+            style={[
+              styles.promoApply,
+              {
+                borderLeftColor: theme.border,
+                // Disabled (no code): Gray/100 fill. Enabled: transparent.
+                backgroundColor: applyDisabled ? theme.backgroundElement : 'transparent',
+              },
+            ]}
             onPress={() => {
               /* TODO: validate + apply the promo code. */
             }}>
-            <Text style={[styles.promoApplyText, { color: theme.text }]}>Apply</Text>
+            <Text
+              style={[
+                styles.promoApplyText,
+                { color: applyDisabled ? theme.textMuted : theme.text },
+              ]}>
+              Apply
+            </Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -282,9 +297,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   promoApply: {
-    alignSelf: 'stretch',
+    paddingVertical: 12, // 12 top/bottom (24 text → 48, matching the field)
+    paddingHorizontal: 16, // 16 leading/trailing
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    alignItems: 'center',
     borderLeftWidth: 1, // divider between the input and the attached button
   },
   promoApplyText: {
