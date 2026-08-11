@@ -334,7 +334,10 @@ export default function BuilderScreen() {
   // Add each built print to the cart (photos = quantity), then go to the Cart tab.
   const onAddToCart = () => {
     if (photos.length === 0) return;
-    cartStore.addPrints({ sku: sku ?? '', title, size, price: price || '0' }, photos);
+    cartStore.addPrints(
+      { productId: selection?.product.id ?? '', sku: sku ?? '', title, size, price: price || '0' },
+      photos,
+    );
     router.navigate('/cart');
   };
 

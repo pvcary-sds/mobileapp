@@ -145,8 +145,14 @@ export default function CartScreen() {
                   to the bottom of the 80px card. */}
               <View style={styles.rowActions}>
                 <View style={styles.rowLinks}>
-                  <Pressable hitSlop={6} onPress={() => {}}>
-                    {/* TODO: wire "Edit prints" (re-open the builder for this print). */}
+                  <Pressable
+                    hitSlop={6}
+                    onPress={() =>
+                      router.navigate({
+                        pathname: '/product/[id]',
+                        params: { id: item.productId },
+                      })
+                    }>
                     <Text style={[styles.editLink, { color: theme.text }]}>Edit prints</Text>
                   </Pressable>
                   <Pressable

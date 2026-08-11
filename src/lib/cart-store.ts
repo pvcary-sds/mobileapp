@@ -27,6 +27,7 @@ export type PhotoEdit = {
 /** One print in the cart: a product/size + the photo (with its edits) to print. */
 export type CartItem = {
   id: string;
+  productId: string; // the PDP product id (for "Edit prints" → back to the PDP)
   sku: string;
   title: string; // product name, e.g. "Acrylic Prints"
   size: string; // e.g. "8x10 in"
