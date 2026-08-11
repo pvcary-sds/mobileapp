@@ -53,19 +53,22 @@ type PickedPhoto = RawPhoto & {
   offsetY: number;
 };
 
-/** Seed a freshly-picked photo with its default edit state. */
-function toPhoto(a: RawPhoto): PickedPhoto {
+/** Seed a picked photo's edit state — defaults for a fresh pick, or the saved
+ *  edits when re-opening a cart item to edit (so the crop/filter carry over). */
+function toPhoto(a: RawPhoto & Partial<PickedPhoto>): PickedPhoto {
   return {
     uri: a.uri,
     width: a.width,
     height: a.height,
-    rotated: false,
-    fillMode: 'fit',
-    filter: 'none',
-    brightness: 0,
-    contrast: 0,
-    saturation: 0,
-    ...IDENTITY_ZOOM,
+    rotated: a.rotated ?? false,
+    fillMode: a.fillMode ?? 'fit',
+    filter: a.filter ?? 'none',
+    brightness: a.brightness ?? 0,
+    contrast: a.contrast ?? 0,
+    saturation: a.saturation ?? 0,
+    scale: a.scale ?? IDENTITY_ZOOM.scale,
+    offsetX: a.offsetX ?? IDENTITY_ZOOM.offsetX,
+    offsetY: a.offsetY ?? IDENTITY_ZOOM.offsetY,
   };
 }
 
@@ -333,9 +336,16 @@ export default function BuilderScreen() {
 
   // Add each built print to the cart (photos = quantity), then go to the Cart tab.
   const onAddToCart = () => {
-    if (photos.length === 0) return;
+    if (photos.length === 0 || !selection) return;
     cartStore.addPrints(
-      { productId: selection?.product.id ?? '', sku: sku ?? '', title, size, price: price || '0' },
+      {
+        productId: selection.product.id,
+        sku: sku ?? '',
+        title,
+        size,
+        price: price || '0',
+        selection,
+      },
       photos,
     );
     router.navigate('/cart');

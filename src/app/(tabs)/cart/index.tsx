@@ -10,6 +10,7 @@ import { EMPTY_CART_ILLUSTRATION } from '@/constants/illustrations';
 import { BottomTabInset, FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { cartStore, useCartItems } from '@/lib/cart-store';
+import { selectionStore } from '@/lib/selection-store';
 
 /** "Start shopping" button glyph (from Figma) — white stroke, on the primary fill. */
 const START_SHOPPING_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -147,12 +148,15 @@ export default function CartScreen() {
                 <View style={styles.rowLinks}>
                   <Pressable
                     hitSlop={6}
-                    onPress={() =>
+                    onPress={() => {
+                      // Restore the product selection, then re-open the builder with
+                      // this print's photo + its saved edits.
+                      selectionStore.set(item.selection.product, item.selection.variant);
                       router.navigate({
-                        pathname: '/product/[id]',
-                        params: { id: item.productId },
-                      })
-                    }>
+                        pathname: '/builder/[sku]',
+                        params: { sku: item.sku, photos: JSON.stringify([item.photo]) },
+                      });
+                    }}>
                     <Text style={[styles.editLink, { color: theme.text }]}>Edit prints</Text>
                   </Pressable>
                   <Pressable

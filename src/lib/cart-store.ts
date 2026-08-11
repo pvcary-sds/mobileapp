@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
+import type { Selection } from '@/lib/selection-store';
+
 /**
  * The cart is **local** (client-side) state, not a server resource: a cart item
  * is the customer's local photo (`file://` URI) + its builder edits, none of
@@ -27,13 +29,15 @@ export type PhotoEdit = {
 /** One print in the cart: a product/size + the photo (with its edits) to print. */
 export type CartItem = {
   id: string;
-  productId: string; // the PDP product id (for "Edit prints" → back to the PDP)
+  productId: string; // the PDP product id
   sku: string;
   title: string; // product name, e.g. "Acrylic Prints"
   size: string; // e.g. "8x10 in"
   price: string; // unit price, USD decimal string e.g. "75.00"
   quantity: number; // copies of this print (the row's stepper), min 1
   photo: PhotoEdit;
+  // The product+variant selection, kept so "Edit prints" can restore the builder.
+  selection: Selection;
 };
 
 let items: CartItem[] = [];
