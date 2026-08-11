@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stepperValue: {
-    fontFamily: FontFamily.bodyMedium,
+    fontFamily: FontFamily.bodySemiBold, // Body 2 / SemiBold 14/20
     fontSize: 14,
     lineHeight: 20,
   },
