@@ -208,6 +208,8 @@ export default function CartScreen() {
               styles.promoApplyBox,
               {
                 borderColor: theme.border,
+                // The seam (this box's left edge) tracks the input's focus stroke.
+                borderLeftColor: promoFocused ? theme.textMuted : theme.border,
                 backgroundColor: applyDisabled ? theme.backgroundElement : theme.promoActiveBg,
               },
             ]}
