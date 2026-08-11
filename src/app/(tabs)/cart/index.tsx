@@ -575,7 +575,7 @@ const styles = StyleSheet.create({
     marginTop: 4, // 4 below the size
     height: 32, // the stepper's height; bottoms out the 80px card
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end', // links sit at the bottom of the card (like the stepper)
     justifyContent: 'space-between', // links left, stepper right (spacer between)
   },
   rowLinks: {
