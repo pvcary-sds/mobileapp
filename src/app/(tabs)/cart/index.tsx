@@ -311,7 +311,7 @@ export default function CartScreen() {
         {/* 1px Gray/200 line (16 leading/trailing), then the estimated total. */}
         <View style={[styles.summaryLine, { backgroundColor: theme.border }]} />
         <View style={styles.estimatedTotalRow}>
-          <Text style={[styles.estimatedTotalLabel, { color: theme.text }]}>Estimated total</Text>
+          <Text style={[styles.estimatedTotalLabel, { color: theme.text }]}>Estimated Total</Text>
           <Text style={[styles.estimatedTotalValue, { color: theme.text }]}>
             {formatUSD(estimatedTotal)}
           </Text>
