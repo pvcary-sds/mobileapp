@@ -357,9 +357,9 @@ const styles = StyleSheet.create({
   },
   coupon: {
     width: 240,
-    height: 148,
+    height: 168,
     borderWidth: 1, // Additional stroke/10
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 16, // 16 top/leading/trailing/bottom
     justifyContent: 'space-between', // description/code at top, button at bottom
   },
