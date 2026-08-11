@@ -1,6 +1,7 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
 import { Colors, NativeFontFamily } from '@/constants/theme';
+import { useCartItems } from '@/lib/cart-store';
 
 /**
  * The app's NATIVE bottom tab bar — Home, Gallery, Cart, Orders. Nested under
@@ -19,9 +20,11 @@ import { Colors, NativeFontFamily } from '@/constants/theme';
  * for actions (CTAs, selected chips), not the tab bar.
  */
 export default function TabsLayout() {
+  const cartCount = useCartItems().length;
   return (
     <NativeTabs
       iconColor={{ default: Colors.textSecondary, selected: Colors.text }}
+      badgeBackgroundColor={Colors.primary} // Primary/500 cart-count badge (only the Cart tab has one)
       titlePositionAdjustment={{ vertical: 8 }} // best-effort 8px icon↔label gap
       labelStyle={{
         // unselected: Body Medium 12, Gray 500
@@ -49,6 +52,8 @@ export default function TabsLayout() {
         />
         <NativeTabs.Trigger.Label>Gallery</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
+      {/* Cart tab — a Primary/500 count badge when there are items (the badge's
+          exact shape/font are OS-controlled; text is white on iOS). */}
       <NativeTabs.Trigger name="cart">
         <NativeTabs.Trigger.Icon
           src={{
@@ -58,6 +63,11 @@ export default function TabsLayout() {
           renderingMode="original"
         />
         <NativeTabs.Trigger.Label>Cart</NativeTabs.Trigger.Label>
+        {cartCount > 0 && (
+          <NativeTabs.Trigger.Badge selectedBackgroundColor={Colors.primary}>
+            {String(cartCount)}
+          </NativeTabs.Trigger.Badge>
+        )}
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="orders">
         <NativeTabs.Trigger.Icon
