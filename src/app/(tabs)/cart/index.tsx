@@ -21,9 +21,9 @@ const CONTINUE_SHOPPING_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" 
 <path d="M12 6.0534V20.3025M5 8.25467C6.26578 8.4507 7.67778 8.7766 9 9.28791M5 12.2547C5.63949 12.3537 6.3163 12.4859 7 12.6584M3.99433 3.0113C6.21271 3.26198 9.19313 3.93635 11.3168 5.42448C11.725 5.71048 12.275 5.71048 12.6832 5.42448C14.8069 3.93635 17.7873 3.26198 20.0057 3.0113C21.1036 2.88724 22 3.80405 22 4.93521V16.2C22 17.3311 21.1036 18.2483 20.0057 18.3724C17.7873 18.623 14.8069 19.2974 12.6832 20.7855C12.275 21.0715 11.725 21.0715 11.3168 20.7855C9.19313 19.2974 6.21271 18.623 3.99433 18.3724C2.89642 18.2483 2 17.3311 2 16.2V4.93521C2 3.80405 2.89642 2.88724 3.99433 3.0113Z" stroke="black" stroke-width="1.5" stroke-linecap="round"/>
 </svg>`;
 
-/** Format a USD amount from a decimal string, e.g. "75" → "$75.00". */
-function formatUSD(price: string): string {
-  const n = Number(price) || 0;
+/** Format a USD amount (string or number), e.g. 75 → "$75.00". */
+function formatUSD(price: string | number): string {
+  const n = typeof price === 'number' ? price : Number(price) || 0;
   return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
@@ -76,6 +76,14 @@ export default function CartScreen() {
   const [promoFocused, setPromoFocused] = useState(false);
   const hasPromo = promo.length > 0;
   const applyDisabled = promo.trim().length === 0; // no code entered → Apply is disabled
+
+  // Summary totals. Shipping / promo / discounts are placeholders until wired.
+  const totalItems = items.reduce((n, i) => n + i.quantity, 0);
+  const subtotal = items.reduce((s, i) => s + (Number(i.price) || 0) * i.quantity, 0);
+  const shipping = 0;
+  const promoDiscount = 0;
+  const discounts = 0;
+  const estimatedTotal = subtotal + shipping - promoDiscount - discounts;
   // On a tab screen the bottom inset already spans the floating tab bar, so the
   // CTA sits 24 above it.
   const aboveTabBar = insets.bottom + 24;
@@ -104,7 +112,7 @@ export default function CartScreen() {
       {/* Everything scrolls together, header included. */}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 16 }]}>
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom }]}>
         {/* "Your products: N items" — Title 1 / SemiBold 24/32. */}
         <Text style={[styles.header, { color: theme.text }]}>
           Your products: {count} {count === 1 ? 'item' : 'items'}
@@ -274,6 +282,49 @@ export default function CartScreen() {
 
         {/* 8px Gray/100 spacer, 24 below the coupons. */}
         <View style={[styles.sectionDivider, { backgroundColor: theme.backgroundElement }]} />
+
+        {/* Summary — line items, an estimated total, and checkout. */}
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Summary</Text>
+        <View style={styles.summaryRows}>
+          <View style={styles.summaryRow}>
+            <Text style={[styles.summaryLabel, { color: theme.text }]}>
+              Subtotal ({totalItems} {totalItems === 1 ? 'item' : 'items'})
+            </Text>
+            <Text style={[styles.summaryValue, { color: theme.text }]}>{formatUSD(subtotal)}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={[styles.summaryLabel, { color: theme.text }]}>Estimated shipping</Text>
+            <Text style={[styles.summaryValue, { color: theme.text }]}>Free</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={[styles.summaryLabel, { color: theme.text }]}>Promo code</Text>
+            <Text style={[styles.summaryValue, { color: theme.text }]}>
+              {formatUSD(promoDiscount)}
+            </Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={[styles.summaryLabel, { color: theme.text }]}>Discounts</Text>
+            <Text style={[styles.summaryValue, { color: theme.text }]}>{formatUSD(discounts)}</Text>
+          </View>
+        </View>
+
+        {/* 1px Gray/200 line (16 leading/trailing), then the estimated total. */}
+        <View style={[styles.summaryLine, { backgroundColor: theme.border }]} />
+        <View style={styles.estimatedTotalRow}>
+          <Text style={[styles.estimatedTotalLabel, { color: theme.text }]}>Estimated total</Text>
+          <Text style={[styles.estimatedTotalValue, { color: theme.text }]}>
+            {formatUSD(estimatedTotal)}
+          </Text>
+        </View>
+
+        {/* Checkout — Primary/500, 16 leading/trailing, 24 above and below. */}
+        <Pressable
+          style={[styles.checkoutButton, { backgroundColor: theme.primary }]}
+          onPress={() => {
+            /* TODO: proceed to checkout (upload photos → Stripe → Prodigi order). */
+          }}>
+          <Text style={[styles.checkoutLabel, { color: theme.onPrimary }]}>Checkout</Text>
+        </Pressable>
       </ScrollView>
     </View>
   );
@@ -385,6 +436,58 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bodySemiBold, // Body 2 / SemiBold 14/20, Gray/black
     fontSize: 14,
     lineHeight: 20,
+  },
+  summaryRows: {
+    marginTop: 12, // 12 below the "Summary" title
+    gap: 12, // 12 between rows
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between', // label left, amount right
+    alignItems: 'center',
+  },
+  summaryLabel: {
+    fontFamily: FontFamily.body, // Body 1 / Regular 16/24
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  summaryValue: {
+    fontFamily: FontFamily.body, // Body 1 / Regular 16/24
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  summaryLine: {
+    marginTop: 12, // below "Discounts"
+    height: 1, // 1px Gray/200, 16 leading/trailing (from the list padding)
+  },
+  estimatedTotalRow: {
+    marginTop: 12, // 12 below the line
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  estimatedTotalLabel: {
+    fontFamily: FontFamily.bodySemiBold, // Body 1 / SemiBold 16/24, Gray/black
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  estimatedTotalValue: {
+    fontFamily: FontFamily.bodySemiBold, // Body / SemiBold 20/24, Gray/black
+    fontSize: 20,
+    lineHeight: 24,
+  },
+  checkoutButton: {
+    marginTop: 24, // 24 below the estimated total
+    marginBottom: 24, // 24 below the button
+    height: 48,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkoutLabel: {
+    fontFamily: FontFamily.bodySemiBold, // Body 1 / SemiBold 16/24, on primary
+    fontSize: 16,
+    lineHeight: 24,
   },
   sectionTitle: {
     marginTop: 24, // 24 below the divider
