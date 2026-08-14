@@ -45,14 +45,22 @@ export type CouponValidation =
       message: string; // safe to show the user
     };
 
-/** The visible offers, optionally narrowed by vendor + hiding the email's used codes. */
+/**
+ * The visible offers. `skus` filters to coupons that apply to the cart's products
+ * (a product-specific code only shows when its product is in the cart); `email`
+ * hides one-time codes that email already used.
+ */
 export async function getCoupons(
-  fulfillmentType: FulfillmentType = DEFAULT_FULFILLMENT,
-  email?: string,
+  params: { fulfillmentType?: FulfillmentType; skus?: string[]; email?: string } = {},
   signal?: AbortSignal,
 ): Promise<CouponOffer[]> {
+  const { fulfillmentType = DEFAULT_FULFILLMENT, skus, email } = params;
   const data = await apiRequest<{ coupons: CouponOffer[] }>('/coupons', {
-    query: { fulfillmentType, email },
+    query: {
+      fulfillmentType,
+      skus: skus && skus.length ? skus.join(',') : undefined,
+      email,
+    },
     signal,
   });
   return data.coupons ?? [];

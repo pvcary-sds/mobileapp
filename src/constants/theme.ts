@@ -47,6 +47,10 @@ export const Colors = {
   promoActiveBg: Brand.lightBlue3,
   promoActiveText: Brand.darkBlue,
 
+  // Promo code error — Primary/200 stroke + Primary/600 message.
+  promoErrorStroke: Primary[200],
+  promoErrorText: Primary[600],
+
   // Coupon card — Brand light background + a faint black hairline (stroke/10).
   brandSurface: Brand.lightBackground, // #F5F5F0
   strokeFaint: Stroke[10], // black @ 10% — "Additional stroke/10"
