@@ -51,6 +51,11 @@ export const LightBlue = {
   100: '#EAF8FD',
 } as const;
 
+/** Success green — the positive accent (e.g. the "Coupon added" toast). */
+export const Green = {
+  500: '#009951',
+} as const;
+
 /** Dark Blue scale (brand navy). */
 export const DarkBlue = {
   light: '#F0F0F4',

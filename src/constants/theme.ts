@@ -9,7 +9,7 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
-import { Base, Brand, Gray, Label, LightBlue, Primary, Stroke, withAlpha } from '@/constants/palette';
+import { Base, Brand, Gray, Green, Label, LightBlue, Primary, Stroke, withAlpha } from '@/constants/palette';
 
 export const Colors = {
   // Text
@@ -50,6 +50,9 @@ export const Colors = {
   // Promo code error — Primary/200 stroke + Primary/600 message.
   promoErrorStroke: Primary[200],
   promoErrorText: Primary[600],
+
+  // Success accent — the "Coupon added" toast's left rail. Green/500 (#009951).
+  successAccent: Green[500],
 
   // Coupon card — Brand light background + a faint black hairline (stroke/10).
   brandSurface: Brand.lightBackground, // #F5F5F0
