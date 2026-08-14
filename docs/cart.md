@@ -165,7 +165,14 @@ A title ("Promo code") + a field 16 below it. The field is **two attached boxes*
   - **Has text (active):** **Brand/Light Blue 3** fill + **Brand/Dark Blue** text
     (theme `promoActiveBg` / `promoActiveText`).
 
-Apply's tap behavior (validate + apply a discount) is a **TODO**.
+**Apply is wired** (`src/api/coupons.ts` → `validateCoupon`): tapping it calls
+`POST /v1/coupons/validate` against the current basket. On success the summary shows
+the real discount and the button **toggles to "Remove"** (removing is purely local —
+nothing is persisted server-side until checkout). An invalid / expired / already-used
+code shows an inline error (dark red) below the field. The applied code is
+**re-validated whenever the basket changes** (a percent discount scales; a code can
+fall below its minimum) and dropped if it stops applying. This is a **preview** — the
+binding 1x-per-customer check happens at `/v1/checkout` (with the email).
 
 ---
 
@@ -179,10 +186,12 @@ with:
 - **Description** (Gray/700, Body-2 Medium 14/20) — 16 from top/leading.
 - **Code** (Title-2 Bold 20/30, Gray/black) — 4 below.
 - **Apply Code** button (bottom, 16 leading/trailing, 40 tall, white + Gray/700
-  stroke, Body-2 SemiBold) — **drops the code into the promo field** (`setPromo`).
+  stroke, Body-2 SemiBold) — **applies the code immediately** (`applyPromo`).
 
-> **Coupons are hardcoded** (`COUPONS` in the screen). **TODO — make coupons
-> API-driven for Prodigi** (fetch available offers instead of the static list).
+> **Coupons are API-driven.** The list comes from `GET /v1/coupons?fulfillmentType=prodigi`
+> (`src/api/coupons.ts` → `getCoupons`), loaded with `useAsync`. The whole "Offers
+> for you" block **hides** when there are no offers or the call fails. No customer
+> email is sent yet (collected at checkout later), so nothing is filtered per-customer.
 
 ---
 
@@ -191,7 +200,8 @@ with:
 - **Line items** (label left / amount right, amounts Body-1 SemiBold):
   - **Subtotal (N items)** — real: `Σ price × quantity`, black.
   - **Estimated shipping** — "Free" (placeholder), black.
-  - **Promo code** — `$0.00` (placeholder), **Primary/600**.
+  - **Promo code (CODE)** — the applied coupon's discount as `-$X.XX`, **Primary/600**
+    (`$0.00` when none applied). Drives the Estimated Total.
   - **Discounts** — `$0.00` (placeholder), **Primary/600**.
 - A **1px Gray/200 rule** (16 leading/trailing), then **Estimated Total** (Body-1
   SemiBold 16 label + Body SemiBold 20 amount, black) — currently = subtotal.
@@ -227,6 +237,7 @@ stacks, so every current and future stack shows it by default.
 | Concern | Location |
 |---|---|
 | Cart screen — rows, promo, coupons, summary | `src/app/(tabs)/cart/index.tsx` |
+| Coupon API client (`getCoupons` / `validateCoupon`) | `src/api/coupons.ts` |
 | Cart nav bar (Stack, title "Cart") | `src/app/(tabs)/cart/_layout.tsx` |
 | Local cart store + `CartItem` / `PhotoEdit` | `src/lib/cart-store.ts` |
 | Product selection store (for Edit prints) | `src/lib/selection-store.ts` |
@@ -241,8 +252,9 @@ stacks, so every current and future stack shows it by default.
 ## TODO
 
 - **Cart persistence** (AsyncStorage) — it's in-memory today.
-- **Coupons API-driven** via Prodigi (replace the hardcoded list).
-- **Apply promo** — validate the code + apply a discount to the summary.
+- **Email at checkout** — collect it on the checkout screen, pass to `/v1/checkout`
+  (makes the 1x-per-customer coupon limit bind), and store it locally to filter
+  offers + preview `ALREADY_USED`.
 - **Shipping & tax** — real values at checkout (Stripe Tax, IL nexus).
 - **Checkout** — render + upload prints → Stripe PaymentIntent → Prodigi order.
 - Collapse the redundant `CartItem` fields (derive from `selection`).

@@ -1,13 +1,24 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { Fragment, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
 
+import { getCoupons, validateCoupon, type CouponBasketItem } from '@/api/coupons';
 import { CLOSE_ICON } from '@/constants/builder-icons';
 import { EMPTY_CART_ILLUSTRATION } from '@/constants/illustrations';
 import { BottomTabInset, FontFamily } from '@/constants/theme';
+import { useAsync } from '@/hooks/use-async';
 import { useTheme } from '@/hooks/use-theme';
 import { cartStore, useCartItems } from '@/lib/cart-store';
 import { selectionStore } from '@/lib/selection-store';
@@ -32,17 +43,6 @@ function formatUSD(price: string | number): string {
   const n = typeof price === 'number' ? price : Number(price) || 0;
   return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
-
-/**
- * "Offers for you" coupons. Hardcoded for now.
- * TODO: make coupons API-driven (Prodigi) — fetch available offers rather than
- * shipping this static list.
- */
-const COUPONS = [
-  { code: 'WELCOME20', description: '20% Off First Order' },
-  { code: 'SAVE15', description: '$15 Off Orders Over $75' },
-  { code: 'FREESHIP', description: 'Free Shipping' },
-];
 
 /**
  * Copy stepper for a cart row (32px tall). First pass — refine to the detailed
@@ -81,15 +81,104 @@ export default function CartScreen() {
   const [promo, setPromo] = useState('');
   const [promoFocused, setPromoFocused] = useState(false);
   const hasPromo = promo.length > 0;
-  const applyDisabled = promo.trim().length === 0; // no code entered → Apply is disabled
 
-  // Summary totals. Shipping / promo / discounts are placeholders until wired.
+  // The cart as the coupon API wants it: one line per SKU, quantities summed.
+  const basketItems = useMemo<CouponBasketItem[]>(() => {
+    const bySku = new Map<string, number>();
+    for (const i of items) bySku.set(i.sku, (bySku.get(i.sku) ?? 0) + i.quantity);
+    return [...bySku].map(([sku, copies]) => ({ sku, copies }));
+  }, [items]);
+  const basketSig = basketItems.map((b) => `${b.sku}:${b.copies}`).join(',');
+
+  // Offers carousel — API-driven (replaces the old hardcoded list).
+  // TODO: pass the stored email (once checkout captures it) to hide used codes.
+  const offers = useAsync((signal) => getCoupons('prodigi', undefined, signal), []);
+  const hasOffers = (offers.data?.length ?? 0) > 0;
+
+  // Applied coupon — a client-side preview. The binding 1x-per-customer check runs
+  // at checkout (with the email), so "apply"/"remove" here is just local state.
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    discountAmount: string;
+    freeShipping: boolean;
+  } | null>(null);
+  const [applying, setApplying] = useState(false);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const isApplied = appliedCoupon !== null;
+
+  // Apply a code against the current basket (from the field or an offer card).
+  const applyPromo = useCallback(
+    async (rawCode: string) => {
+      const code = rawCode.trim().toUpperCase();
+      if (!code) return;
+      setApplying(true);
+      setPromoError(null);
+      try {
+        const res = await validateCoupon({ code, items: basketItems });
+        if (res.valid) {
+          setAppliedCoupon({
+            code,
+            discountAmount: res.discountAmount,
+            freeShipping: res.freeShipping,
+          });
+          setPromo(code);
+        } else {
+          setAppliedCoupon(null);
+          setPromoError(res.message);
+        }
+      } catch (err) {
+        setAppliedCoupon(null);
+        setPromoError(err instanceof Error ? err.message : 'Could not apply the code.');
+      } finally {
+        setApplying(false);
+      }
+    },
+    [basketItems],
+  );
+
+  // Remove is purely local — nothing is persisted server-side until checkout.
+  const removeCoupon = useCallback(() => {
+    setAppliedCoupon(null);
+    setPromo('');
+    setPromoError(null);
+  }, []);
+
+  // Re-validate an applied code when the basket changes: a percent discount scales
+  // with the cart, and a code can fall below its minimum. Drop it if it stops
+  // applying. (Not the enforcement point — checkout re-checks authoritatively.)
+  useEffect(() => {
+    if (!appliedCoupon) return;
+    const controller = new AbortController();
+    validateCoupon({ code: appliedCoupon.code, items: basketItems }, controller.signal)
+      .then((res) => {
+        if (controller.signal.aborted) return;
+        if (res.valid) {
+          setAppliedCoupon({
+            code: appliedCoupon.code,
+            discountAmount: res.discountAmount,
+            freeShipping: res.freeShipping,
+          });
+        } else {
+          setAppliedCoupon(null);
+          setPromoError(res.message);
+        }
+      })
+      .catch(() => {
+        /* leave the last discount in place on a transient error */
+      });
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [basketSig]);
+
+  const applyDisabled = promo.trim().length === 0 || applying;
+
+  // Summary totals.
   const totalItems = items.reduce((n, i) => n + i.quantity, 0);
   const subtotal = items.reduce((s, i) => s + (Number(i.price) || 0) * i.quantity, 0);
   const shipping = 0;
-  const promoDiscount = 0;
+  const promoDiscount = appliedCoupon ? Number(appliedCoupon.discountAmount) || 0 : 0;
   const discounts = 0;
-  const estimatedTotal = subtotal + shipping - promoDiscount - discounts;
+  const estimatedTotal = Math.max(0, subtotal + shipping - promoDiscount - discounts);
   // On a tab screen the bottom inset already spans the floating tab bar, so the
   // CTA sits 24 above it.
   const aboveTabBar = insets.bottom + 24;
@@ -218,87 +307,109 @@ export default function CartScreen() {
             <TextInput
               style={[styles.promoInput, { color: theme.text }]}
               value={promo}
-              onChangeText={setPromo}
+              onChangeText={(t) => {
+                setPromo(t);
+                if (promoError) setPromoError(null);
+              }}
               onFocus={() => setPromoFocused(true)}
               onBlur={() => setPromoFocused(false)}
+              onSubmitEditing={() => applyPromo(promo)}
+              editable={!isApplied} // locked to the applied code until removed
               placeholder="Enter code"
               placeholderTextColor={theme.textSecondary}
               autoCapitalize="characters"
               autoCorrect={false}
               returnKeyType="done"
             />
-            {/* Clear (X) — shown while there's text; 16 from the Apply button. */}
-            {hasPromo && (
+            {/* Clear (X) — while there's text and nothing is applied (Remove takes over). */}
+            {hasPromo && !isApplied && (
               <Pressable hitSlop={6} style={styles.promoClear} onPress={() => setPromo('')}>
                 <SvgXml xml={CLOSE_ICON} width={24} height={24} color={theme.textSecondary} />
               </Pressable>
             )}
           </View>
 
-          {/* Apply box — rounded right, attached. Disabled: Gray/100 fill +
-              Gray/400 text. Active: Brand/Light Blue 3 fill + Brand/Dark Blue text. */}
+          {/* Apply / Remove box — rounded right, attached. Disabled: Gray/100 fill +
+              Gray/400 text. Active (typed, or applied): Brand/Light Blue 3 fill +
+              Brand/Dark Blue text. Toggles to "Remove" once a code is applied. */}
           <Pressable
-            disabled={applyDisabled}
+            disabled={isApplied ? false : applyDisabled}
             style={[
               styles.promoApplyBox,
               {
                 borderColor: theme.border,
                 // The seam (this box's left edge) tracks the input's focus stroke.
                 borderLeftColor: promoFocused ? theme.textMuted : theme.border,
-                backgroundColor: applyDisabled ? theme.backgroundElement : theme.promoActiveBg,
+                backgroundColor:
+                  isApplied || !applyDisabled ? theme.promoActiveBg : theme.backgroundElement,
               },
             ]}
-            onPress={() => {
-              /* TODO: validate + apply the promo code. */
-            }}>
-            <Text
-              style={[
-                styles.promoApplyText,
-                { color: applyDisabled ? theme.textMuted : theme.promoActiveText },
-              ]}>
-              Apply
-            </Text>
+            onPress={() => (isApplied ? removeCoupon() : applyPromo(promo))}>
+            {applying ? (
+              <ActivityIndicator size="small" color={theme.promoActiveText} />
+            ) : (
+              <Text
+                style={[
+                  styles.promoApplyText,
+                  {
+                    color:
+                      isApplied || !applyDisabled ? theme.promoActiveText : theme.textMuted,
+                  },
+                ]}>
+                {isApplied ? 'Remove' : 'Apply'}
+              </Text>
+            )}
           </Pressable>
         </View>
+
+        {/* Validation error (invalid / expired / already-used code). */}
+        {promoError && (
+          <Text style={[styles.promoError, { color: theme.errorFg }]}>{promoError}</Text>
+        )}
 
         {/* 8px Gray/100 spacer, 24 below the promo field (same as above). */}
         <View style={[styles.sectionDivider, { backgroundColor: theme.backgroundElement }]} />
 
-        {/* "Offers for you" — coupons in a horizontal scroll. */}
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>Offers for you</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.couponScroll}
-          contentContainerStyle={styles.couponScrollContent}>
-          {COUPONS.map((c, i) => (
-            <View
-              key={c.code}
-              style={[
-                styles.coupon,
-                i > 0 && styles.couponGap,
-                { backgroundColor: theme.brandSurface, borderColor: theme.strokeFaint },
-              ]}>
-              <View>
-                <Text style={[styles.couponDesc, { color: theme.textTertiary }]}>
-                  {c.description}
-                </Text>
-                <Text style={[styles.couponCode, { color: theme.text }]}>{c.code}</Text>
-              </View>
-              <Pressable
-                style={[
-                  styles.couponApply,
-                  { backgroundColor: theme.background, borderColor: theme.textTertiary },
-                ]}
-                onPress={() => setPromo(c.code)}>
-                <Text style={[styles.couponApplyText, { color: theme.text }]}>Apply Code</Text>
-              </Pressable>
-            </View>
-          ))}
-        </ScrollView>
+        {/* "Offers for you" — API-driven coupons in a horizontal scroll. Hidden
+            entirely (with its trailing spacer) when there are no offers. */}
+        {hasOffers && (
+          <>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Offers for you</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.couponScroll}
+              contentContainerStyle={styles.couponScrollContent}>
+              {offers.data!.map((c, i) => (
+                <View
+                  key={c.code}
+                  style={[
+                    styles.coupon,
+                    i > 0 && styles.couponGap,
+                    { backgroundColor: theme.brandSurface, borderColor: theme.strokeFaint },
+                  ]}>
+                  <View>
+                    <Text style={[styles.couponDesc, { color: theme.textTertiary }]}>
+                      {c.description}
+                    </Text>
+                    <Text style={[styles.couponCode, { color: theme.text }]}>{c.code}</Text>
+                  </View>
+                  <Pressable
+                    style={[
+                      styles.couponApply,
+                      { backgroundColor: theme.background, borderColor: theme.textTertiary },
+                    ]}
+                    onPress={() => applyPromo(c.code)}>
+                    <Text style={[styles.couponApplyText, { color: theme.text }]}>Apply Code</Text>
+                  </Pressable>
+                </View>
+              ))}
+            </ScrollView>
 
-        {/* 8px Gray/100 spacer, 24 below the coupons. */}
-        <View style={[styles.sectionDivider, { backgroundColor: theme.backgroundElement }]} />
+            {/* 8px Gray/100 spacer, 24 below the coupons. */}
+            <View style={[styles.sectionDivider, { backgroundColor: theme.backgroundElement }]} />
+          </>
+        )}
 
         {/* Summary — line items, an estimated total, and checkout. */}
         <Text style={[styles.sectionTitle, { color: theme.text }]}>Summary</Text>
@@ -314,9 +425,11 @@ export default function CartScreen() {
             <Text style={[styles.summaryValue, { color: theme.text }]}>Free</Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={[styles.summaryLabel, { color: theme.text }]}>Promo code</Text>
+            <Text style={[styles.summaryLabel, { color: theme.text }]}>
+              {appliedCoupon ? `Promo code (${appliedCoupon.code})` : 'Promo code'}
+            </Text>
             <Text style={[styles.summaryValue, { color: theme.discount }]}>
-              {formatUSD(promoDiscount)}
+              {promoDiscount > 0 ? `-${formatUSD(promoDiscount)}` : formatUSD(0)}
             </Text>
           </View>
           <View style={styles.summaryRow}>
@@ -553,6 +666,12 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bodySemiBold, // Body 1 / SemiBold 16/24
     fontSize: 16,
     lineHeight: 24,
+  },
+  promoError: {
+    marginTop: 8, // below the promo field
+    fontFamily: FontFamily.body, // Body 2 / Regular 14/20, error red
+    fontSize: 14,
+    lineHeight: 20,
   },
   row: {
     flexDirection: 'row',
