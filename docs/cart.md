@@ -168,11 +168,15 @@ A title ("Promo code") + a field 16 below it. The field is **two attached boxes*
 **Apply is wired** (`src/api/coupons.ts` → `validateCoupon`): tapping it calls
 `POST /v1/coupons/validate` against the current basket. On success the summary shows
 the real discount and the button **toggles to "Remove"** (removing is purely local —
-nothing is persisted server-side until checkout). An invalid / expired / already-used
-code shows an inline error (dark red) below the field. The applied code is
+nothing is persisted server-side until checkout). The applied code is
 **re-validated whenever the basket changes** (a percent discount scales; a code can
 fall below its minimum) and dropped if it stops applying. This is a **preview** — the
 binding 1x-per-customer check happens at `/v1/checkout` (with the email).
+
+**While validating**, a spinner sits **in place of the clear (X)** inside the field
+(not on the Apply button). **On error** (invalid / expired / already-used), the field
+stroke goes **Primary/200** and an inline message shows **4px below** the field in
+**Primary/600** (Body-2 Regular 14/20). Tokens: `promoErrorStroke` / `promoErrorText`.
 
 ---
 
@@ -188,10 +192,14 @@ with:
 - **Apply Code** button (bottom, 16 leading/trailing, 40 tall, white + Gray/700
   stroke, Body-2 SemiBold) — **applies the code immediately** (`applyPromo`).
 
-> **Coupons are API-driven.** The list comes from `GET /v1/coupons?fulfillmentType=prodigi`
-> (`src/api/coupons.ts` → `getCoupons`), loaded with `useAsync`. The whole "Offers
-> for you" block **hides** when there are no offers or the call fails. No customer
-> email is sent yet (collected at checkout later), so nothing is filtered per-customer.
+> **Coupons are API-driven and product-based.** The list comes from
+> `GET /v1/coupons?fulfillmentType=prodigi&skus=…` (`src/api/coupons.ts` → `getCoupons`),
+> passing the **cart's SKUs** so only coupons that apply to what's in the cart come
+> back (a product-specific code shows only when its product is present; an `"all"`
+> code always shows). Loaded with `useAsync`, **re-fetched when the cart's SKU set
+> changes**. The whole block **hides** when there are no applicable offers or the call
+> fails. No customer email is sent yet (collected at checkout later), so nothing is
+> filtered per-customer.
 
 ---
 

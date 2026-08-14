@@ -90,9 +90,17 @@ export default function CartScreen() {
   }, [items]);
   const basketSig = basketItems.map((b) => `${b.sku}:${b.copies}`).join(',');
 
-  // Offers carousel — API-driven (replaces the old hardcoded list).
+  // Offers depend only on WHICH products are in the cart, not their quantities.
+  const cartSkus = basketItems.map((b) => b.sku);
+  const skuSig = [...cartSkus].sort().join(',');
+
+  // Offers carousel — API-driven + product-based: only coupons that apply to the
+  // cart's SKUs come back. Refetches when the set of products changes.
   // TODO: pass the stored email (once checkout captures it) to hide used codes.
-  const offers = useAsync((signal) => getCoupons('prodigi', undefined, signal), []);
+  const offers = useAsync(
+    (signal) => getCoupons({ fulfillmentType: 'prodigi', skus: cartSkus }, signal),
+    [skuSig],
+  );
   const hasOffers = (offers.data?.length ?? 0) > 0;
 
   // Applied coupon — a client-side preview. The binding 1x-per-customer check runs
@@ -302,7 +310,13 @@ export default function CartScreen() {
           <View
             style={[
               styles.promoInputBox,
-              { borderColor: promoFocused ? theme.textMuted : theme.border },
+              {
+                borderColor: promoError
+                  ? theme.promoErrorStroke
+                  : promoFocused
+                    ? theme.textMuted
+                    : theme.border,
+              },
             ]}>
             <TextInput
               style={[styles.promoInput, { color: theme.text }]}
@@ -321,12 +335,19 @@ export default function CartScreen() {
               autoCorrect={false}
               returnKeyType="done"
             />
-            {/* Clear (X) — while there's text and nothing is applied (Remove takes over). */}
-            {hasPromo && !isApplied && (
+            {/* While validating, a spinner sits where the clear (X) is; otherwise the
+                clear (X) shows when there's text and nothing is applied yet. */}
+            {applying ? (
+              <ActivityIndicator
+                style={styles.promoClear}
+                size="small"
+                color={theme.textSecondary}
+              />
+            ) : hasPromo && !isApplied ? (
               <Pressable hitSlop={6} style={styles.promoClear} onPress={() => setPromo('')}>
                 <SvgXml xml={CLOSE_ICON} width={24} height={24} color={theme.textSecondary} />
               </Pressable>
-            )}
+            ) : null}
           </View>
 
           {/* Apply / Remove box — rounded right, attached. Disabled: Gray/100 fill +
@@ -338,33 +359,33 @@ export default function CartScreen() {
               styles.promoApplyBox,
               {
                 borderColor: theme.border,
-                // The seam (this box's left edge) tracks the input's focus stroke.
-                borderLeftColor: promoFocused ? theme.textMuted : theme.border,
+                // The seam (this box's left edge) tracks the input's error/focus stroke.
+                borderLeftColor: promoError
+                  ? theme.promoErrorStroke
+                  : promoFocused
+                    ? theme.textMuted
+                    : theme.border,
                 backgroundColor:
                   isApplied || !applyDisabled ? theme.promoActiveBg : theme.backgroundElement,
               },
             ]}
             onPress={() => (isApplied ? removeCoupon() : applyPromo(promo))}>
-            {applying ? (
-              <ActivityIndicator size="small" color={theme.promoActiveText} />
-            ) : (
-              <Text
-                style={[
-                  styles.promoApplyText,
-                  {
-                    color:
-                      isApplied || !applyDisabled ? theme.promoActiveText : theme.textMuted,
-                  },
-                ]}>
-                {isApplied ? 'Remove' : 'Apply'}
-              </Text>
-            )}
+            <Text
+              style={[
+                styles.promoApplyText,
+                {
+                  color: isApplied || !applyDisabled ? theme.promoActiveText : theme.textMuted,
+                },
+              ]}>
+              {isApplied ? 'Remove' : 'Apply'}
+            </Text>
           </Pressable>
         </View>
 
-        {/* Validation error (invalid / expired / already-used code). */}
+        {/* Validation error (invalid / expired / already-used code) — 4 below the
+            field, Primary/600. */}
         {promoError && (
-          <Text style={[styles.promoError, { color: theme.errorFg }]}>{promoError}</Text>
+          <Text style={[styles.promoError, { color: theme.promoErrorText }]}>{promoError}</Text>
         )}
 
         {/* 8px Gray/100 spacer, 24 below the promo field (same as above). */}
@@ -668,8 +689,8 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   promoError: {
-    marginTop: 8, // below the promo field
-    fontFamily: FontFamily.body, // Body 2 / Regular 14/20, error red
+    marginTop: 4, // 4 below the promo field
+    fontFamily: FontFamily.body, // Body 2 / Regular 14/20, Primary/600
     fontSize: 14,
     lineHeight: 20,
   },
