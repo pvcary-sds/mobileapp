@@ -1,23 +1,21 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { Animated, Platform, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Animated, StyleSheet } from 'react-native';
 
 import { Toast } from '@/components/toast';
 import { toast, useToast } from '@/lib/toast-store';
 
-/** Standard nav-bar content height, so the toast rests just below it. */
-const NAV_BAR_HEIGHT = Platform.OS === 'ios' ? 44 : 56;
-
 /**
- * Renders the active toast (from `toast-store`) over everything, once, at the app
- * root. Slides **down from the top** to rest 16 below the nav bar (16 leading/
- * trailing), auto-dismisses after the toast's duration, and dismisses on the X.
+ * Renders the active toast (from `toast-store`), animating it **down from the top**
+ * to rest **16 below the top of its container**, auto-dismissing after the toast's
+ * duration (or on the X).
  *
- * Mounted in `app/_layout.tsx` so any screen's `toast.success(...)` surfaces here.
+ * Mount this inside a screen's content area (below its nav bar) so "16 from the top"
+ * lands 16 below the nav bar — e.g. the cart mounts it in its root `View`. The store
+ * is global, so `toast.success(...)` from anywhere surfaces in whichever `ToastHost`
+ * is mounted.
  */
 export function ToastHost() {
   const data = useToast();
-  const insets = useSafeAreaInsets();
   const translateY = useRef(new Animated.Value(-200)).current;
 
   const hide = useCallback(() => {
@@ -42,10 +40,7 @@ export function ToastHost() {
   return (
     <Animated.View
       pointerEvents="box-none" // taps pass through except on the toast itself
-      style={[
-        styles.host,
-        { top: insets.top + NAV_BAR_HEIGHT + 16, transform: [{ translateY }] },
-      ]}>
+      style={[styles.host, { transform: [{ translateY }] }]}>
       <Toast variant={data.variant} title={data.title} subtitle={data.subtitle} onClose={hide} />
     </Animated.View>
   );
@@ -54,6 +49,7 @@ export function ToastHost() {
 const styles = StyleSheet.create({
   host: {
     position: 'absolute',
+    top: 16, // 16 below the top of the container (i.e. below the nav bar)
     left: 16, // 16 leading / trailing
     right: 16,
     zIndex: 1000, // over everything

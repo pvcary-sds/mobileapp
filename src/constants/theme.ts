@@ -54,6 +54,10 @@ export const Colors = {
   // Success accent — the "Coupon added" toast's left rail. Green/500 (#009951).
   successAccent: Green[500],
 
+  // "Remove Code" button on an active coupon card — Primary/200 stroke + Primary/600 text.
+  removeStroke: Primary[200],
+  removeText: Primary[600],
+
   // Coupon card — Brand light background + a faint black hairline (stroke/10).
   brandSurface: Brand.lightBackground, // #F5F5F0
   strokeFaint: Stroke[10], // black @ 10% — "Additional stroke/10"
