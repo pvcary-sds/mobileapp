@@ -166,12 +166,36 @@ A title ("Promo code") + a field 16 below it. The field is **two attached boxes*
     (theme `promoActiveBg` / `promoActiveText`).
 
 **Apply is wired** (`src/api/coupons.ts` → `validateCoupon`): tapping it calls
-`POST /v1/coupons/validate` against the current basket. On success the summary shows
-the real discount and the button **toggles to "Remove"** (removing is purely local —
-nothing is persisted server-side until checkout). The applied code is
-**re-validated whenever the basket changes** (a percent discount scales; a code can
-fall below its minimum) and dropped if it stops applying. This is a **preview** — the
-binding 1x-per-customer check happens at `/v1/checkout` (with the email).
+`POST /v1/coupons/validate` against the current basket. **On success** the field is
+**cleared**, a success **toast** slides down (see below), the summary shows the real
+discount, and the button **toggles to "Remove"** (removing is purely local — nothing
+is persisted server-side until checkout). The applied code is **re-validated whenever
+the basket changes** (a percent discount scales; a code can fall below its minimum)
+and dropped if it stops applying. This is a **preview** — the binding 1x-per-customer
+check happens at `/v1/checkout` (with the email).
+
+### The "Coupon added" toast (reusable)
+
+Fired **only on a successful apply** via the app-wide toast system — the cart just
+calls `toast.success({ title: 'Coupon added', subtitle: 'You'll see the discount at
+checkout' })`. Failed applies are unaffected — they still show the inline `promoError`
+(no toast).
+
+The toast system is a small **module store** (no provider), mirroring `cart-store`:
+
+| Concern | Location |
+|---|---|
+| Fire from anywhere (`toast.success(…)`) + `useToast()` | `src/lib/toast-store.ts` |
+| Presentational card (accent rail + title/subtitle + X) | `src/components/toast.tsx` |
+| Root host — animation, 3s auto-dismiss, positioning | `src/components/toast-host.tsx` |
+| Mounted once | `src/app/_layout.tsx` (`<ToastHost/>`) |
+
+The host renders over **every** screen: slides **down from the top** (`Animated`
+`translateY`) to rest **16 below the nav bar** (16 leading/trailing), auto-dismisses
+after 3s or on the **X**. 12px radius, 1px `strokeFaint` border, drop shadow. The
+success variant's **48px accent rail** is `successAccent` (**Success Green** /
+`Green/500` `#009951`) with a white check-circle; title is Body-1 Medium 16/24,
+subtitle Body-2 Regular 14/20 (Gray/700).
 
 **While validating**, a spinner sits **in place of the clear (X)** inside the field
 (not on the Apply button). **On error** (invalid / expired / already-used), the field

@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
 
 import { getCoupons, validateCoupon, type CouponBasketItem } from '@/api/coupons';
+import { toast } from '@/lib/toast-store';
 import { CLOSE_ICON } from '@/constants/builder-icons';
 import { EMPTY_CART_ILLUSTRATION } from '@/constants/illustrations';
 import { BottomTabInset, FontFamily } from '@/constants/theme';
@@ -129,7 +130,13 @@ export default function CartScreen() {
             discountAmount: res.discountAmount,
             freeShipping: res.freeShipping,
           });
-          setPromo(code);
+          // On success: clear the field and confirm with a toast. The applied
+          // coupon lives on in the summary (and the button becomes "Remove").
+          setPromo('');
+          toast.success({
+            title: 'Coupon added',
+            subtitle: 'You’ll see the discount at checkout',
+          });
         } else {
           setAppliedCoupon(null);
           setPromoError(res.message);
@@ -328,8 +335,8 @@ export default function CartScreen() {
               onFocus={() => setPromoFocused(true)}
               onBlur={() => setPromoFocused(false)}
               onSubmitEditing={() => applyPromo(promo)}
-              editable={!isApplied} // locked to the applied code until removed
-              placeholder="Enter code"
+              editable={!isApplied} // locked (and cleared) once a code is applied
+              placeholder={isApplied ? '' : 'Enter code'}
               placeholderTextColor={theme.textSecondary}
               autoCapitalize="characters"
               autoCorrect={false}
