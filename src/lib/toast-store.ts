@@ -25,7 +25,7 @@ type ShowOptions = {
   durationMs?: number;
 };
 
-const DEFAULT_DURATION_MS = 3000;
+const DEFAULT_DURATION_MS = 2000;
 
 let current: ToastData | null = null;
 let seq = 0;

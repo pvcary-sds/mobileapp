@@ -99,7 +99,8 @@ Each row (16 leading/trailing, 20 below the header):
 - **80×80 image** (the photo, `expo-image`, rounded 8) on the far left; 16px gap.
 - **Info column** (80px tall to match the image):
   - **Title** (Gray/black, Body/SemiBold 16/24) left + **price** right on one line
-    (HStack with a spacer; title truncates).
+    (HStack with a spacer; title truncates). The price is the **line total**
+    (`unitPrice × quantity`), so it updates as the stepper changes the quantity.
   - **Size** (Gray/500, Body-2 Regular 14/20) right below the title.
   - **Bottom half**, bottom-aligned to the 80px card: **Edit prints** and
     **Remove** links on the left (16px apart), a spacer, then the **stepper** on
@@ -160,19 +161,21 @@ A title ("Promo code") + a field 16 below it. The field is **two attached boxes*
   16). **On focus** the input's stroke — including the seam to the Apply button —
   goes **Gray/400**; typed text is black.
 - **Clear (X)** appears while there's text, 16px left of Apply, and empties the field.
-- **Apply box** (rounded right, 12/16 padding, 48 tall):
+- **Apply box** (rounded right, 12/16 padding, 48 tall). It is **only ever "Apply"** —
+  never a "Remove" toggle:
   - **Empty (disabled):** Gray/100 fill, Gray/400 text.
   - **Has text (active):** **Brand/Light Blue 3** fill + **Brand/Dark Blue** text
     (theme `promoActiveBg` / `promoActiveText`).
 
 **Apply is wired** (`src/api/coupons.ts` → `validateCoupon`): tapping it calls
 `POST /v1/coupons/validate` against the current basket. **On success** the field is
-**cleared**, a success **toast** slides down (see below), the summary shows the real
-discount, and the button **toggles to "Remove"** (removing is purely local — nothing
-is persisted server-side until checkout). The applied code is **re-validated whenever
-the basket changes** (a percent discount scales; a code can fall below its minimum)
-and dropped if it stops applying. This is a **preview** — the binding 1x-per-customer
-check happens at `/v1/checkout` (with the email).
+**cleared** (so the button returns to its **disabled "Apply"** state), a success
+**toast** fires (see below), and the summary shows the real discount. The applied code
+is **re-validated whenever the basket changes** (a percent discount scales; a code can
+fall below its minimum) and dropped if it stops applying. This is a **preview** — the
+binding 1x-per-customer check happens at `/v1/checkout` (with the email).
+**Removing** a coupon is done from its **card** in "Offers for you" (the "Remove Code"
+button), not the field — see below.
 
 ### The "Coupon added" toast (reusable)
 
@@ -187,15 +190,17 @@ The toast system is a small **module store** (no provider), mirroring `cart-stor
 |---|---|
 | Fire from anywhere (`toast.success(…)`) + `useToast()` | `src/lib/toast-store.ts` |
 | Presentational card (accent rail + title/subtitle + X) | `src/components/toast.tsx` |
-| Root host — animation, 3s auto-dismiss, positioning | `src/components/toast-host.tsx` |
-| Mounted once | `src/app/_layout.tsx` (`<ToastHost/>`) |
+| Host — animation, 2s auto-dismiss, positioning | `src/components/toast-host.tsx` |
+| Mounted in the cart's content area | `src/app/(tabs)/cart/index.tsx` |
 
-The host renders over **every** screen: slides **down from the top** (`Animated`
-`translateY`) to rest **16 below the nav bar** (16 leading/trailing), auto-dismisses
-after 3s or on the **X**. 12px radius, 1px `strokeFaint` border, drop shadow. The
+The host slides the toast **down from the top** (`Animated` `translateY`) to rest
+**16 below the top of its container** — it's mounted **inside the cart screen** (whose
+content starts below the nav bar), so that lands 16 below the nav bar. Auto-dismisses
+after **2s** or on the **X**. 12px radius, 1px `strokeFaint` border, drop shadow. The
 success variant's **48px accent rail** is `successAccent` (**Success Green** /
 `Green/500` `#009951`) with a white check-circle; title is Body-1 Medium 16/24,
-subtitle Body-2 Regular 14/20 (Gray/700).
+subtitle Body-2 Regular 14/20 (Gray/700). The store is global, so any screen can fire
+a toast — it just needs its own `<ToastHost/>` mounted where it should appear.
 
 **While validating**, a spinner sits **in place of the clear (X)** inside the field
 (not on the Apply button). **On error** (invalid / expired / already-used), the field
@@ -215,6 +220,20 @@ with:
 - **Code** (Title-2 Bold 20/30, Gray/black) — 4 below.
 - **Apply Code** button (bottom, 16 leading/trailing, 40 tall, white + Gray/700
   stroke, Body-2 SemiBold) — **applies the code immediately** (`applyPromo`).
+
+**Applied (Active) state** — when a card's coupon is the applied one
+(`appliedCoupon?.code === c.code`):
+
+- The card **fill turns white**.
+- An **"Active" badge** pins to the **top-right** (16 from top/trailing): Label/light
+  green fill, Label/dark green text (**Caption Medium 12/18**), a 12px check-circle
+  glyph 4px in. The description gets right padding so it clears the badge.
+- The button becomes **"Remove Code"** — **Primary/200** stroke + **Primary/600** text
+  (`removeStroke` / `removeText`) — and tapping it removes the coupon (`removeCoupon`).
+
+So **removal lives on the card**, not the promo field. (A manually-typed code that
+isn't in the offers list still applies and shows in the summary, but has no card — so
+no Active/Remove affordance for it.)
 
 > **Coupons are API-driven and product-based.** The list comes from
 > `GET /v1/coupons?fulfillmentType=prodigi&skus=…` (`src/api/coupons.ts` → `getCoupons`),
