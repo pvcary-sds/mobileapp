@@ -16,10 +16,10 @@ import { useTheme } from '@/hooks/use-theme';
 
 type AutoCap = 'none' | 'words';
 
-/** Checkbox — unchecked is the Figma asset (Gray/300 outline); checked is
- *  improvised (primary fill + white check) since only the unchecked state was given. */
+/** Checkbox glyphs (Figma) — unchecked is a Gray/300 outline; checked is a white
+ *  box with a Gray/800 border and a black check. */
 const CHECKBOX_UNCHECKED = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 1H18C20.7614 1 23 3.23858 23 6V18C23 20.7614 20.7614 23 18 23H6C3.23858 23 1 20.7614 1 18V6C1 3.23858 3.23858 1 6 1Z" stroke="#D6D6D6" stroke-width="2"/></svg>`;
-const CHECKBOX_CHECKED = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 1H18C20.7614 1 23 3.23858 23 6V18C23 20.7614 20.7614 23 18 23H6C3.23858 23 1 20.7614 1 18V6C1 3.23858 3.23858 1 6 1Z" fill="currentColor"/><path d="M7 12L10.5 15.5L17 9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const CHECKBOX_CHECKED = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 1H18C20.7614 1 23 3.23858 23 6V18C23 20.7614 20.7614 23 18 23H6C3.23858 23 1 20.7614 1 18V6C1 3.23858 3.23858 1 6 1Z" fill="white"/><path d="M6 1H18C20.7614 1 23 3.23858 23 6V18C23 20.7614 20.7614 23 18 23H6C3.23858 23 1 20.7614 1 18V6C1 3.23858 3.23858 1 6 1Z" stroke="#424242" stroke-width="2"/><path d="M6.16699 12.834L9.50033 16.1673L17.8337 7.83398" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 /** A labelled text field: "Label *" (red asterisk) above an input whose stroke
  *  highlights (Gray/200 → Gray/400) on focus. */
@@ -126,12 +126,7 @@ export default function ReviewOrderScreen() {
         {/* Marketing opt-in — 16 below the email field; checkbox at the 16 leading
             edge, text 12 to its right. */}
         <Pressable style={styles.optIn} onPress={() => setOptIn((v) => !v)}>
-          <SvgXml
-            xml={optIn ? CHECKBOX_CHECKED : CHECKBOX_UNCHECKED}
-            width={24}
-            height={24}
-            color={theme.primary}
-          />
+          <SvgXml xml={optIn ? CHECKBOX_CHECKED : CHECKBOX_UNCHECKED} width={24} height={24} />
           <Text style={[styles.optInText, { color: theme.text }]}>
             Keep me updated on deals, inspiration, and new products
           </Text>
