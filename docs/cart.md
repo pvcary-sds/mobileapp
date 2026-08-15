@@ -212,14 +212,15 @@ stroke goes **Primary/200** and an inline message shows **4px below** the field 
 ## Offers for you (coupons)
 
 A **"Offers for you"** title + a **horizontal scroll** of coupon cards (full-bleed
-so they scroll to the edges, 12px apart). Each card: **240×168**, 12px radius,
-**Brand/Light background** fill + **Additional stroke/10** (faint black) border,
-with:
+so they scroll to the edges, 12px apart). Each card: **240 wide, height grows with
+content** (no fixed height), 12px radius, **Brand/Light background** fill +
+**Additional stroke/10** (faint black) border, 16px padding, with:
 
-- **Description** (Gray/700, Body-2 Medium 14/20) — 16 from top/leading.
+- **Title** (the short promo line, e.g. "20% Off First Order" — `coupon.title`, not the
+  long description) — Gray/700, Body-2 Medium 14/20, 16 from top/leading.
 - **Code** (Title-2 Bold 20/30, Gray/black) — 4 below.
-- **Apply Code** button (bottom, 16 leading/trailing, 40 tall, white + Gray/700
-  stroke, Body-2 SemiBold) — **applies the code immediately** (`applyPromo`).
+- **Apply Code** button — **42px below the code**, 40 tall, white + Gray/700 stroke,
+  Body-2 SemiBold — **applies the code immediately** (`applyPromo`).
 
 **Applied (Active) state** — when a card's coupon is the applied one
 (`appliedCoupon?.code === c.code`):
