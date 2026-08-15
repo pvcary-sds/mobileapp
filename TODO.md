@@ -19,12 +19,29 @@ add new ones here rather than leaving them only in chat/session notes.
       from the Storyblok variant blok; default to `in`. Then render
       `{size} {unit}` and remove the hardcoded string.
 
+- [ ] **Add a `fixed` (whole-dollars-off) coupon discount type.** The API only
+      supports `percent` + `free_shipping`; `$X off` codes (e.g. `SAVE15`) need a
+      `fixed` type (`src/services/coupons.ts` `Discount` union + `priceCoupon`, plus
+      the app's `CouponDiscount`). See `docs/dynamodb-setup.md` / cart.md TODO notes.
+
 ## Mobile app
 
 - [ ] **Wire the PDP share action.** The PDP header has a share icon
       (`HeaderShareButton`, `// TODO`) that currently does nothing. On press,
       open the native share sheet with the product link/details (deep link to
       `/product/{id}`, name, maybe image).
+- [ ] **Build the checkout flow.** From the cart's Checkout button: render +
+      upload each print → `POST /v1/checkout` (Stripe PaymentIntent, with the
+      applied `couponCode`) → confirm the card → `POST /v1/orders` (Prodigi).
+- [ ] **Collect the customer email at checkout.** The coupon **1×-per-customer**
+      limit only *binds* when `/v1/checkout` receives the email (see cart.md /
+      the API's API.md). Add an email field to the checkout contact step, pass it
+      to `POST /v1/checkout`, and **persist it locally** so `GET /v1/coupons?email=`
+      can hide already-used codes.
+- [ ] **Cart persistence.** The cart is in-memory (`src/lib/cart-store.ts`) and
+      resets on app restart — persist it via AsyncStorage.
+- [ ] **Collapse redundant `CartItem` fields.** `title` / `size` / `price` /
+      `productId` / `sku` duplicate what's already in `selection`; derive them.
 
 ## Content (Storyblok)
 
@@ -41,5 +58,16 @@ add new ones here rather than leaving them only in chat/session notes.
 
 ## Done
 
+- [x] **Coupons — API-driven + product-based.** Offers from
+      `GET /v1/coupons?fulfillmentType=prodigi&skus=…` (only codes that apply to the
+      cart's products), apply/preview via `POST /v1/coupons/validate`, an applied
+      **"Active"** card state (white fill, badge, "Remove Code"), and a **success
+      toast**. Server-side: an SDS coupon system (DynamoDB) with checkout
+      enforcement. See `docs/cart.md` + the API's `API.md` / `docs/dynamodb-setup.md`.
+- [x] **Reusable toast system** (`src/lib/toast-store.ts` + `components/toast*`).
+- [x] **Cart page** — local store, quantity stepper (line-total price),
+      edit-in-place via the builder, promo field, summary, cart-count badges.
+- [x] **Builder / customizer** — crop, filters, adjust slider, pinch-zoom/pan, and
+      the WYSIWYG Prodigi print frame. See `docs/customize-builder.md`.
 - [x] Fix PDP description paragraph spacing (split richtext into per-paragraph
       Text blocks with a gap).
