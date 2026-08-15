@@ -9,6 +9,7 @@ export default function CartStackLayout() {
   return (
     <Stack>
       <Stack.Screen name="index" options={{ title: 'Cart' }} />
+      <Stack.Screen name="review" options={{ title: 'Review order' }} />
     </Stack>
   );
 }

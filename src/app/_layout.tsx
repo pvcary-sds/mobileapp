@@ -15,7 +15,6 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { ToastHost } from '@/components/toast-host';
 import { initEnvironmentAsync } from '@/api/environment';
 import { Colors } from '@/constants/theme';
 
@@ -78,8 +77,6 @@ export default function RootLayout() {
             options={{ title: '', headerBackTitle: 'Back', gestureEnabled: false }}
           />
         </Stack>
-        {/* App-wide toast host — renders toasts fired from anywhere via toast-store. */}
-        <ToastHost />
         <StatusBar style="dark" />
       </ThemeProvider>
     </GestureHandlerRootView>

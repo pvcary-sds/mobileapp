@@ -41,6 +41,8 @@ export const Colors = {
   // Selected indicator — Primary/600 stroke + Primary/700 label.
   selectedBorder: Primary[600],
   selectedText: Primary[700],
+  // Required-field asterisk (checkout form) — Primary/600.
+  required: Primary[600],
   iconDisabled: Gray[300], // Gray/300 — a disabled icon/control
 
   // Active promo "Apply" — Brand/Light Blue 3 fill + Brand/Dark Blue text.
@@ -53,6 +55,10 @@ export const Colors = {
 
   // Success accent — the "Coupon added" toast's left rail. Green/500 (#009951).
   successAccent: Green[500],
+
+  // "Remove Code" button on an active coupon card — Primary/200 stroke + Primary/600 text.
+  removeStroke: Primary[200],
+  removeText: Primary[600],
 
   // Coupon card — Brand light background + a faint black hairline (stroke/10).
   brandSurface: Brand.lightBackground, // #F5F5F0
