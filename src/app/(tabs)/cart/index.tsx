@@ -424,9 +424,9 @@ export default function CartScreen() {
                         borderColor: theme.strokeFaint,
                       },
                     ]}>
-                    <View style={active && styles.couponTextActive}>
+                    <View>
                       <Text style={[styles.couponDesc, { color: theme.textTertiary }]}>
-                        {c.description}
+                        {c.title}
                       </Text>
                       <Text style={[styles.couponCode, { color: theme.text }]}>{c.code}</Text>
                     </View>
@@ -598,15 +598,10 @@ const styles = StyleSheet.create({
     marginLeft: 12, // 12 between coupons
   },
   coupon: {
-    width: 240,
-    height: 168,
+    width: 240, // height grows with content (no fixed height)
     borderWidth: 1, // Additional stroke/10
     borderRadius: 12,
     padding: 16, // 16 top/leading/trailing/bottom
-    justifyContent: 'space-between', // description/code at top, button at bottom
-  },
-  couponTextActive: {
-    paddingRight: 64, // keep the description clear of the "Active" badge
   },
   couponBadge: {
     position: 'absolute',
@@ -637,6 +632,7 @@ const styles = StyleSheet.create({
     lineHeight: 30,
   },
   couponApply: {
+    marginTop: 42, // 42 from the code to the button
     height: 40,
     borderWidth: 1, // Gray/700 stroke on white
     borderRadius: 8,
