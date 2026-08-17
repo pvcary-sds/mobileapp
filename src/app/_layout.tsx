@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { initEnvironmentAsync } from '@/api/environment';
+import { AppStripeProvider } from '@/components/stripe-provider';
 import { Colors } from '@/constants/theme';
 
 /** Single (light) navigation theme, tinted from the app palette. */
@@ -64,21 +65,25 @@ export default function RootLayout() {
   return (
     // Root for react-native-gesture-handler (the builder's pinch-zoom/pan).
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider value={navigationTheme}>
-        {/* Default nav-bar separator (hairline under the title) is kept, app-wide. */}
-        <Stack>
-          {/* The tab bar and everything inside it. */}
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          {/* Full-screen photo editor — pushes over the tabs (title + custom Back
-              come from the screen itself). Swipe-back is disabled so the edge
-              gesture doesn't fight horizontal drags (the Adjust slider). */}
-          <Stack.Screen
-            name="builder/[sku]"
-            options={{ title: '', headerBackTitle: 'Back', gestureEnabled: false }}
-          />
-        </Stack>
-        <StatusBar style="dark" />
-      </ThemeProvider>
+      {/* Stripe provider — active only in a Stripe-enabled build (guarded), inert
+          otherwise so the old dev client / web don't crash. */}
+      <AppStripeProvider>
+        <ThemeProvider value={navigationTheme}>
+          {/* Default nav-bar separator (hairline under the title) is kept, app-wide. */}
+          <Stack>
+            {/* The tab bar and everything inside it. */}
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            {/* Full-screen photo editor — pushes over the tabs (title + custom Back
+                come from the screen itself). Swipe-back is disabled so the edge
+                gesture doesn't fight horizontal drags (the Adjust slider). */}
+            <Stack.Screen
+              name="builder/[sku]"
+              options={{ title: '', headerBackTitle: 'Back', gestureEnabled: false }}
+            />
+          </Stack>
+          <StatusBar style="dark" />
+        </ThemeProvider>
+      </AppStripeProvider>
     </GestureHandlerRootView>
   );
 }

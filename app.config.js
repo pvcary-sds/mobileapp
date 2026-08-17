@@ -16,6 +16,17 @@ const API_BASE_URLS = {
   production: 'https://api.samedaysnaps.com/v1',
 };
 
+/**
+ * Stripe PUBLISHABLE keys (public — safe to ship in the client). Set them via the
+ * EAS build env (`STRIPE_PUBLISHABLE_KEY_TEST` / `_LIVE`), or paste the `pk_` values
+ * here. Staging uses the test key, production the live key. (The SECRET key stays on
+ * the API in SSM.)
+ */
+const STRIPE_PUBLISHABLE_KEYS = {
+  staging: process.env.STRIPE_PUBLISHABLE_KEY_TEST || '',
+  production: process.env.STRIPE_PUBLISHABLE_KEY_LIVE || '',
+};
+
 function resolveEnvironment() {
   return process.env.APP_ENV === 'production' ? 'production' : 'staging';
 }
@@ -30,6 +41,7 @@ module.exports = ({ config }) => {
       ...config.extra,
       environment,
       apiBaseUrl: API_BASE_URLS[environment],
+      stripePublishableKey: STRIPE_PUBLISHABLE_KEYS[environment],
     },
   };
 };
