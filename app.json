@@ -40,6 +40,12 @@
         {
           "photosPermission": "Allow SameDaySnaps to access your photos so you can add them to your prints."
         }
+      ],
+      [
+        "@stripe/stripe-react-native",
+        {
+          "enableGooglePay": false
+        }
       ]
     ],
     "experiments": {

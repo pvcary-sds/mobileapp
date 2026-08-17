@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
 
 import { getCoupons, validateCoupon, type CouponBasketItem } from '@/api/coupons';
+import { SectionDivider } from '@/components/section-divider';
 import { ToastHost } from '@/components/toast-host';
 import { toast } from '@/lib/toast-store';
 import { CLOSE_ICON } from '@/constants/builder-icons';
@@ -311,7 +312,7 @@ export default function CartScreen() {
         </Pressable>
 
         {/* 8px Gray/100 section divider, 24 below "Continue shopping". */}
-        <View style={[styles.sectionDivider, { backgroundColor: theme.backgroundElement }]} />
+        <SectionDivider style={{ marginTop: 24 }} />
 
         {/* "Promo code" — same title style as "Your products", 24 below the divider. */}
         <Text style={[styles.sectionTitle, { color: theme.text }]}>Promo code</Text>
@@ -398,7 +399,7 @@ export default function CartScreen() {
         )}
 
         {/* 8px Gray/100 spacer, 24 below the promo field (same as above). */}
-        <View style={[styles.sectionDivider, { backgroundColor: theme.backgroundElement }]} />
+        <SectionDivider style={{ marginTop: 24 }} />
 
         {/* "Offers for you" — API-driven coupons in a horizontal scroll. Hidden
             entirely (with its trailing spacer) when there are no offers. */}
@@ -462,7 +463,7 @@ export default function CartScreen() {
             </ScrollView>
 
             {/* 8px Gray/100 spacer, 24 below the coupons. */}
-            <View style={[styles.sectionDivider, { backgroundColor: theme.backgroundElement }]} />
+            <SectionDivider style={{ marginTop: 24 }} />
           </>
         )}
 
@@ -579,11 +580,6 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bodySemiBold, // Body 1 / SemiBold 16/24, black
     fontSize: 16,
     lineHeight: 24,
-  },
-  sectionDivider: {
-    marginTop: 24, // 24 below "Continue shopping"
-    marginHorizontal: -16, // full-bleed (counteract the list's 16 padding)
-    height: 8, // 8px Gray/100 section separator
   },
   couponScroll: {
     marginTop: 20, // 20 below the "Offers for you" title
