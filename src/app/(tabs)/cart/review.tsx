@@ -4,10 +4,12 @@ import {
   KeyboardTypeOptions,
   Pressable,
   ScrollView,
+  StyleProp,
   StyleSheet,
   Text,
   TextInput,
   View,
+  ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
@@ -44,6 +46,7 @@ function Field({
   keyboardType,
   autoCapitalize,
   required = true,
+  style,
 }: {
   label: string;
   placeholder: string;
@@ -52,11 +55,12 @@ function Field({
   keyboardType?: KeyboardTypeOptions;
   autoCapitalize?: AutoCap;
   required?: boolean;
+  style?: StyleProp<ViewStyle>;
 }) {
   const theme = useTheme();
   const [focused, setFocused] = useState(false);
   return (
-    <View>
+    <View style={style}>
       <FieldLabel label={label} required={required} />
       <TextInput
         style={[
@@ -111,8 +115,7 @@ export default function ReviewOrderScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
 
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [name, setName] = useState(''); // full name → the API's single recipient.name
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [optIn, setOptIn] = useState(false); // marketing opt-in (not required)
@@ -136,17 +139,10 @@ export default function ReviewOrderScreen() {
         {/* 4 required fields, 16 below the header and 16 apart. */}
         <View style={styles.fields}>
           <Field
-            label="First name"
-            placeholder="John"
-            value={firstName}
-            onChangeText={setFirstName}
-            autoCapitalize="words"
-          />
-          <Field
-            label="Last name"
-            placeholder="Smith"
-            value={lastName}
-            onChangeText={setLastName}
+            label="Full name"
+            placeholder="John Cary"
+            value={name}
+            onChangeText={setName}
             autoCapitalize="words"
           />
           <Field
@@ -206,20 +202,25 @@ export default function ReviewOrderScreen() {
             onChangeText={setCity}
             autoCapitalize="words"
           />
-          <Field
-            label="State"
-            placeholder="IL"
-            value={stateCode}
-            onChangeText={setStateCode}
-            autoCapitalize="characters"
-          />
-          <Field
-            label="Zip"
-            placeholder="60606"
-            value={zip}
-            onChangeText={setZip}
-            keyboardType="numbers-and-punctuation"
-          />
+          {/* State + Zip share a row to save vertical space. */}
+          <View style={styles.row}>
+            <Field
+              label="State"
+              placeholder="IL"
+              value={stateCode}
+              onChangeText={setStateCode}
+              autoCapitalize="characters"
+              style={styles.rowItem}
+            />
+            <Field
+              label="Zip"
+              placeholder="60606"
+              value={zip}
+              onChangeText={setZip}
+              keyboardType="numbers-and-punctuation"
+              style={styles.rowItem}
+            />
+          </View>
           <SelectField
             label="Country"
             value="United States"
@@ -254,6 +255,13 @@ const styles = StyleSheet.create({
   fields: {
     marginTop: 16, // 16 below the header
     gap: 16, // 16 between fields
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 16, // 16 between State and Zip
+  },
+  rowItem: {
+    flex: 1, // State and Zip split the row evenly
   },
   select: {
     flexDirection: 'row',
