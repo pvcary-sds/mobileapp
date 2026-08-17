@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   KeyboardTypeOptions,
   Pressable,
   ScrollView,
@@ -17,6 +19,8 @@ import { SvgXml } from 'react-native-svg';
 import { SectionDivider } from '@/components/section-divider';
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useCartItems } from '@/lib/cart-store';
+import { runCheckoutPayment } from '@/lib/payment';
 
 type AutoCap = 'none' | 'words' | 'characters';
 
@@ -127,6 +131,71 @@ export default function ReviewOrderScreen() {
   const [stateCode, setStateCode] = useState('');
   const [zip, setZip] = useState('');
 
+  const items = useCartItems();
+  const [paying, setPaying] = useState(false);
+
+  // "Proceed to Checkout" → price the basket (/v1/checkout) and present Stripe's
+  // PaymentSheet. (Placing the Prodigi order is the next step, after payment.)
+  const handleProceed = async () => {
+    const missing = [
+      !name.trim() && 'name',
+      !email.trim() && 'email',
+      !line1.trim() && 'address',
+      !city.trim() && 'city',
+      !stateCode.trim() && 'state',
+      !zip.trim() && 'ZIP',
+    ].filter(Boolean);
+    if (missing.length) {
+      Alert.alert('Missing details', `Please fill in: ${missing.join(', ')}.`);
+      return;
+    }
+    if (items.length === 0) {
+      Alert.alert('Your cart is empty', 'Add a print before checking out.');
+      return;
+    }
+
+    setPaying(true);
+    try {
+      // One line per SKU (quantities summed) — checkout prices sku × copies.
+      const bySku = new Map<string, number>();
+      for (const i of items) bySku.set(i.sku, (bySku.get(i.sku) ?? 0) + i.quantity);
+
+      const outcome = await runCheckoutPayment({
+        idempotencyKey: `sds-${Date.now()}`,
+        shippingMethod: 'Standard',
+        email: email.trim(),
+        shipTo: {
+          line1: line1.trim(),
+          line2: line2.trim() || undefined,
+          city: city.trim(),
+          state: stateCode.trim().toUpperCase(),
+          zip: zip.trim(),
+          countryCode: 'US',
+        },
+        items: [...bySku].map(([sku, copies]) => ({ sku, copies })),
+      });
+
+      switch (outcome.status) {
+        case 'completed':
+          Alert.alert('Payment complete', `Charged ${outcome.total}. Order placement is the next step.`);
+          break;
+        case 'canceled':
+          break; // user dismissed the sheet — no alert
+        case 'unavailable':
+          Alert.alert(
+            'Payment not available',
+            'This build doesn’t include Stripe yet. Install the Stripe dev build and set a publishable key.',
+          );
+          break;
+        case 'error':
+          Alert.alert('Payment failed', outcome.message);
+          break;
+      }
+    } finally {
+      setPaying(false);
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView
@@ -228,6 +297,25 @@ export default function ReviewOrderScreen() {
             onPress={() => {}}
           />
         </View>
+
+        {/* 8px Gray/100 divider below Country, then the Payment section. */}
+        <SectionDivider style={styles.divider} />
+        <Text style={[styles.header, styles.section, { color: theme.text }]}>Payment</Text>
+
+        {/* "Proceed to Checkout" — 16 below the Payment header; opens Stripe's
+            PaymentSheet. */}
+        <Pressable
+          style={[styles.proceed, { backgroundColor: theme.primary }]}
+          disabled={paying}
+          onPress={handleProceed}>
+          {paying ? (
+            <ActivityIndicator color={theme.onPrimary} />
+          ) : (
+            <Text style={[styles.proceedLabel, { color: theme.onPrimary }]}>
+              Proceed to Checkout
+            </Text>
+          )}
+        </Pressable>
       </ScrollView>
     </View>
   );
@@ -295,6 +383,18 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 12, // 12 to the right of the checkbox
     fontFamily: FontFamily.body, // Body 1 / Regular 16/24
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  proceed: {
+    marginTop: 16, // 16 below the Payment header
+    height: 48, // Primary/500, 16 leading/trailing (from the content padding)
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  proceedLabel: {
+    fontFamily: FontFamily.bodySemiBold, // Body 1 / SemiBold 16/24, white
     fontSize: 16,
     lineHeight: 24,
   },
