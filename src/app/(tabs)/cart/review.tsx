@@ -19,10 +19,15 @@ import { SvgXml } from 'react-native-svg';
 import { SectionDivider } from '@/components/section-divider';
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { useCartItems } from '@/lib/cart-store';
+import { useAppliedCoupon, useCartItems } from '@/lib/cart-store';
 import { runCheckoutPayment } from '@/lib/payment';
 
 type AutoCap = 'none' | 'words' | 'characters';
+
+/** Format a USD amount, e.g. 75 → "$75.00". */
+function formatUSD(n: number): string {
+  return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
 
 /** Checkbox glyphs (Figma) — unchecked is a Gray/300 outline; checked is a white
  *  box with a Gray/800 border and a black check. */
@@ -35,7 +40,11 @@ function FieldLabel({ label, required }: { label: string; required: boolean }) {
   return (
     <Text style={[styles.label, { color: theme.text }]}>
       {label}
-      {required ? <Text style={{ color: theme.required }}>*</Text> : null}
+      {required ? (
+        <Text style={{ color: theme.required }}>*</Text>
+      ) : (
+        <Text style={{ color: theme.textSecondary }}> (Optional)</Text>
+      )}
     </Text>
   );
 }
@@ -142,7 +151,15 @@ export default function ReviewOrderScreen() {
   const [zip, setZip] = useState('');
 
   const items = useCartItems();
+  const appliedCoupon = useAppliedCoupon();
   const [paying, setPaying] = useState(false);
+
+  // Totals. Tax is added at payment (it needs the address); this shows the
+  // subtotal minus any applied coupon.
+  const subtotal = items.reduce((s, i) => s + (Number(i.price) || 0) * i.quantity, 0);
+  const discount = appliedCoupon ? Number(appliedCoupon.discountAmount) || 0 : 0;
+  const total = Math.max(0, subtotal - discount);
+  const hasCoupon = discount > 0;
 
   // "Proceed to Checkout" → price the basket (/v1/checkout) and present Stripe's
   // PaymentSheet. (Placing the Prodigi order is the next step, after payment.)
@@ -231,6 +248,7 @@ export default function ReviewOrderScreen() {
             onChangeText={setPhone}
             keyboardType="phone-pad"
             autoCapitalize="none"
+            required={false}
           />
           <Field
             label="Email"
@@ -268,7 +286,7 @@ export default function ReviewOrderScreen() {
           />
           <Field
             label="Address 2"
-            placeholder="Apt, suite, etc. (optional)"
+            placeholder="Apt, suite, etc."
             value={line2}
             onChangeText={setLine2}
             autoCapitalize="words"
@@ -313,18 +331,37 @@ export default function ReviewOrderScreen() {
         <SectionDivider style={styles.divider} />
         <Text style={[styles.header, styles.section, { color: theme.text }]}>Payment</Text>
 
-        {/* "Proceed to Checkout" — 16 below the Payment header; opens Stripe's
-            PaymentSheet. */}
+        {/* Total row — 16 below the header. Label left, amount right; a struck-out
+            original price sits 4 to the left of the amount when a coupon applies. */}
+        <View style={styles.totalRow}>
+          <Text style={[styles.totalLabel, { color: theme.text }]}>Total</Text>
+          <View style={styles.totalRight}>
+            {hasCoupon ? (
+              <Text style={[styles.totalStrike, { color: theme.textSecondary }]}>
+                {formatUSD(subtotal)}
+              </Text>
+            ) : null}
+            <Text style={[styles.totalAmount, { color: theme.text }]}>{formatUSD(total)}</Text>
+          </View>
+        </View>
+        {hasCoupon ? (
+          <Text style={[styles.youSaved, { color: theme.textPositive }]}>
+            You saved {formatUSD(discount)}
+          </Text>
+        ) : null}
+
+        {/* 1px Gray/200 rule, 12 below the totals. */}
+        <View style={[styles.totalRule, { backgroundColor: theme.border }]} />
+
+        {/* "Continue" — 24 below the rule; opens Stripe's PaymentSheet. */}
         <Pressable
-          style={[styles.proceed, { backgroundColor: theme.primary }]}
+          style={[styles.continue, { backgroundColor: theme.primary }]}
           disabled={paying}
           onPress={handleProceed}>
           {paying ? (
             <ActivityIndicator color={theme.onPrimary} />
           ) : (
-            <Text style={[styles.proceedLabel, { color: theme.onPrimary }]}>
-              Proceed to Checkout
-            </Text>
+            <Text style={[styles.continueLabel, { color: theme.onPrimary }]}>Continue</Text>
           )}
         </Pressable>
       </ScrollView>
@@ -407,14 +444,51 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
   },
-  proceed: {
+  totalRow: {
     marginTop: 16, // 16 below the Payment header
+    flexDirection: 'row',
+    justifyContent: 'space-between', // label left, amount right
+    alignItems: 'center',
+  },
+  totalLabel: {
+    fontFamily: FontFamily.bodyMedium, // Body 1 / Medium 16/24, Gray/black
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  totalRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  totalStrike: {
+    marginRight: 4, // 4 to the left of the amount
+    fontFamily: FontFamily.body, // Body 1 / Regular 16/24, Gray/500
+    fontSize: 16,
+    lineHeight: 24,
+    textDecorationLine: 'line-through',
+  },
+  totalAmount: {
+    fontFamily: FontFamily.bodySemiBold, // Body 1 / SemiBold 16/24, Gray/black
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  youSaved: {
+    marginTop: 4, // 4 below the Total row
+    fontFamily: FontFamily.bodyMedium, // Text/Positive/Default
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  totalRule: {
+    marginTop: 12, // 12 below the totals
+    height: 1, // 1px Gray/200 (16 leading/trailing from the content padding)
+  },
+  continue: {
+    marginTop: 24, // 24 below the rule
     height: 48, // Primary/500, 16 leading/trailing (from the content padding)
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  proceedLabel: {
+  continueLabel: {
     fontFamily: FontFamily.bodySemiBold, // Body 1 / SemiBold 16/24, white
     fontSize: 16,
     lineHeight: 24,
