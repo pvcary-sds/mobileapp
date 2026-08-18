@@ -1,4 +1,5 @@
 import { createCheckout, type CheckoutRequest } from '@/api/checkout';
+import { Colors } from '@/constants/theme';
 import { getStripePublishableKey, isStripeNativeAvailable } from '@/lib/stripe';
 
 /**
@@ -40,6 +41,15 @@ export async function runCheckoutPayment(req: CheckoutRequest): Promise<PaymentO
     paymentIntentClientSecret: clientSecret,
     returnURL: 'mobileapp://stripe-redirect', // for 3DS / bank redirects
     defaultBillingDetails: req.email ? { email: req.email } : undefined,
+    // Brand the sheet: Pay button = Primary/500 fill + white text, 8px corners —
+    // matching the app's CTAs. (Stripe's appearance API has no button-height
+    // setting; it uses a fixed ~48 height, which is what we want anyway.)
+    appearance: {
+      primaryButton: {
+        colors: { background: Colors.primary, text: Colors.onPrimary },
+        shapes: { borderRadius: 8 },
+      },
+    },
   });
   if (init.error) return { status: 'error', message: init.error.message };
 
