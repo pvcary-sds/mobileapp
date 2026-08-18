@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   totalRule: {
-    marginTop: 12, // 12 below the totals
+    marginTop: 16, // 16 below the totals (You saved / Total)
     height: 1, // 1px Gray/200 (16 leading/trailing from the content padding)
   },
   continue: {
