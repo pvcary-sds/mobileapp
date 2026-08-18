@@ -327,9 +327,9 @@ export default function ReviewOrderScreen() {
           />
         </View>
 
-        {/* 8px Gray/100 divider below Country, then the order-summary section. */}
+        {/* 8px Gray/100 divider below Country, then the order-total section. */}
         <SectionDivider style={styles.divider} />
-        <Text style={[styles.header, styles.section, { color: theme.text }]}>Order summary</Text>
+        <Text style={[styles.header, styles.section, { color: theme.text }]}>Order total</Text>
 
         {/* Total row — 16 below the header. Label left, amount right; a struck-out
             original price sits 4 to the left of the amount when a coupon applies. */}
