@@ -41,10 +41,17 @@ export async function runCheckoutPayment(req: CheckoutRequest): Promise<PaymentO
     paymentIntentClientSecret: clientSecret,
     returnURL: 'mobileapp://stripe-redirect', // for 3DS / bank redirects
     defaultBillingDetails: req.email ? { email: req.email } : undefined,
-    // Brand the sheet: Pay button = Primary/500 fill + white text, 8px corners —
-    // matching the app's CTAs. (Stripe's appearance API has no button-height
-    // setting; it uses a fixed ~48 height, which is what we want anyway.)
+    // Brand the sheet to match the app: 8px radius on fields/options, Gray/200
+    // borders, and a Primary/500 + white Pay button. (Stripe's appearance API has
+    // no button-height setting; it uses a fixed ~48 height, which we want anyway.)
     appearance: {
+      colors: {
+        componentBorder: Colors.border, // Gray/200 — field / option borders
+        componentDivider: Colors.border, // Gray/200
+      },
+      shapes: {
+        borderRadius: 8, // 8px across the fields / options
+      },
       primaryButton: {
         colors: { background: Colors.primary, text: Colors.onPrimary },
         shapes: { borderRadius: 8 },
