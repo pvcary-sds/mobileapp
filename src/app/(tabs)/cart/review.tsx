@@ -327,9 +327,9 @@ export default function ReviewOrderScreen() {
           />
         </View>
 
-        {/* 8px Gray/100 divider below Country, then the Payment section. */}
+        {/* 8px Gray/100 divider below Country, then the order-summary section. */}
         <SectionDivider style={styles.divider} />
-        <Text style={[styles.header, styles.section, { color: theme.text }]}>Payment</Text>
+        <Text style={[styles.header, styles.section, { color: theme.text }]}>Order summary</Text>
 
         {/* Total row — 16 below the header. Label left, amount right; a struck-out
             original price sits 4 to the left of the amount when a coupon applies. */}
@@ -361,7 +361,9 @@ export default function ReviewOrderScreen() {
           {paying ? (
             <ActivityIndicator color={theme.onPrimary} />
           ) : (
-            <Text style={[styles.continueLabel, { color: theme.onPrimary }]}>Continue</Text>
+            <Text style={[styles.continueLabel, { color: theme.onPrimary }]}>
+              Continue to payment
+            </Text>
           )}
         </Pressable>
       </ScrollView>
