@@ -33,6 +33,14 @@ add new ones here rather than leaving them only in chat/session notes.
 - [ ] **Build the checkout flow.** From the cart's Checkout button: render +
       upload each print → `POST /v1/checkout` (Stripe PaymentIntent, with the
       applied `couponCode`) → confirm the card → `POST /v1/orders` (Prodigi).
+- [ ] **Apple Pay as a standalone button.** Surface Apple Pay as a native
+      `PlatformPayButton` on the Review order screen (above "Continue to payment"),
+      instead of only as a row inside the Stripe PaymentSheet — gated by
+      `isPlatformPaySupported()`, confirmed via `confirmPlatformPayPayment`.
+      Prereqs (all outstanding): an Apple **Merchant ID** + processing certificate
+      (Apple Developer + Stripe), the `merchantIdentifier` in the Stripe config
+      plugin (**native → new EAS build**), and a **real device** to test — Apple
+      Pay doesn't render in the simulator.
 - [ ] **Collect the customer email at checkout.** The coupon **1×-per-customer**
       limit only *binds* when `/v1/checkout` receives the email (see cart.md /
       the API's API.md). Add an email field to the checkout contact step, pass it
