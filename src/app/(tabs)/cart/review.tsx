@@ -50,6 +50,7 @@ function Field({
   keyboardType,
   autoCapitalize,
   required = true,
+  chevron = false,
   style,
 }: {
   label: string;
@@ -59,6 +60,7 @@ function Field({
   keyboardType?: KeyboardTypeOptions;
   autoCapitalize?: AutoCap;
   required?: boolean;
+  chevron?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const theme = useTheme();
@@ -66,21 +68,29 @@ function Field({
   return (
     <View style={style}>
       <FieldLabel label={label} required={required} />
-      <TextInput
-        style={[
-          styles.input,
-          { color: theme.text, borderColor: focused ? theme.textMuted : theme.border },
-        ]}
-        value={value}
-        onChangeText={onChangeText}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        placeholder={placeholder}
-        placeholderTextColor={theme.textSecondary}
-        keyboardType={keyboardType}
-        autoCapitalize={autoCapitalize}
-        autoCorrect={false}
-      />
+      <View>
+        <TextInput
+          style={[
+            styles.input,
+            chevron && styles.inputWithChevron,
+            { color: theme.text, borderColor: focused ? theme.textMuted : theme.border },
+          ]}
+          value={value}
+          onChangeText={onChangeText}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          placeholder={placeholder}
+          placeholderTextColor={theme.textSecondary}
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+          autoCorrect={false}
+        />
+        {chevron ? (
+          <View style={styles.fieldChevron} pointerEvents="none">
+            <Ionicons name="chevron-down" size={20} color={theme.textSecondary} />
+          </View>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -244,8 +254,8 @@ export default function ReviewOrderScreen() {
         {/* 8px Gray/100 divider, 24 below the opt-in text. */}
         <SectionDivider style={styles.divider} />
 
-        {/* "Shipping" — same title style, 24 below the divider. */}
-        <Text style={[styles.header, styles.section, { color: theme.text }]}>Shipping</Text>
+        {/* "Shipping details" — same title style, 24 below the divider. */}
+        <Text style={[styles.header, styles.section, { color: theme.text }]}>Shipping details</Text>
 
         {/* Shipping fields — 16 below the header, 16 apart. */}
         <View style={styles.fields}>
@@ -280,6 +290,7 @@ export default function ReviewOrderScreen() {
               onChangeText={setStateCode}
               autoCapitalize="characters"
               style={styles.rowItem}
+              chevron
             />
             <Field
               label="Zip"
@@ -373,6 +384,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontFamily: FontFamily.body, // Body 1 / Regular 16 (placeholder Gray/500)
     fontSize: 16,
+  },
+  inputWithChevron: {
+    paddingRight: 44, // clear the chevron (16 inset + 20 icon + gap)
+  },
+  fieldChevron: {
+    position: 'absolute',
+    right: 16, // 16 from the right edge
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center', // vertically centered in the 48px field
   },
   optIn: {
     marginTop: 16, // 16 below the email field
