@@ -1,4 +1,5 @@
 import { createCheckout, type CheckoutRequest } from '@/api/checkout';
+import { Colors, NativeFontFamily } from '@/constants/theme';
 import { getStripePublishableKey, isStripeNativeAvailable } from '@/lib/stripe';
 
 /**
@@ -40,6 +41,26 @@ export async function runCheckoutPayment(req: CheckoutRequest): Promise<PaymentO
     paymentIntentClientSecret: clientSecret,
     returnURL: 'mobileapp://stripe-redirect', // for 3DS / bank redirects
     defaultBillingDetails: req.email ? { email: req.email } : undefined,
+    // Brand the sheet to match the app: 8px radius on fields/options, Gray/200
+    // borders, and a Primary/500 + white Pay button. (Stripe's appearance API has
+    // no button-height setting; it uses a fixed ~48 height, which we want anyway.)
+    appearance: {
+      // DM Sans (Regular) across the sheet. Stripe sizes text with its own type
+      // scale (input text ≈ 16px) — it has no per-field size / line-height setting.
+      font: { family: NativeFontFamily.body },
+      colors: {
+        componentBorder: Colors.border, // Gray/200 — field / option borders
+        componentDivider: Colors.border, // Gray/200
+        placeholderText: Colors.textSecondary, // Gray/500 placeholders
+      },
+      shapes: {
+        borderRadius: 8, // 8px across the fields / options
+      },
+      primaryButton: {
+        colors: { background: Colors.primary, text: Colors.onPrimary },
+        shapes: { borderRadius: 8 },
+      },
+    },
   });
   if (init.error) return { status: 'error', message: init.error.message };
 
