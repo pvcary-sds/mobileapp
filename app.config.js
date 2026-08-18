@@ -23,7 +23,11 @@ const API_BASE_URLS = {
  * the API in SSM.)
  */
 const STRIPE_PUBLISHABLE_KEYS = {
-  staging: process.env.STRIPE_PUBLISHABLE_KEY_TEST || '',
+  // Test publishable key (public — safe to commit). Staging's API uses Stripe test
+  // mode, so this pairs with test cards (4242…). Env var overrides if set.
+  staging:
+    process.env.STRIPE_PUBLISHABLE_KEY_TEST ||
+    'pk_test_51Tw8iHRosqdTTco1wxvyWMXBmln1f7B2WNbUggaWtUl8YazYdlUslauo5DJnvzAIBmW0qY3gJJihxuAFWZaTlMVb00ogvplBwQ',
   production: process.env.STRIPE_PUBLISHABLE_KEY_LIVE || '',
 };
 
