@@ -55,6 +55,8 @@ export const Colors = {
 
   // Success accent — the "Coupon added" toast's left rail. Green/500 (#009951).
   successAccent: Green[500],
+  // Text/Positive/Default (#02542D) — savings amounts / "You saved" text.
+  textPositive: Green[700],
 
   // "Remove Code" button on an active coupon card — Primary/200 stroke + Primary/600 text.
   removeStroke: Primary[200],

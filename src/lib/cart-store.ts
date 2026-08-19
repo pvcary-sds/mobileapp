@@ -40,7 +40,11 @@ export type CartItem = {
   selection: Selection;
 };
 
+/** A coupon applied to the cart — shared so the Review screen can price with it. */
+export type AppliedCoupon = { code: string; discountAmount: string; freeShipping: boolean };
+
 let items: CartItem[] = [];
+let appliedCoupon: AppliedCoupon | null = null;
 let seq = 0;
 const listeners = new Set<() => void>();
 
@@ -50,11 +54,17 @@ function emit() {
 
 export const cartStore = {
   getItems: (): CartItem[] => items,
+  getAppliedCoupon: (): AppliedCoupon | null => appliedCoupon,
   subscribe: (l: () => void) => {
     listeners.add(l);
     return () => {
       listeners.delete(l);
     };
+  },
+  /** Set (or clear) the applied coupon. */
+  setAppliedCoupon(coupon: AppliedCoupon | null) {
+    appliedCoupon = coupon;
+    emit();
   },
   /** Add one print per photo — the builder's "Add N to Cart" (photos = quantity). */
   addPrints(product: Omit<CartItem, 'id' | 'quantity' | 'photo'>, photos: PhotoEdit[]) {
@@ -78,6 +88,7 @@ export const cartStore = {
   },
   clear() {
     items = [];
+    appliedCoupon = null;
     emit();
   },
 };
@@ -85,4 +96,13 @@ export const cartStore = {
 /** Subscribe to the cart's items; re-renders the caller when they change. */
 export function useCartItems(): CartItem[] {
   return useSyncExternalStore(cartStore.subscribe, cartStore.getItems, cartStore.getItems);
+}
+
+/** Subscribe to the applied coupon (null when none). */
+export function useAppliedCoupon(): AppliedCoupon | null {
+  return useSyncExternalStore(
+    cartStore.subscribe,
+    cartStore.getAppliedCoupon,
+    cartStore.getAppliedCoupon,
+  );
 }

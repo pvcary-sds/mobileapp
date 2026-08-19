@@ -23,7 +23,7 @@ import { EMPTY_CART_ILLUSTRATION } from '@/constants/illustrations';
 import { BottomTabInset, FontFamily } from '@/constants/theme';
 import { useAsync } from '@/hooks/use-async';
 import { useTheme } from '@/hooks/use-theme';
-import { cartStore, useCartItems } from '@/lib/cart-store';
+import { cartStore, useAppliedCoupon, useCartItems } from '@/lib/cart-store';
 import { selectionStore } from '@/lib/selection-store';
 
 /** "Start shopping" button glyph (from Figma) — white stroke, on the primary fill. */
@@ -110,13 +110,10 @@ export default function CartScreen() {
   );
   const hasOffers = (offers.data?.length ?? 0) > 0;
 
-  // Applied coupon — a client-side preview. The binding 1x-per-customer check runs
-  // at checkout (with the email), so "apply"/"remove" here is just local state.
-  const [appliedCoupon, setAppliedCoupon] = useState<{
-    code: string;
-    discountAmount: string;
-    freeShipping: boolean;
-  } | null>(null);
+  // Applied coupon — a client-side preview. Lives in the cart store so the Review
+  // screen can price with it. The binding 1x-per-customer check runs at checkout.
+  const appliedCoupon = useAppliedCoupon();
+  const setAppliedCoupon = cartStore.setAppliedCoupon;
   const [applying, setApplying] = useState(false);
   const [promoError, setPromoError] = useState<string | null>(null);
 
