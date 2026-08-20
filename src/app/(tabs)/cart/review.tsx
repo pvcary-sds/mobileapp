@@ -16,11 +16,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
 
+import { router } from 'expo-router';
+
 import { SectionDivider } from '@/components/section-divider';
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { useAppliedCoupon, useCartItems } from '@/lib/cart-store';
-import { runCheckoutPayment } from '@/lib/payment';
+import { cartStore, useAppliedCoupon, useCartItems } from '@/lib/cart-store';
+import { runCheckout } from '@/lib/payment';
 
 type AutoCap = 'none' | 'words' | 'characters';
 
@@ -161,8 +163,8 @@ export default function ReviewOrderScreen() {
   const total = Math.max(0, subtotal - discount);
   const hasCoupon = discount > 0;
 
-  // "Proceed to Checkout" → price the basket (/v1/checkout) and present Stripe's
-  // PaymentSheet. (Placing the Prodigi order is the next step, after payment.)
+  // "Continue to payment" → upload the photos, present Stripe's PaymentSheet, and
+  // place the Prodigi order — the whole buy flow (see `runCheckout`).
   const handleProceed = async () => {
     const missing = [
       !name.trim() && 'name',
@@ -183,28 +185,34 @@ export default function ReviewOrderScreen() {
 
     setPaying(true);
     try {
-      // One line per SKU (quantities summed) — checkout prices sku × copies.
-      const bySku = new Map<string, number>();
-      for (const i of items) bySku.set(i.sku, (bySku.get(i.sku) ?? 0) + i.quantity);
-
-      const outcome = await runCheckoutPayment({
+      const outcome = await runCheckout({
         idempotencyKey: `sds-${Date.now()}`,
         shippingMethod: 'Standard',
-        email: email.trim(),
-        shipTo: {
-          line1: line1.trim(),
-          line2: line2.trim() || undefined,
-          city: city.trim(),
-          state: stateCode.trim().toUpperCase(),
-          zip: zip.trim(),
-          countryCode: 'US',
+        recipient: {
+          name: name.trim(),
+          email: email.trim(),
+          phone: phone.trim() || undefined,
+          address: {
+            line1: line1.trim(),
+            line2: line2.trim() || undefined,
+            city: city.trim(),
+            state: stateCode.trim().toUpperCase(),
+            zip: zip.trim(),
+            countryCode: 'US',
+          },
         },
-        items: [...bySku].map(([sku, copies]) => ({ sku, copies })),
+        // One line per cart item (a photo + its copies) — NOT aggregated by SKU, so
+        // this matches the order's basket signature and each print gets its own upload.
+        lines: items.map((i) => ({ sku: i.sku, copies: i.quantity, photoUri: i.photo.uri })),
+        couponCode: appliedCoupon?.code,
       });
 
       switch (outcome.status) {
-        case 'completed':
-          Alert.alert('Payment complete', `Charged ${outcome.total}. Order placement is the next step.`);
+        case 'ordered':
+          cartStore.clear(); // order placed — empty the cart
+          Alert.alert('Order placed', `Your order is in! Confirmation ${outcome.orderId}.`, [
+            { text: 'Done', onPress: () => router.back() },
+          ]);
           break;
         case 'canceled':
           break; // user dismissed the sheet — no alert
@@ -214,8 +222,16 @@ export default function ReviewOrderScreen() {
             'This build doesn’t include Stripe yet. Install the Stripe dev build and set a publishable key.',
           );
           break;
-        case 'error':
+        case 'payment_error':
           Alert.alert('Payment failed', outcome.message);
+          break;
+        case 'order_error':
+          // Paid, but the order didn't place. Never re-charge — this needs support.
+          Alert.alert(
+            'Order needs attention',
+            `Your payment went through, but we couldn’t place the order (${outcome.message}). ` +
+              `We’ll sort it out — reference ${outcome.paymentIntentId}.`,
+          );
           break;
       }
     } finally {
