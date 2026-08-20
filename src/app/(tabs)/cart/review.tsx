@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,9 +18,11 @@ import { SvgXml } from 'react-native-svg';
 
 import { router } from 'expo-router';
 
+import { previewCheckout, type CheckoutPricing } from '@/api/checkout';
 import { SectionDivider } from '@/components/section-divider';
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { validateCity, validateLine1, validateState, validateZip } from '@/lib/checkout-form';
 import { cartStore, useAppliedCoupon, useCartItems } from '@/lib/cart-store';
 import { runCheckout } from '@/lib/payment';
 
@@ -156,12 +158,70 @@ export default function ReviewOrderScreen() {
   const appliedCoupon = useAppliedCoupon();
   const [paying, setPaying] = useState(false);
 
-  // Totals. Tax is added at payment (it needs the address); this shows the
-  // subtotal minus any applied coupon.
+  // Server pricing preview — the real total INCLUDING Stripe Tax, fetched once the
+  // shipping address is valid (tax depends on it). Null until then; we fall back to
+  // the local subtotal − coupon (pre-tax) so the ladder still renders.
+  const [pricing, setPricing] = useState<CheckoutPricing | null>(null);
+  const [taxLoading, setTaxLoading] = useState(false);
+
+  // Local (always-known) figures, used as the fallback before tax is computed.
   const subtotal = items.reduce((s, i) => s + (Number(i.price) || 0) * i.quantity, 0);
   const discount = appliedCoupon ? Number(appliedCoupon.discountAmount) || 0 : 0;
-  const total = Math.max(0, subtotal - discount);
-  const hasCoupon = discount > 0;
+
+  const addressReady =
+    !validateLine1(line1) && !validateCity(city) && !validateState(stateCode) && !validateZip(zip);
+  // Refetch key: tax changes with the address, the coupon, and the basket.
+  const itemsKey = items
+    .map((i) => `${i.sku}:${i.quantity}`)
+    .sort()
+    .join(',');
+
+  useEffect(() => {
+    if (!addressReady || items.length === 0) {
+      setPricing(null);
+      setTaxLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    setTaxLoading(true);
+    // Debounce so we don't price on every keystroke of the address.
+    const timer = setTimeout(() => {
+      previewCheckout(
+        {
+          shipTo: {
+            line1: line1.trim(),
+            line2: line2.trim() || undefined,
+            city: city.trim(),
+            state: stateCode.trim().toUpperCase(),
+            zip: zip.trim(),
+            countryCode: 'US',
+          },
+          items: items.map((i) => ({ sku: i.sku, copies: i.quantity })),
+          couponCode: appliedCoupon?.code,
+        },
+        controller.signal,
+      )
+        .then((p) => setPricing(p))
+        .catch(() => {
+          if (!controller.signal.aborted) setPricing(null); // fall back to local, pre-tax
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setTaxLoading(false);
+        });
+    }, 600);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addressReady, itemsKey, line1, city, stateCode, zip, appliedCoupon?.code]);
+
+  // Prefer the server pricing (with tax); fall back to local subtotal − coupon.
+  const dSubtotal = pricing ? Number(pricing.subtotal) : subtotal;
+  const dDiscount = pricing?.discount ? Number(pricing.discount.amount) : discount;
+  const dTax = pricing ? Number(pricing.tax) : null; // null = not computed yet
+  const dTotal = pricing ? Number(pricing.total) : Math.max(0, subtotal - discount);
+  const hasCoupon = dDiscount > 0;
 
   // "Continue to payment" → upload the photos, present Stripe's PaymentSheet, and
   // place the Prodigi order — the whole buy flow (see `runCheckout`).
@@ -347,27 +407,43 @@ export default function ReviewOrderScreen() {
         <SectionDivider style={styles.divider} />
         <Text style={[styles.header, styles.section, { color: theme.text }]}>Order total</Text>
 
-        {/* Total row — 16 below the header. Label left, amount right; a struck-out
-            original price sits 4 to the left of the amount when a coupon applies. */}
-        <View style={styles.totalRow}>
-          <Text style={[styles.totalLabel, { color: theme.text }]}>Total</Text>
-          <View style={styles.totalRight}>
-            {hasCoupon ? (
-              <Text style={[styles.totalStrike, { color: theme.textSecondary }]}>
-                {formatUSD(subtotal)}
-              </Text>
-            ) : null}
-            <Text style={[styles.totalAmount, { color: theme.text }]}>{formatUSD(total)}</Text>
-          </View>
+        {/* Ladder: Subtotal → You saved → Tax → rule → Total. Tax needs the ship-to
+            address, so it fills in once the shipping fields are valid (via the
+            /v1/checkout price preview); until then it shows a hint. */}
+        <View style={[styles.ledgerRow, styles.ledgerFirst]}>
+          <Text style={[styles.ledgerLabel, { color: theme.textTertiary }]}>Subtotal</Text>
+          <Text style={[styles.ledgerAmount, { color: theme.text }]}>{formatUSD(dSubtotal)}</Text>
         </View>
+
         {hasCoupon ? (
-          <Text style={[styles.youSaved, { color: theme.textPositive }]}>
-            You saved {formatUSD(discount)}
-          </Text>
+          <View style={styles.ledgerRow}>
+            <Text style={[styles.ledgerLabel, { color: theme.textPositive }]}>You saved</Text>
+            <Text style={[styles.ledgerAmount, { color: theme.textPositive }]}>
+              −{formatUSD(dDiscount)}
+            </Text>
+          </View>
         ) : null}
 
-        {/* 1px Gray/200 rule, 12 below the totals. */}
+        <View style={styles.ledgerRow}>
+          <Text style={[styles.ledgerLabel, { color: theme.textTertiary }]}>Tax</Text>
+          {dTax != null ? (
+            <Text style={[styles.ledgerAmount, { color: theme.text }]}>{formatUSD(dTax)}</Text>
+          ) : taxLoading ? (
+            <ActivityIndicator size="small" color={theme.textSecondary} />
+          ) : (
+            <Text style={[styles.ledgerHint, { color: theme.textSecondary }]}>
+              Calculated once address is entered
+            </Text>
+          )}
+        </View>
+
+        {/* 1px Gray/200 rule between the line items and the grand total. */}
         <View style={[styles.totalRule, { backgroundColor: theme.border }]} />
+
+        <View style={styles.totalRow}>
+          <Text style={[styles.grandLabel, { color: theme.text }]}>Total</Text>
+          <Text style={[styles.grandAmount, { color: theme.text }]}>{formatUSD(dTotal)}</Text>
+        </View>
 
         {/* "Continue" — 24 below the rule; opens Stripe's PaymentSheet. */}
         <Pressable
@@ -462,42 +538,51 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
   },
+  // Ledger line item (Subtotal / You saved / Tax) — label left, amount right.
+  ledgerRow: {
+    marginTop: 12, // 12 between line items
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  ledgerFirst: {
+    marginTop: 16, // first line (Subtotal) is 16 below the header
+  },
+  ledgerLabel: {
+    fontFamily: FontFamily.body, // Body 1 / Regular 16/24
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  ledgerAmount: {
+    fontFamily: FontFamily.body, // Body 1 / Regular 16/24
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  ledgerHint: {
+    fontFamily: FontFamily.body, // Body 2 / Regular 14/20 — the "tax pending" hint
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  totalRule: {
+    marginTop: 16, // 16 below the last line item
+    height: 1, // 1px Gray/200 (16 leading/trailing from the content padding)
+  },
+  // Grand total row — below the rule; emphasized.
   totalRow: {
-    marginTop: 16, // 16 below the Payment header
+    marginTop: 12, // 12 below the rule
     flexDirection: 'row',
-    justifyContent: 'space-between', // label left, amount right
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  totalLabel: {
-    fontFamily: FontFamily.bodyMedium, // Body 1 / Medium 16/24, Gray/black
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  totalRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  totalStrike: {
-    marginRight: 4, // 4 to the left of the amount
-    fontFamily: FontFamily.body, // Body 1 / Regular 16/24, Gray/500
-    fontSize: 16,
-    lineHeight: 24,
-    textDecorationLine: 'line-through',
-  },
-  totalAmount: {
+  grandLabel: {
     fontFamily: FontFamily.bodySemiBold, // Body 1 / SemiBold 16/24, Gray/black
     fontSize: 16,
     lineHeight: 24,
   },
-  youSaved: {
-    marginTop: 4, // 4 below the Total row
-    fontFamily: FontFamily.bodyMedium, // Text/Positive/Default
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  totalRule: {
-    marginTop: 16, // 16 below the totals (You saved / Total)
-    height: 1, // 1px Gray/200 (16 leading/trailing from the content padding)
+  grandAmount: {
+    fontFamily: FontFamily.bodySemiBold, // SemiBold 20/28, Gray/black
+    fontSize: 20,
+    lineHeight: 28,
   },
   continue: {
     marginTop: 24, // 24 below the rule
