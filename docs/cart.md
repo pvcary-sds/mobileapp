@@ -264,8 +264,11 @@ no Active/Remove affordance for it.)
   order placement happen (see [`checkout.md`](checkout.md)).
 
 Shipping / discounts here are still placeholders — the **real** shipping and tax
-are computed at `/v1/checkout` (which needs the address), so they surface on the
-review/payment step, not in this cart summary.
+are computed at `/v1/checkout` (which needs the address). Tax can't be shown in this
+cart summary because there's no address yet; it appears on the **Review order**
+screen's **Order total** ladder, which fetches it via the `/v1/checkout` **price
+preview** (`preview: true`) once the shipping fields are valid — see
+[`checkout.md`](checkout.md#tax-on-the-review-screen-price-preview).
 
 ---
 

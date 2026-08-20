@@ -60,11 +60,28 @@ Prodigi only billed — **after** the customer's card is charged.
 - **Country** is fixed to **US** — the catalog and Prodigi order are US-only.
 
 ### Order total
-- **Total** row (label left, amount right). When a coupon is applied, the
-  original price shows **struck through** and a **"You saved $X"** line renders in
-  Text/Positive (`#02542D`). Tax is *not* shown here — it needs the address and is
-  computed at `/v1/checkout` (Stripe Tax), so this screen shows subtotal − coupon.
-- A 1px Gray/200 rule, then the **Continue to payment** button (Primary/500).
+A ledger that shows the **real, tax-inclusive total before payment** (so the
+amount doesn't jump when the PaymentSheet opens):
+
+```
+Subtotal                     $75.00
+You saved                   −$15.00   (Text/Positive #02542D; only with a coupon)
+Tax                           $4.35
+──────────────────────────────────   1px Gray/200 rule
+Total                        $64.35   (SemiBold, 20px)
+```
+
+Tax depends on the **ship-to address**, so it can't be known locally. Once the
+shipping fields are valid, the screen fetches pricing via the **`/v1/checkout`
+price preview** (`preview: true` — see [below](#tax-on-the-review-screen-price-preview)):
+
+- **Before** the address is valid: the Tax row shows *"Calculated once address is
+  entered"*; Subtotal/Total fall back to the local pre-tax `subtotal − coupon`.
+- **While** fetching: a small spinner in the Tax row.
+- **After**: Subtotal / You saved / Tax / Total all come from the preview response,
+  so they're guaranteed consistent with what the customer will be charged.
+
+Below the ledger: the **Continue to payment** button (Primary/500).
 
 Light client-side validation lives in `src/lib/checkout-form.ts` (email pattern,
 2-letter USPS state, 5/9-digit ZIP, 10/11-digit phone). `handleProceed` also
@@ -224,6 +241,29 @@ The server **re-validates** the coupon against the live basket (a preview from t
 cart can go stale), applies the discount to the PaymentIntent amount, adds **Stripe
 Tax** (IL-only nexus today), and stores the **basket signature** + coupon identity
 in the PaymentIntent metadata for the order step to check.
+
+#### Tax on the review screen (price preview)
+
+`POST /v1/checkout` also accepts **`preview: true`** (`previewCheckout` in
+`src/api/checkout.ts`). Preview mode prices the basket **exactly** the same —
+including Stripe Tax against `shipTo` and any coupon discount — but **skips creating
+the PaymentIntent** (the response has **no `payment` object**). It's what lets the
+review screen show tax before the customer commits.
+
+Why a separate mode instead of just calling `/v1/checkout`: tax only exists once we
+have the address, and a real checkout mints a PaymentIntent (and a Stripe Tax
+calculation). Calling that live as the customer types their address would spawn a
+**throwaway PaymentIntent on every edit**. Preview avoids that.
+
+Two more preview-only relaxations, so the *display* isn't blocked:
+- **`idempotencyKey` isn't required** (there's no payment to de-dupe).
+- The **one-time-coupon binding isn't enforced** — no `email` required, no
+  redemption check. It shows the *best-case* discount, exactly like the cart's
+  coupon preview. The real (non-preview) call at pay time is still what **binds**
+  the coupon and **charges** the card, and it stays authoritative.
+
+The app fetches it **debounced (~600ms)** once the shipping fields validate, and
+re-fetches when the address, coupon, or basket changes.
 
 ### `POST /v1/orders` (`src/api/order.ts`)
 
