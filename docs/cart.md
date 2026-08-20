@@ -1,9 +1,10 @@
 # The Cart page
 
 Everything the **Cart** screen does, the decisions behind it, and how each piece
-works. Companion to [`photo-flow.md`](photo-flow.md) (browse → build) and
-[`customize-builder.md`](customize-builder.md) (the builder). This is the cart's
-own reference.
+works. Companion to [`photo-flow.md`](photo-flow.md) (browse → build),
+[`customize-builder.md`](customize-builder.md) (the builder), and
+[`checkout.md`](checkout.md) (review → pay → order). This is the cart's own
+reference.
 
 - **Screen:** `src/app/(tabs)/cart/index.tsx`
 - **Store:** `src/lib/cart-store.ts`
@@ -19,8 +20,9 @@ The cart is **client-side only**. A cart item is the customer's **local photo**
 so there's nothing to fetch or sync. A tiny external store backs it
 (`useSyncExternalStore`, no provider); components read it with `useCartItems()`.
 
-**APIs enter only at checkout** (not built): render + upload each print's full-res
-file → Stripe PaymentIntent (with Stripe Tax) → Prodigi order.
+**APIs enter only at checkout**, which is now **built** — upload each print's photo
+→ `POST /v1/checkout` (Stripe PaymentIntent + Stripe Tax) → Stripe PaymentSheet →
+`POST /v1/orders` (Prodigi). See [`checkout.md`](checkout.md) for the whole flow.
 
 > **The cart is in-memory** — it resets on app restart. Persistence
 > (AsyncStorage) is a TODO.
@@ -257,10 +259,13 @@ no Active/Remove affordance for it.)
   - **Discounts** — `$0.00` (placeholder), **Primary/600**.
 - A **1px Gray/200 rule** (16 leading/trailing), then **Estimated Total** (Body-1
   SemiBold 16 label + Body SemiBold 20 amount, black) — currently = subtotal.
-- **Checkout** button (Primary/500, 16 edge-to-edge, 24 above and below). Wiring
-  checkout is a **TODO**.
+- **Checkout** button (Primary/500, 16 edge-to-edge, 24 above and below) →
+  `show.push` to the **Review order** screen, where the real pricing, payment, and
+  order placement happen (see [`checkout.md`](checkout.md)).
 
-Shipping / promo / discounts are placeholders until the pricing logic exists.
+Shipping / discounts here are still placeholders — the **real** shipping and tax
+are computed at `/v1/checkout` (which needs the address), so they surface on the
+review/payment step, not in this cart summary.
 
 ---
 
@@ -304,10 +309,13 @@ stacks, so every current and future stack shows it by default.
 ## TODO
 
 - **Cart persistence** (AsyncStorage) — it's in-memory today.
-- **Email at checkout** — collect it on the checkout screen, pass to `/v1/checkout`
-  (makes the 1x-per-customer coupon limit bind), and store it locally to filter
-  offers + preview `ALREADY_USED`.
-- **Shipping & tax** — real values at checkout (Stripe Tax, IL nexus).
-- **Checkout** — render + upload prints → Stripe PaymentIntent → Prodigi order.
+- **Persist the customer email** — it's now *collected* on the review screen and
+  passed to `/v1/checkout` (so the 1×-per-customer coupon limit binds), but not yet
+  **stored locally** to filter offers / preview `ALREADY_USED` in the cart.
 - Collapse the redundant `CartItem` fields (derive from `selection`).
 - Size change in the builder's edit mode (the size picker is still a stub).
+
+> ✅ **Checkout is built** — review → upload → Stripe PaymentSheet → Prodigi order,
+> with real shipping + tax (Stripe Tax). See [`checkout.md`](checkout.md). Remaining
+> checkout work (Stripe **production** setup, Apple Pay button, Phase 2 WYSIWYG
+> render) lives in [`TODO.md`](../TODO.md).
