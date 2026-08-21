@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   KeyboardTypeOptions,
   Pressable,
   ScrollView,
@@ -145,10 +146,40 @@ function SelectField({
 }
 
 /**
+ * One 3px connector in the step track: a gray base with a Primary/600 fill whose
+ * width animates 0↔100% (left → right) when the step changes, so progress "flows"
+ * between steps instead of snapping.
+ */
+function StepLine({ active }: { active: boolean }) {
+  const theme = useTheme();
+  const fill = useRef(new Animated.Value(active ? 1 : 0)).current;
+  useEffect(() => {
+    Animated.timing(fill, {
+      toValue: active ? 1 : 0,
+      duration: 280,
+      useNativeDriver: false, // animating width — not supported on the native driver
+    }).start();
+  }, [active, fill]);
+  return (
+    <View style={[styles.stepLine, { backgroundColor: theme.stepTrack }]}>
+      <Animated.View
+        style={[
+          styles.stepLineFill,
+          {
+            backgroundColor: theme.stepActive,
+            width: fill.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+          },
+        ]}
+      />
+    </View>
+  );
+}
+
+/**
  * The step indicator: three titles with a circle-and-line track 10px below them.
  * Each step is in one of three states:
  *   - **completed** (before the current one): Primary/600 circle + white check;
- *     title Body2/Medium, Gray/black. The track leading up to it is Primary/600.
+ *     title Body2/Bold, Gray/black. The track leading up to it is Primary/600.
  *   - **current**: an outlined circle — white fill, 2px Primary/600 border, the step
  *     number in Primary/600 (no check, since it isn't done). Title Body2/Bold, Gray/black.
  *   - **upcoming**: Gray/300 circle + white step number; title Body2/Medium, Gray/500.
@@ -165,7 +196,7 @@ function Stepper({ step, onPress }: { step: number; onPress: (i: number) => void
           <Pressable key={label} style={styles.stepCell} onPress={() => onPress(i)}>
             <Text
               style={[
-                i === step ? styles.stepTitleCurrent : styles.stepTitle,
+                i <= step ? styles.stepTitleReached : styles.stepTitle,
                 { color: i > step ? theme.textSecondary : theme.text },
               ]}>
               {label}
@@ -182,9 +213,7 @@ function Stepper({ step, onPress }: { step: number; onPress: (i: number) => void
           const rightPrimary = i < step;
           return (
             <View key={label} style={styles.stepTrackCell}>
-              <View
-                style={[styles.stepLine, { backgroundColor: leftPrimary ? theme.stepActive : theme.stepTrack }]}
-              />
+              <StepLine active={leftPrimary} />
               {i < step ? (
                 // completed
                 <View style={[styles.stepCircle, { backgroundColor: theme.stepActive }]}>
@@ -206,9 +235,7 @@ function Stepper({ step, onPress }: { step: number; onPress: (i: number) => void
                   <Text style={[styles.stepNum, { color: theme.onPrimary }]}>{i + 1}</Text>
                 </View>
               )}
-              <View
-                style={[styles.stepLine, { backgroundColor: rightPrimary ? theme.stepActive : theme.stepTrack }]}
-              />
+              <StepLine active={rightPrimary} />
             </View>
           );
         })}
@@ -629,12 +656,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stepTitle: {
-    fontFamily: FontFamily.bodyMedium, // disabled step — Body 2 / Medium 14/20, Gray/500
+    fontFamily: FontFamily.bodyMedium, // upcoming step — Body 2 / Medium 14/20, Gray/500
     fontSize: 14,
     lineHeight: 20,
   },
-  stepTitleCurrent: {
-    fontFamily: FontFamily.bodyBold, // current step — Body 2 / Bold 14/20
+  stepTitleReached: {
+    fontFamily: FontFamily.bodyBold, // current + completed steps — Body 2 / Bold 14/20
     fontSize: 14,
     lineHeight: 20,
   },
@@ -650,7 +677,14 @@ const styles = StyleSheet.create({
   },
   stepLine: {
     flex: 1,
-    height: 3, // 3px connecting line
+    height: 3, // 3px connecting line (Gray/300 base)
+    overflow: 'hidden',
+  },
+  stepLineFill: {
+    position: 'absolute', // Primary/600 fill, width animated 0→100% from the left
+    left: 0,
+    top: 0,
+    bottom: 0,
   },
   stepCircle: {
     width: 20,
