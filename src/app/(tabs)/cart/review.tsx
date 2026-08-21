@@ -179,7 +179,7 @@ function StepLine({ active }: { active: boolean }) {
  * The step indicator: three titles with a circle-and-line track 10px below them.
  * Each step is in one of three states:
  *   - **completed** (before the current one): Primary/600 circle + white check;
- *     title Body2/Bold, Gray/black. The track leading up to it is Primary/600.
+ *     title Body2/Medium, Gray/black. The track leading up to it is Primary/600.
  *   - **current**: an outlined circle — white fill, 2px Primary/600 border, the step
  *     number in Primary/600 (no check, since it isn't done). Title Body2/Bold, Gray/black.
  *   - **upcoming**: Gray/300 circle + white step number; title Body2/Medium, Gray/500.
@@ -196,7 +196,7 @@ function Stepper({ step, onPress }: { step: number; onPress: (i: number) => void
           <Pressable key={label} style={styles.stepCell} onPress={() => onPress(i)}>
             <Text
               style={[
-                i <= step ? styles.stepTitleReached : styles.stepTitle,
+                i === step ? styles.stepTitleCurrent : styles.stepTitle,
                 { color: i > step ? theme.textSecondary : theme.text },
               ]}>
               {label}
@@ -656,12 +656,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stepTitle: {
-    fontFamily: FontFamily.bodyMedium, // upcoming step — Body 2 / Medium 14/20, Gray/500
+    fontFamily: FontFamily.bodyMedium, // completed + upcoming — Body 2 / Medium 14/20
     fontSize: 14,
     lineHeight: 20,
   },
-  stepTitleReached: {
-    fontFamily: FontFamily.bodyBold, // current + completed steps — Body 2 / Bold 14/20
+  stepTitleCurrent: {
+    fontFamily: FontFamily.bodyBold, // current step — Body 2 / Bold 14/20
     fontSize: 14,
     lineHeight: 20,
   },
