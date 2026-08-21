@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   KeyboardTypeOptions,
   Pressable,
   ScrollView,
@@ -18,13 +19,26 @@ import { SvgXml } from 'react-native-svg';
 
 import { router } from 'expo-router';
 
+import { previewCheckout, type CheckoutPricing } from '@/api/checkout';
 import { SectionDivider } from '@/components/section-divider';
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import {
+  validateCity,
+  validateEmail,
+  validateLine1,
+  validateName,
+  validatePhone,
+  validateState,
+  validateZip,
+} from '@/lib/checkout-form';
 import { cartStore, useAppliedCoupon, useCartItems } from '@/lib/cart-store';
 import { runCheckout } from '@/lib/payment';
 
 type AutoCap = 'none' | 'words' | 'characters';
+
+/** The checkout wizard's three steps, in order. */
+const STEPS = ['Contact', 'Payment', 'Confirmation'] as const;
 
 /** Format a USD amount, e.g. 75 → "$75.00". */
 function formatUSD(n: number): string {
@@ -132,13 +146,121 @@ function SelectField({
 }
 
 /**
- * Checkout step 1 — "Review order". Pushed from the cart's Checkout button.
- * Being built section by section: contact details, shipping, order summary, and
- * payment (form validation lives in `src/lib/checkout-form.ts`).
+ * One 3px line in the step track — a leading/trailing stub (`flex` 1) or a
+ * connector between two circles (`flex` 2). A gray base with a Primary/600 fill
+ * whose width animates 0↔100% (left → right) when `active` changes, so progress
+ * "flows" as one continuous front rather than snapping. Each gap between circles is
+ * a SINGLE StepLine, so the fill isn't split into two halves.
+ */
+function StepLine({ active, flex = 1 }: { active: boolean; flex?: number }) {
+  const theme = useTheme();
+  const fill = useRef(new Animated.Value(active ? 1 : 0)).current;
+  useEffect(() => {
+    Animated.timing(fill, {
+      toValue: active ? 1 : 0,
+      duration: 280,
+      useNativeDriver: false, // animating width — not supported on the native driver
+    }).start();
+  }, [active, fill]);
+  return (
+    <View style={[styles.stepLine, { flex, backgroundColor: theme.stepTrack }]}>
+      <Animated.View
+        style={[
+          styles.stepLineFill,
+          {
+            backgroundColor: theme.stepActive,
+            width: fill.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+          },
+        ]}
+      />
+    </View>
+  );
+}
+
+/**
+ * The step indicator: three titles with a circle-and-line track 10px below them.
+ * Each step is in one of three states:
+ *   - **completed** (before the current one): Primary/600 circle + white check;
+ *     title Body2/Medium, Gray/black. The track leading up to it is Primary/600.
+ *   - **current**: an outlined circle — white fill, 2px Primary/600 border, the step
+ *     number in Primary/600 (no check, since it isn't done). Title Body2/Bold, Gray/black.
+ *   - **upcoming**: Gray/300 circle + white step number; title Body2/Medium, Gray/500.
+ *
+ * So the Primary/600 fill grows across the track as steps complete. Tapping a title
+ * navigates BACK to an earlier step (forward is gated by the Continue buttons).
+ */
+function Stepper({ step, onPress }: { step: number; onPress: (i: number) => void }) {
+  const theme = useTheme();
+  return (
+    <View>
+      <View style={styles.stepTitles}>
+        {STEPS.map((label, i) => (
+          <Pressable key={label} style={styles.stepCell} onPress={() => onPress(i)}>
+            <Text
+              style={[
+                i === step ? styles.stepTitleCurrent : styles.stepTitle,
+                { color: i > step ? theme.textSecondary : theme.text },
+              ]}>
+              {label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      <View style={styles.stepTrack}>
+        {/* Leading stub — always Primary (it precedes the first/current step). The
+            flex is 1 for stubs and 2 for connectors, which lands the circles exactly
+            under their titles (1/6, 1/2, 5/6). */}
+        <StepLine active flex={1} />
+        {STEPS.map((label, i) => (
+          <Fragment key={label}>
+            {i < step ? (
+              // completed
+              <View style={[styles.stepCircle, { backgroundColor: theme.stepActive }]}>
+                <Ionicons name="checkmark" size={13} color={theme.onPrimary} />
+              </View>
+            ) : i === step ? (
+              // current — outlined (white fill, 2px Primary/600 border), number in Primary/600
+              <View
+                style={[
+                  styles.stepCircle,
+                  styles.stepCircleCurrent,
+                  { backgroundColor: theme.background, borderColor: theme.stepActive },
+                ]}>
+                <Text style={[styles.stepNum, { color: theme.stepActive }]}>{i + 1}</Text>
+              </View>
+            ) : (
+              // upcoming
+              <View style={[styles.stepCircle, { backgroundColor: theme.stepTrack }]}>
+                <Text style={[styles.stepNum, { color: theme.onPrimary }]}>{i + 1}</Text>
+              </View>
+            )}
+            {/* Connector to the next circle — one fill, so it animates as a single
+                front. Turns Primary once this step is completed. */}
+            {i < STEPS.length - 1 ? <StepLine active={i < step} flex={2} /> : null}
+          </Fragment>
+        ))}
+        {/* Trailing stub — never filled (nothing comes after the last step). */}
+        <StepLine active={false} flex={1} />
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Checkout — a 3-step wizard pushed from the cart's Checkout button:
+ *   1. **Contact** — contact + shipping details.
+ *   2. **Payment** — the order total (with tax, via the /v1/checkout preview) + pay.
+ *   3. **Confirmation** — the placed-order receipt (placeholder for now).
+ *
+ * You can't advance until each step's requirements are met; the tax preview runs
+ * when you enter Payment. Field validation lives in `src/lib/checkout-form.ts`.
  */
 export default function ReviewOrderScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+
+  const [step, setStep] = useState(0); // 0 Contact · 1 Payment · 2 Confirmation
+  const [orderId, setOrderId] = useState('');
 
   const [name, setName] = useState(''); // full name → the API's single recipient.name
   const [phone, setPhone] = useState('');
@@ -156,33 +278,104 @@ export default function ReviewOrderScreen() {
   const appliedCoupon = useAppliedCoupon();
   const [paying, setPaying] = useState(false);
 
-  // Totals. Tax is added at payment (it needs the address); this shows the
-  // subtotal minus any applied coupon.
+  // Server pricing preview — the real total INCLUDING Stripe Tax. Fetched on entering
+  // the Payment step; null until then, when we fall back to the local pre-tax figures.
+  const [pricing, setPricing] = useState<CheckoutPricing | null>(null);
+  const [taxLoading, setTaxLoading] = useState(false);
+
+  // Local (always-known) figures, the fallback before the preview lands.
   const subtotal = items.reduce((s, i) => s + (Number(i.price) || 0) * i.quantity, 0);
   const discount = appliedCoupon ? Number(appliedCoupon.discountAmount) || 0 : 0;
-  const total = Math.max(0, subtotal - discount);
-  const hasCoupon = discount > 0;
 
-  // "Continue to payment" → upload the photos, present Stripe's PaymentSheet, and
-  // place the Prodigi order — the whole buy flow (see `runCheckout`).
-  const handleProceed = async () => {
-    const missing = [
-      !name.trim() && 'name',
-      !email.trim() && 'email',
-      !line1.trim() && 'address',
-      !city.trim() && 'city',
-      !stateCode.trim() && 'state',
-      !zip.trim() && 'ZIP',
-    ].filter(Boolean);
-    if (missing.length) {
-      Alert.alert('Missing details', `Please fill in: ${missing.join(', ')}.`);
+  const addressReady =
+    !validateLine1(line1) && !validateCity(city) && !validateState(stateCode) && !validateZip(zip);
+  // Refetch key: tax changes with the address, the coupon, and the basket.
+  const itemsKey = items
+    .map((i) => `${i.sku}:${i.quantity}`)
+    .sort()
+    .join(',');
+
+  // The preview runs when we're on the Payment step (address is complete by then),
+  // and re-runs if the address / coupon / basket changes while we're back on it.
+  useEffect(() => {
+    if (step !== 1 || !addressReady || items.length === 0) {
+      setTaxLoading(false);
       return;
     }
+    const controller = new AbortController();
+    setTaxLoading(true);
+    const timer = setTimeout(() => {
+      previewCheckout(
+        {
+          shipTo: {
+            line1: line1.trim(),
+            line2: line2.trim() || undefined,
+            city: city.trim(),
+            state: stateCode.trim().toUpperCase(),
+            zip: zip.trim(),
+            countryCode: 'US',
+          },
+          items: items.map((i) => ({ sku: i.sku, copies: i.quantity })),
+          couponCode: appliedCoupon?.code,
+        },
+        controller.signal,
+      )
+        .then((p) => setPricing(p))
+        .catch(() => {
+          if (!controller.signal.aborted) setPricing(null); // fall back to local, pre-tax
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setTaxLoading(false);
+        });
+    }, 400);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, addressReady, itemsKey, line1, city, stateCode, zip, appliedCoupon?.code]);
+
+  // Prefer the server pricing (with tax); fall back to local subtotal − coupon.
+  const dSubtotal = pricing ? Number(pricing.subtotal) : subtotal;
+  const dDiscount = pricing?.discount ? Number(pricing.discount.amount) : discount;
+  const dTax = pricing ? Number(pricing.tax) : null; // null = not computed yet
+  const dTotal = pricing ? Number(pricing.total) : Math.max(0, subtotal - discount);
+  const hasCoupon = dDiscount > 0;
+
+  // Contact + shipping must be valid (and the cart non-empty) before Payment. Priming
+  // the loading state here so the Payment step shows a spinner immediately, not a flash.
+  const goToPayment = () => {
     if (items.length === 0) {
       Alert.alert('Your cart is empty', 'Add a print before checking out.');
       return;
     }
+    const problem =
+      validateName(name) ||
+      validateEmail(email) ||
+      (phone.trim() ? validatePhone(phone) : null) ||
+      validateLine1(line1) ||
+      validateCity(city) ||
+      validateState(stateCode) ||
+      validateZip(zip);
+    if (problem) {
+      Alert.alert('Check your details', problem);
+      return;
+    }
+    setPricing(null);
+    setTaxLoading(true);
+    setStep(1);
+  };
 
+  // Tapping a step title goes BACK to an earlier step (forward is gated by the
+  // Continue buttons). No navigation once the order is confirmed.
+  const onStepPress = (i: number) => {
+    if (step === 2) return;
+    if (i < step) setStep(i);
+  };
+
+  // "Continue to payment" → upload the photos, present Stripe's PaymentSheet, and
+  // place the Prodigi order — the whole buy flow (see `runCheckout`).
+  const handlePay = async () => {
     setPaying(true);
     try {
       const outcome = await runCheckout({
@@ -209,10 +402,9 @@ export default function ReviewOrderScreen() {
 
       switch (outcome.status) {
         case 'ordered':
+          setOrderId(outcome.orderId);
           cartStore.clear(); // order placed — empty the cart
-          Alert.alert('Order placed', `Your order is in! Confirmation ${outcome.orderId}.`, [
-            { text: 'Done', onPress: () => router.back() },
-          ]);
+          setStep(2); // → Confirmation
           break;
         case 'canceled':
           break; // user dismissed the sheet — no alert
@@ -239,149 +431,211 @@ export default function ReviewOrderScreen() {
     }
   };
 
+  const firstName = name.trim().split(' ')[0];
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}>
-        {/* "Contact details" — Title 1 / SemiBold 24/32, 24 below the nav bar. */}
-        <Text style={[styles.header, { color: theme.text }]}>Contact details</Text>
-
-        {/* 4 required fields, 16 below the header and 16 apart. */}
-        <View style={styles.fields}>
-          <Field
-            label="Full name"
-            placeholder="John Cary"
-            value={name}
-            onChangeText={setName}
-            autoCapitalize="words"
-          />
-          <Field
-            label="Phone number"
-            placeholder="312 123 4567"
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            autoCapitalize="none"
-            required={false}
-          />
-          <Field
-            label="Email"
-            placeholder="john.cary@example.com"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+        {/* Step indicator — scrolls up with the content. */}
+        <View style={styles.stepperWrap}>
+          <Stepper step={step} onPress={onStepPress} />
         </View>
 
-        {/* Marketing opt-in — 16 below the email field; checkbox at the 16 leading
-            edge, text 12 to its right. */}
-        <Pressable style={styles.optIn} onPress={() => setOptIn((v) => !v)}>
-          <SvgXml xml={optIn ? CHECKBOX_CHECKED : CHECKBOX_UNCHECKED} width={24} height={24} />
-          <Text style={[styles.optInText, { color: theme.text }]}>
-            Keep me updated on deals, inspiration, and new products
-          </Text>
-        </Pressable>
+        {/* ── Step 1: Contact ─────────────────────────────────────────────── */}
+        {step === 0 ? (
+          <>
+            <View style={[styles.fields, styles.fieldsFirst]}>
+              <Field
+                label="Full name"
+                placeholder="John Cary"
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
+              />
+              <Field
+                label="Phone number"
+                placeholder="312 123 4567"
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+                autoCapitalize="none"
+                required={false}
+              />
+              <Field
+                label="Email"
+                placeholder="john.cary@example.com"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
 
-        {/* 8px Gray/100 divider, 24 below the opt-in text. */}
-        <SectionDivider style={styles.divider} />
-
-        {/* "Shipping details" — same title style, 24 below the divider. */}
-        <Text style={[styles.header, styles.section, { color: theme.text }]}>Shipping details</Text>
-
-        {/* Shipping fields — 16 below the header, 16 apart. */}
-        <View style={styles.fields}>
-          <Field
-            label="Address 1"
-            placeholder="123 Main St"
-            value={line1}
-            onChangeText={setLine1}
-            autoCapitalize="words"
-          />
-          <Field
-            label="Address 2"
-            placeholder="Apt, suite, etc."
-            value={line2}
-            onChangeText={setLine2}
-            autoCapitalize="words"
-            required={false}
-          />
-          <Field
-            label="City"
-            placeholder="Chicago"
-            value={city}
-            onChangeText={setCity}
-            autoCapitalize="words"
-          />
-          {/* State + Zip share a row to save vertical space. */}
-          <View style={styles.row}>
-            <Field
-              label="State"
-              placeholder="IL"
-              value={stateCode}
-              onChangeText={setStateCode}
-              autoCapitalize="characters"
-              style={styles.rowItem}
-              chevron
-            />
-            <Field
-              label="Zip"
-              placeholder="60606"
-              value={zip}
-              onChangeText={setZip}
-              keyboardType="numbers-and-punctuation"
-              style={styles.rowItem}
-            />
-          </View>
-          <SelectField
-            label="Country"
-            value="United States"
-            // TODO: country picker. The API is US-only today, so this is fixed.
-            onPress={() => {}}
-          />
-        </View>
-
-        {/* 8px Gray/100 divider below Country, then the order-total section. */}
-        <SectionDivider style={styles.divider} />
-        <Text style={[styles.header, styles.section, { color: theme.text }]}>Order total</Text>
-
-        {/* Total row — 16 below the header. Label left, amount right; a struck-out
-            original price sits 4 to the left of the amount when a coupon applies. */}
-        <View style={styles.totalRow}>
-          <Text style={[styles.totalLabel, { color: theme.text }]}>Total</Text>
-          <View style={styles.totalRight}>
-            {hasCoupon ? (
-              <Text style={[styles.totalStrike, { color: theme.textSecondary }]}>
-                {formatUSD(subtotal)}
+            {/* Marketing opt-in — 16 below the email field. */}
+            <Pressable style={styles.optIn} onPress={() => setOptIn((v) => !v)}>
+              <SvgXml xml={optIn ? CHECKBOX_CHECKED : CHECKBOX_UNCHECKED} width={24} height={24} />
+              <Text style={[styles.optInText, { color: theme.text }]}>
+                Keep me updated on deals, inspiration, and new products
               </Text>
-            ) : null}
-            <Text style={[styles.totalAmount, { color: theme.text }]}>{formatUSD(total)}</Text>
-          </View>
-        </View>
-        {hasCoupon ? (
-          <Text style={[styles.youSaved, { color: theme.textPositive }]}>
-            You saved {formatUSD(discount)}
-          </Text>
+            </Pressable>
+
+            <SectionDivider style={styles.divider} />
+
+            <Text style={[styles.header, styles.section, { color: theme.text }]}>Shipping</Text>
+            <View style={styles.fields}>
+              <Field
+                label="Address 1"
+                placeholder="123 Main St"
+                value={line1}
+                onChangeText={setLine1}
+                autoCapitalize="words"
+              />
+              <Field
+                label="Address 2"
+                placeholder="Apt, suite, etc."
+                value={line2}
+                onChangeText={setLine2}
+                autoCapitalize="words"
+                required={false}
+              />
+              <Field
+                label="City"
+                placeholder="Chicago"
+                value={city}
+                onChangeText={setCity}
+                autoCapitalize="words"
+              />
+              <View style={styles.row}>
+                <Field
+                  label="State"
+                  placeholder="IL"
+                  value={stateCode}
+                  onChangeText={setStateCode}
+                  autoCapitalize="characters"
+                  style={styles.rowItem}
+                  chevron
+                />
+                <Field
+                  label="Zip"
+                  placeholder="60606"
+                  value={zip}
+                  onChangeText={setZip}
+                  keyboardType="numbers-and-punctuation"
+                  style={styles.rowItem}
+                />
+              </View>
+              <SelectField
+                label="Country"
+                value="United States"
+                // TODO: country picker. The API is US-only today, so this is fixed.
+                onPress={() => {}}
+              />
+            </View>
+
+            {/* Advance to Payment (validates contact + shipping first). */}
+            <Pressable
+              style={[styles.continue, { backgroundColor: theme.primary }]}
+              onPress={goToPayment}>
+              <Text style={[styles.continueLabel, { color: theme.onPrimary }]}>Continue</Text>
+            </Pressable>
+          </>
         ) : null}
 
-        {/* 1px Gray/200 rule, 12 below the totals. */}
-        <View style={[styles.totalRule, { backgroundColor: theme.border }]} />
+        {/* ── Step 2: Payment ─────────────────────────────────────────────── */}
+        {step === 1 ? (
+          <>
+            <Text style={[styles.header, { color: theme.text }]}>Order details</Text>
 
-        {/* "Continue" — 24 below the rule; opens Stripe's PaymentSheet. */}
-        <Pressable
-          style={[styles.continue, { backgroundColor: theme.primary }]}
-          disabled={paying}
-          onPress={handleProceed}>
-          {paying ? (
-            <ActivityIndicator color={theme.onPrimary} />
-          ) : (
-            <Text style={[styles.continueLabel, { color: theme.onPrimary }]}>
-              Continue to payment
+            {/* Ship-to recap — who/where, since those fields live on the prior step. */}
+            <View style={styles.recap}>
+              <Text style={[styles.recapName, { color: theme.text }]}>{name.trim()}</Text>
+              <Text style={[styles.recapLine, { color: theme.textSecondary }]}>
+                {line1.trim()}
+                {line2.trim() ? `, ${line2.trim()}` : ''}
+              </Text>
+              <Text style={[styles.recapLine, { color: theme.textSecondary }]}>
+                {city.trim()}, {stateCode.trim().toUpperCase()} {zip.trim()}
+              </Text>
+            </View>
+
+            {/* Ladder: Subtotal → You saved → Tax → rule → Total. */}
+            <View style={[styles.ledgerRow, styles.ledgerFirst]}>
+              <Text style={[styles.ledgerLabel, { color: theme.textTertiary }]}>Subtotal</Text>
+              <Text style={[styles.ledgerAmount, { color: theme.text }]}>{formatUSD(dSubtotal)}</Text>
+            </View>
+
+            {hasCoupon ? (
+              <View style={styles.ledgerRow}>
+                <Text style={[styles.ledgerLabel, { color: theme.textPositive }]}>You saved</Text>
+                <Text style={[styles.ledgerAmount, { color: theme.textPositive }]}>
+                  −{formatUSD(dDiscount)}
+                </Text>
+              </View>
+            ) : null}
+
+            <View style={styles.ledgerRow}>
+              <Text style={[styles.ledgerLabel, { color: theme.textTertiary }]}>Tax</Text>
+              {dTax != null ? (
+                <Text style={[styles.ledgerAmount, { color: theme.text }]}>{formatUSD(dTax)}</Text>
+              ) : taxLoading ? (
+                <ActivityIndicator size="small" color={theme.textSecondary} />
+              ) : (
+                <Text style={[styles.ledgerHint, { color: theme.textSecondary }]}>
+                  Calculated at payment
+                </Text>
+              )}
+            </View>
+
+            {/* 1px Gray/200 rule between the line items and the grand total. */}
+            <View style={[styles.totalRule, { backgroundColor: theme.border }]} />
+
+            <View style={styles.totalRow}>
+              <Text style={[styles.grandLabel, { color: theme.text }]}>Total</Text>
+              <Text style={[styles.grandAmount, { color: theme.text }]}>{formatUSD(dTotal)}</Text>
+            </View>
+
+            <Pressable
+              style={[styles.continue, { backgroundColor: theme.primary }]}
+              disabled={paying}
+              onPress={handlePay}>
+              {paying ? (
+                <ActivityIndicator color={theme.onPrimary} />
+              ) : (
+                <Text style={[styles.continueLabel, { color: theme.onPrimary }]}>
+                  Continue to payment
+                </Text>
+              )}
+            </Pressable>
+          </>
+        ) : null}
+
+        {/* ── Step 3: Confirmation (placeholder) ──────────────────────────── */}
+        {step === 2 ? (
+          <View style={styles.confirm}>
+            <View style={[styles.confirmBadge, { backgroundColor: theme.stepActive }]}>
+              <Ionicons name="checkmark" size={40} color={theme.onPrimary} />
+            </View>
+            <Text style={[styles.confirmTitle, { color: theme.text }]}>Order placed</Text>
+            <Text style={[styles.confirmBody, { color: theme.textSecondary }]}>
+              Thanks{firstName ? `, ${firstName}` : ''}! Your order is confirmed and heading to print.
             </Text>
-          )}
-        </Pressable>
+            {orderId ? (
+              <Text style={[styles.confirmRef, { color: theme.text }]}>Confirmation {orderId}</Text>
+            ) : null}
+            <Text style={[styles.confirmBody, { color: theme.textSecondary }]}>
+              We’ll email your receipt and shipping updates
+              {email.trim() ? ` to ${email.trim()}` : ''}.
+            </Text>
+            <Pressable
+              style={[styles.continue, styles.confirmDone, { backgroundColor: theme.primary }]}
+              onPress={() => router.back()}>
+              <Text style={[styles.continueLabel, { color: theme.onPrimary }]}>Done</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -391,8 +645,63 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  // Step indicator — scrolls with the content; 24 gap to the first section below.
+  stepperWrap: {
+    marginBottom: 24,
+  },
+  stepTitles: {
+    flexDirection: 'row', // 16 leading/trailing comes from the content padding
+  },
+  stepCell: {
+    flex: 1, // three equal columns; title centered under its future circle
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepTitle: {
+    fontFamily: FontFamily.bodyMedium, // completed + upcoming — Body 2 / Medium 14/20
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  stepTitleCurrent: {
+    fontFamily: FontFamily.bodyBold, // current step — Body 2 / Bold 14/20
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  stepTrack: {
+    marginTop: 10, // 10 below the titles
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  stepLine: {
+    height: 3, // 3px connecting line (Gray/300 base); flex set per-line (stub 1 / connector 2)
+    overflow: 'hidden',
+  },
+  stepLineFill: {
+    position: 'absolute', // Primary/600 fill, width animated 0→100% from the left
+    left: 0,
+    top: 0,
+    bottom: 0,
+  },
+  stepCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    marginHorizontal: 4, // 4px between the circle and each line
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepCircleCurrent: {
+    borderWidth: 2, // current step — outlined, no fill (border set inline: Primary/600)
+  },
+  stepNum: {
+    fontFamily: FontFamily.bodyBold, // Caption / Bold 12 — step number in a circle.
+    fontSize: 12,
+    // No explicit lineHeight: lets the glyph self-center in the 20px circle (an 18px
+    // line-box would sit the digit ~1px low on iOS).
+    textAlign: 'center',
+  },
   content: {
-    paddingTop: 24, // 24 from the top (below the nav bar)
+    paddingTop: 24, // 24 below the step track
     paddingHorizontal: 16, // 16 leading / trailing (header + fields)
   },
   header: {
@@ -409,6 +718,9 @@ const styles = StyleSheet.create({
   fields: {
     marginTop: 16, // 16 below the header
     gap: 16, // 16 between fields
+  },
+  fieldsFirst: {
+    marginTop: 0, // no header above (Contact step) — the stepper gap provides the space
   },
   row: {
     flexDirection: 'row',
@@ -462,45 +774,69 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
   },
+  // Ship-to recap on the Payment step.
+  recap: {
+    marginTop: 16,
+    gap: 2,
+  },
+  recapName: {
+    fontFamily: FontFamily.bodyMedium, // Body 1 / Medium 16/24
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  recapLine: {
+    fontFamily: FontFamily.body, // Body 2 / Regular 14/20
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  // Ledger line item (Subtotal / You saved / Tax) — label left, amount right.
+  ledgerRow: {
+    marginTop: 12, // 12 between line items
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  ledgerFirst: {
+    marginTop: 24, // first line (Subtotal) is 24 below the recap
+  },
+  ledgerLabel: {
+    fontFamily: FontFamily.body, // Body 1 / Regular 16/24
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  ledgerAmount: {
+    fontFamily: FontFamily.body, // Body 1 / Regular 16/24
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  ledgerHint: {
+    fontFamily: FontFamily.body, // Body 2 / Regular 14/20 — the "tax pending" hint
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  totalRule: {
+    marginTop: 16, // 16 below the last line item
+    height: 1, // 1px Gray/200 (16 leading/trailing from the content padding)
+  },
+  // Grand total row — below the rule; emphasized.
   totalRow: {
-    marginTop: 16, // 16 below the Payment header
+    marginTop: 12, // 12 below the rule
     flexDirection: 'row',
-    justifyContent: 'space-between', // label left, amount right
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  totalLabel: {
-    fontFamily: FontFamily.bodyMedium, // Body 1 / Medium 16/24, Gray/black
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  totalRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  totalStrike: {
-    marginRight: 4, // 4 to the left of the amount
-    fontFamily: FontFamily.body, // Body 1 / Regular 16/24, Gray/500
-    fontSize: 16,
-    lineHeight: 24,
-    textDecorationLine: 'line-through',
-  },
-  totalAmount: {
+  grandLabel: {
     fontFamily: FontFamily.bodySemiBold, // Body 1 / SemiBold 16/24, Gray/black
     fontSize: 16,
     lineHeight: 24,
   },
-  youSaved: {
-    marginTop: 4, // 4 below the Total row
-    fontFamily: FontFamily.bodyMedium, // Text/Positive/Default
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  totalRule: {
-    marginTop: 16, // 16 below the totals (You saved / Total)
-    height: 1, // 1px Gray/200 (16 leading/trailing from the content padding)
+  grandAmount: {
+    fontFamily: FontFamily.bodySemiBold, // SemiBold 20/28, Gray/black
+    fontSize: 20,
+    lineHeight: 28,
   },
   continue: {
-    marginTop: 24, // 24 below the rule
+    marginTop: 24, // 24 below the content above it
     height: 48, // Primary/500, 16 leading/trailing (from the content padding)
     borderRadius: 8,
     alignItems: 'center',
@@ -510,5 +846,40 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bodySemiBold, // Body 1 / SemiBold 16/24, white
     fontSize: 16,
     lineHeight: 24,
+  },
+  // Confirmation step (placeholder).
+  confirm: {
+    alignItems: 'center',
+    paddingTop: 32,
+  },
+  confirmBadge: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  confirmTitle: {
+    fontFamily: FontFamily.title, // Title 1 / SemiBold 24/32
+    fontSize: 24,
+    lineHeight: 32,
+    marginBottom: 8,
+  },
+  confirmBody: {
+    fontFamily: FontFamily.body, // Body 1 / Regular 16/24
+    fontSize: 16,
+    lineHeight: 24,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  confirmRef: {
+    fontFamily: FontFamily.bodySemiBold, // Body 1 / SemiBold 16/24
+    fontSize: 16,
+    lineHeight: 24,
+    marginTop: 12,
+  },
+  confirmDone: {
+    alignSelf: 'stretch', // full-width button inside the centered column
   },
 });
