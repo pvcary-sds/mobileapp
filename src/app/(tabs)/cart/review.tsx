@@ -418,8 +418,7 @@ export default function ReviewOrderScreen() {
         {/* ── Step 1: Contact ─────────────────────────────────────────────── */}
         {step === 0 ? (
           <>
-            <Text style={[styles.header, { color: theme.text }]}>Contact details</Text>
-            <View style={styles.fields}>
+            <View style={[styles.fields, styles.fieldsFirst]}>
               <Field
                 label="Full name"
                 placeholder="John Cary"
@@ -689,6 +688,9 @@ const styles = StyleSheet.create({
   fields: {
     marginTop: 16, // 16 below the header
     gap: 16, // 16 between fields
+  },
+  fieldsFirst: {
+    marginTop: 0, // no header above (Contact step) — the stepper gap provides the space
   },
   row: {
     flexDirection: 'row',
