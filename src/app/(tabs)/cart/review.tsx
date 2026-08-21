@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -146,11 +146,13 @@ function SelectField({
 }
 
 /**
- * One 3px connector in the step track: a gray base with a Primary/600 fill whose
- * width animates 0↔100% (left → right) when the step changes, so progress "flows"
- * between steps instead of snapping.
+ * One 3px line in the step track — a leading/trailing stub (`flex` 1) or a
+ * connector between two circles (`flex` 2). A gray base with a Primary/600 fill
+ * whose width animates 0↔100% (left → right) when `active` changes, so progress
+ * "flows" as one continuous front rather than snapping. Each gap between circles is
+ * a SINGLE StepLine, so the fill isn't split into two halves.
  */
-function StepLine({ active }: { active: boolean }) {
+function StepLine({ active, flex = 1 }: { active: boolean; flex?: number }) {
   const theme = useTheme();
   const fill = useRef(new Animated.Value(active ? 1 : 0)).current;
   useEffect(() => {
@@ -161,7 +163,7 @@ function StepLine({ active }: { active: boolean }) {
     }).start();
   }, [active, fill]);
   return (
-    <View style={[styles.stepLine, { backgroundColor: theme.stepTrack }]}>
+    <View style={[styles.stepLine, { flex, backgroundColor: theme.stepTrack }]}>
       <Animated.View
         style={[
           styles.stepLineFill,
@@ -205,40 +207,40 @@ function Stepper({ step, onPress }: { step: number; onPress: (i: number) => void
         ))}
       </View>
       <View style={styles.stepTrack}>
-        {STEPS.map((label, i) => {
-          // The Primary fill covers everything up to and including the line to the
-          // LEFT of the current circle (so the current step's preceding lines — the
-          // leading stub included — are Primary too); everything to its right is gray.
-          const leftPrimary = i <= step;
-          const rightPrimary = i < step;
-          return (
-            <View key={label} style={styles.stepTrackCell}>
-              <StepLine active={leftPrimary} />
-              {i < step ? (
-                // completed
-                <View style={[styles.stepCircle, { backgroundColor: theme.stepActive }]}>
-                  <Ionicons name="checkmark" size={13} color={theme.onPrimary} />
-                </View>
-              ) : i === step ? (
-                // current — outlined (white fill, 2px Primary/600 border), number in Primary/600
-                <View
-                  style={[
-                    styles.stepCircle,
-                    styles.stepCircleCurrent,
-                    { backgroundColor: theme.background, borderColor: theme.stepActive },
-                  ]}>
-                  <Text style={[styles.stepNum, { color: theme.stepActive }]}>{i + 1}</Text>
-                </View>
-              ) : (
-                // upcoming
-                <View style={[styles.stepCircle, { backgroundColor: theme.stepTrack }]}>
-                  <Text style={[styles.stepNum, { color: theme.onPrimary }]}>{i + 1}</Text>
-                </View>
-              )}
-              <StepLine active={rightPrimary} />
-            </View>
-          );
-        })}
+        {/* Leading stub — always Primary (it precedes the first/current step). The
+            flex is 1 for stubs and 2 for connectors, which lands the circles exactly
+            under their titles (1/6, 1/2, 5/6). */}
+        <StepLine active flex={1} />
+        {STEPS.map((label, i) => (
+          <Fragment key={label}>
+            {i < step ? (
+              // completed
+              <View style={[styles.stepCircle, { backgroundColor: theme.stepActive }]}>
+                <Ionicons name="checkmark" size={13} color={theme.onPrimary} />
+              </View>
+            ) : i === step ? (
+              // current — outlined (white fill, 2px Primary/600 border), number in Primary/600
+              <View
+                style={[
+                  styles.stepCircle,
+                  styles.stepCircleCurrent,
+                  { backgroundColor: theme.background, borderColor: theme.stepActive },
+                ]}>
+                <Text style={[styles.stepNum, { color: theme.stepActive }]}>{i + 1}</Text>
+              </View>
+            ) : (
+              // upcoming
+              <View style={[styles.stepCircle, { backgroundColor: theme.stepTrack }]}>
+                <Text style={[styles.stepNum, { color: theme.onPrimary }]}>{i + 1}</Text>
+              </View>
+            )}
+            {/* Connector to the next circle — one fill, so it animates as a single
+                front. Turns Primary once this step is completed. */}
+            {i < STEPS.length - 1 ? <StepLine active={i < step} flex={2} /> : null}
+          </Fragment>
+        ))}
+        {/* Trailing stub — never filled (nothing comes after the last step). */}
+        <StepLine active={false} flex={1} />
       </View>
     </View>
   );
@@ -670,14 +672,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  stepTrackCell: {
-    flex: 1, // circle centered by the two flanking lines; aligns under the title
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   stepLine: {
-    flex: 1,
-    height: 3, // 3px connecting line (Gray/300 base)
+    height: 3, // 3px connecting line (Gray/300 base); flex set per-line (stub 1 / connector 2)
     overflow: 'hidden',
   },
   stepLineFill: {
