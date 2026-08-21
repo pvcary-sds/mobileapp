@@ -149,8 +149,8 @@ function SelectField({
  * Each step is in one of three states:
  *   - **completed** (before the current one): Primary/600 circle + white check;
  *     title Body2/Medium, Gray/black. The track leading up to it is Primary/600.
- *   - **current**: Primary/600 circle + white step number (no check, since it isn't
- *     done yet). Title Body2/Bold, Gray/black.
+ *   - **current**: an outlined circle — white fill, 2px Primary/600 border, the step
+ *     number in Primary/600 (no check, since it isn't done). Title Body2/Bold, Gray/black.
  *   - **upcoming**: Gray/300 circle + white step number; title Body2/Medium, Gray/500.
  *
  * So the Primary/600 fill grows across the track as steps complete. Tapping a title
@@ -191,9 +191,14 @@ function Stepper({ step, onPress }: { step: number; onPress: (i: number) => void
                   <Ionicons name="checkmark" size={13} color={theme.onPrimary} />
                 </View>
               ) : i === step ? (
-                // current — filled Primary/600, number in white (no check: not done yet)
-                <View style={[styles.stepCircle, { backgroundColor: theme.stepActive }]}>
-                  <Text style={[styles.stepNum, { color: theme.onPrimary }]}>{i + 1}</Text>
+                // current — outlined (white fill, 2px Primary/600 border), number in Primary/600
+                <View
+                  style={[
+                    styles.stepCircle,
+                    styles.stepCircleCurrent,
+                    { backgroundColor: theme.background, borderColor: theme.stepActive },
+                  ]}>
+                  <Text style={[styles.stepNum, { color: theme.stepActive }]}>{i + 1}</Text>
                 </View>
               ) : (
                 // upcoming
@@ -654,6 +659,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 4, // 4px between the circle and each line
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  stepCircleCurrent: {
+    borderWidth: 2, // current step — outlined, no fill (border set inline: Primary/600)
   },
   stepNum: {
     fontFamily: FontFamily.bodyBold, // Caption / Bold 12 — step number in a circle.
