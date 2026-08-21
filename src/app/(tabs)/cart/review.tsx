@@ -175,9 +175,10 @@ function Stepper({ step, onPress }: { step: number; onPress: (i: number) => void
       </View>
       <View style={styles.stepTrack}>
         {STEPS.map((label, i) => {
-          // The Primary fill covers everything up to the current circle: a line is
-          // Primary once the step it leads out of is completed.
-          const leftPrimary = i === 0 ? step > 0 : i <= step;
+          // The Primary fill covers everything up to and including the line to the
+          // LEFT of the current circle (so the current step's preceding lines — the
+          // leading stub included — are Primary too); everything to its right is gray.
+          const leftPrimary = i <= step;
           const rightPrimary = i < step;
           return (
             <View key={label} style={styles.stepTrackCell}>
