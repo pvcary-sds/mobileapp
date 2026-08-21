@@ -146,57 +146,67 @@ function SelectField({
 
 /**
  * The step indicator: three titles with a circle-and-line track 10px below them.
- * Only the CURRENT step is highlighted — a Primary/600 circle with a white check;
- * every other circle and the 3px connecting lines are Gray/300, and non-current
- * titles are Gray/500. Tapping a title navigates BACK to an earlier step (forward
- * is gated behind each step's requirements, so it's handled by the Continue buttons).
+ * Each step is in one of three states:
+ *   - **completed** (before the current one): Primary/600 circle + white check;
+ *     title Body2/Medium, Gray/black. The track leading up to it is Primary/600.
+ *   - **current**: an outlined circle — white fill, 2px Primary/600 border, the step
+ *     number in Primary/600 (no check, since it isn't done). Title Body2/Bold, Gray/black.
+ *   - **upcoming**: Gray/300 circle + white step number; title Body2/Medium, Gray/500.
+ *
+ * So the Primary/600 fill grows across the track as steps complete. Tapping a title
+ * navigates BACK to an earlier step (forward is gated by the Continue buttons).
  */
 function Stepper({ step, onPress }: { step: number; onPress: (i: number) => void }) {
   const theme = useTheme();
   return (
     <View>
       <View style={styles.stepTitles}>
-        {STEPS.map((label, i) => {
-          const current = i === step;
-          return (
-            <Pressable key={label} style={styles.stepCell} onPress={() => onPress(i)}>
-              <Text
-                style={[
-                  current ? styles.stepTitleCurrent : styles.stepTitle,
-                  { color: current ? theme.text : theme.textSecondary },
-                ]}>
-                {label}
-              </Text>
-            </Pressable>
-          );
-        })}
+        {STEPS.map((label, i) => (
+          <Pressable key={label} style={styles.stepCell} onPress={() => onPress(i)}>
+            <Text
+              style={[
+                i === step ? styles.stepTitleCurrent : styles.stepTitle,
+                { color: i > step ? theme.textSecondary : theme.text },
+              ]}>
+              {label}
+            </Text>
+          </Pressable>
+        ))}
       </View>
       <View style={styles.stepTrack}>
         {STEPS.map((label, i) => {
-          const current = i === step;
-          // The line immediately LEFT of the current circle is Primary/600. It spans
-          // this cell's left line plus the previous cell's right line (so the whole
-          // segment reads as one), and for step 0 it's just the leading stub.
-          const leftActive = i === step;
-          const rightActive = i === step - 1;
+          // The Primary fill covers everything up to the current circle: a line is
+          // Primary once the step it leads out of is completed.
+          const leftPrimary = i === 0 ? step > 0 : i <= step;
+          const rightPrimary = i < step;
           return (
             <View key={label} style={styles.stepTrackCell}>
               <View
-                style={[styles.stepLine, { backgroundColor: leftActive ? theme.stepActive : theme.stepTrack }]}
+                style={[styles.stepLine, { backgroundColor: leftPrimary ? theme.stepActive : theme.stepTrack }]}
               />
-              <View
-                style={[
-                  styles.stepCircle,
-                  { backgroundColor: current ? theme.stepActive : theme.stepTrack },
-                ]}>
-                {current ? (
+              {i < step ? (
+                // completed
+                <View style={[styles.stepCircle, { backgroundColor: theme.stepActive }]}>
                   <Ionicons name="checkmark" size={13} color={theme.onPrimary} />
-                ) : (
+                </View>
+              ) : i === step ? (
+                // current — outlined, number in Primary/600
+                <View
+                  style={[
+                    styles.stepCircle,
+                    styles.stepCircleCurrent,
+                    { backgroundColor: theme.background, borderColor: theme.stepActive },
+                  ]}>
+                  <Text style={[styles.stepNum, { color: theme.stepActive }]}>{i + 1}</Text>
+                </View>
+              ) : (
+                // upcoming
+                <View style={[styles.stepCircle, { backgroundColor: theme.stepTrack }]}>
                   <Text style={[styles.stepNum, { color: theme.onPrimary }]}>{i + 1}</Text>
-                )}
-              </View>
+                </View>
+              )}
               <View
-                style={[styles.stepLine, { backgroundColor: rightActive ? theme.stepActive : theme.stepTrack }]}
+                style={[styles.stepLine, { backgroundColor: rightPrimary ? theme.stepActive : theme.stepTrack }]}
               />
             </View>
           );
@@ -649,6 +659,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 4, // 4px between the circle and each line
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  stepCircleCurrent: {
+    borderWidth: 2, // current step — outlined, no fill (border set inline: Primary/600)
   },
   stepNum: {
     fontFamily: FontFamily.bodyBold, // Caption / Bold 12/18, white — disabled-step number
