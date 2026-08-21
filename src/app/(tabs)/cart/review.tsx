@@ -455,7 +455,7 @@ export default function ReviewOrderScreen() {
 
             <SectionDivider style={styles.divider} />
 
-            <Text style={[styles.header, styles.section, { color: theme.text }]}>Shipping details</Text>
+            <Text style={[styles.header, styles.section, { color: theme.text }]}>Shipping</Text>
             <View style={styles.fields}>
               <Field
                 label="Address 1"
