@@ -664,9 +664,11 @@ const styles = StyleSheet.create({
     borderWidth: 2, // current step — outlined, no fill (border set inline: Primary/600)
   },
   stepNum: {
-    fontFamily: FontFamily.bodyBold, // Caption / Bold 12/18, white — disabled-step number
+    fontFamily: FontFamily.bodyBold, // Caption / Bold 12 — step number in a circle.
     fontSize: 12,
-    lineHeight: 18,
+    // No explicit lineHeight: lets the glyph self-center in the 20px circle (an 18px
+    // line-box would sit the digit ~1px low on iOS).
+    textAlign: 'center',
   },
   content: {
     paddingTop: 24, // 24 below the step track
