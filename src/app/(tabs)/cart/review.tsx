@@ -395,15 +395,15 @@ export default function ReviewOrderScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Step indicator, pinned 24 below the nav bar. */}
-      <View style={styles.stepperWrap}>
-        <Stepper step={step} onPress={onStepPress} />
-      </View>
-
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}>
+        {/* Step indicator — scrolls up with the content. */}
+        <View style={styles.stepperWrap}>
+          <Stepper step={step} onPress={onStepPress} />
+        </View>
+
         {/* ── Step 1: Contact ─────────────────────────────────────────────── */}
         {step === 0 ? (
           <>
@@ -606,13 +606,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  // Step indicator — pinned above the scrolling content, 24 below the nav bar.
+  // Step indicator — scrolls with the content; 24 gap to the first section below.
   stepperWrap: {
-    paddingTop: 24,
+    marginBottom: 24,
   },
   stepTitles: {
-    flexDirection: 'row',
-    paddingHorizontal: 16, // 16 leading / trailing
+    flexDirection: 'row', // 16 leading/trailing comes from the content padding
   },
   stepCell: {
     flex: 1, // three equal columns; title centered under its future circle
@@ -631,7 +630,6 @@ const styles = StyleSheet.create({
   },
   stepTrack: {
     marginTop: 10, // 10 below the titles
-    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
   },
