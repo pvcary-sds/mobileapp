@@ -82,6 +82,7 @@ export default function PaymentStep() {
   // Prefer the server pricing (with tax); fall back to local subtotal − coupon.
   const dSubtotal = c.pricing ? Number(c.pricing.subtotal) : subtotal;
   const dDiscount = c.pricing?.discount ? Number(c.pricing.discount.amount) : discount;
+  const dShipping = c.pricing ? Number(c.pricing.shipping) : 0; // free to the customer
   const dTax = c.pricing ? Number(c.pricing.tax) : null;
   const dTotal = c.pricing ? Number(c.pricing.total) : Math.max(0, subtotal - discount);
   const hasCoupon = dDiscount > 0;
@@ -166,6 +167,11 @@ export default function PaymentStep() {
             </Text>
           </View>
         ) : null}
+
+        <View style={styles.ledgerRow}>
+          <Text style={[styles.ledgerLabel, { color: theme.textTertiary }]}>Shipping</Text>
+          <Text style={[styles.ledgerAmount, { color: theme.text }]}>{formatUSD(dShipping)}</Text>
+        </View>
 
         <View style={styles.ledgerRow}>
           <Text style={[styles.ledgerLabel, { color: theme.textTertiary }]}>Tax</Text>
