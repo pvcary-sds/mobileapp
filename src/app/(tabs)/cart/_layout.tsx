@@ -9,7 +9,9 @@ export default function CartStackLayout() {
   return (
     <Stack>
       <Stack.Screen name="index" options={{ title: 'Cart' }} />
-      <Stack.Screen name="review" options={{ title: 'Checkout' }} />
+      {/* The checkout wizard draws its own header (the step indicator), so hide the
+          cart stack's native header for it. */}
+      <Stack.Screen name="checkout" options={{ headerShown: false }} />
     </Stack>
   );
 }

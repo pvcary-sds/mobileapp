@@ -505,7 +505,7 @@ export default function CartScreen() {
         {/* Checkout — Primary/500, 16 leading/trailing, 24 above and below. */}
         <Pressable
           style={[styles.checkoutButton, { backgroundColor: theme.primary }]}
-          onPress={() => router.push('/cart/review')}>
+          onPress={() => router.push('/cart/checkout/contact')}>
           <Text style={[styles.checkoutLabel, { color: theme.onPrimary }]}>Checkout</Text>
         </Pressable>
       </ScrollView>
