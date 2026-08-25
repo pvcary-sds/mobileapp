@@ -5,6 +5,7 @@ import { SvgXml } from 'react-native-svg';
 import { router } from 'expo-router';
 
 import { SectionDivider } from '@/components/section-divider';
+import { CheckoutStepper } from '@/components/checkout-stepper';
 import { Field, SelectField } from '@/components/checkout-fields';
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -42,6 +43,7 @@ export default function ContactStep() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}>
+        <CheckoutStepper step={0} />
         <View style={[styles.fields, styles.fieldsTop]}>
           <Field
             label="Full name"

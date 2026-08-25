@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
 
+import { CheckoutStepper } from '@/components/checkout-stepper';
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useCheckout } from '@/lib/checkout-context';
@@ -21,6 +22,7 @@ export default function ConfirmationStep() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}>
+        <CheckoutStepper step={2} />
         <View style={[styles.badge, { backgroundColor: theme.stepActive }]}>
           <Ionicons name="checkmark" size={40} color={theme.onPrimary} />
         </View>
@@ -50,7 +52,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    paddingTop: 32,
+    paddingTop: 24, // stepper sits 24 below the nav bar
     paddingHorizontal: 16,
     alignItems: 'center',
   },

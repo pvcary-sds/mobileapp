@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 
 import { previewCheckout } from '@/api/checkout';
+import { CheckoutStepper } from '@/components/checkout-stepper';
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { cartStore, useAppliedCoupon, useCartItems } from '@/lib/cart-store';
@@ -127,6 +128,7 @@ export default function PaymentStep() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}>
+        <CheckoutStepper step={1} />
         <Text style={[styles.header, { color: theme.text }]}>Order details</Text>
 
         {/* Ship-to recap — who / where (those fields live on the previous step). */}
