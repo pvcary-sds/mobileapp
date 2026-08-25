@@ -179,6 +179,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   stepperPad: {
+    paddingTop: 24, // 24 below the nav row (back button / title)
     paddingHorizontal: 16, // 16 leading / trailing for the titles + track
   },
   stepTitles: {
