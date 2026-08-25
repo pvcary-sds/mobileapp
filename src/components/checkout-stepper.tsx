@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Fragment, useEffect, useRef } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
+
+import { useNavigation } from 'expo-router';
 
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -25,20 +27,25 @@ function StepLine({
   active,
   flex = 1,
   animateOnMount = false,
+  play = true,
 }: {
   active: boolean;
   flex?: number;
   animateOnMount?: boolean;
+  /** For an `animateOnMount` line, hold the fill until this flips true (the page
+   *  has finished sliding in), so the grow-in is actually seen. */
+  play?: boolean;
 }) {
   const theme = useTheme();
   const fill = useRef(new Animated.Value(animateOnMount ? 0 : active ? 1 : 0)).current;
   useEffect(() => {
+    if (animateOnMount && !play) return; // wait for the page to settle
     Animated.timing(fill, {
       toValue: active ? 1 : 0,
       duration: 280,
       useNativeDriver: false, // animating width — not supported on the native driver
     }).start();
-  }, [active, fill]);
+  }, [active, fill, animateOnMount, play]);
   return (
     <View style={[styles.stepLine, { flex, backgroundColor: theme.stepTrack }]}>
       <Animated.View
@@ -56,6 +63,24 @@ function StepLine({
 
 export function CheckoutStepper({ step }: { step: number }) {
   const theme = useTheme();
+  const navigation = useNavigation();
+  // Play the incoming connector's fill once the page has slid in — driven by the
+  // navigator's transitionEnd, with a fallback in case it doesn't fire.
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    // `transitionEnd` is a native-stack event, not in the generic navigation type.
+    const nav = navigation as unknown as {
+      addListener: (e: string, cb: (ev: { data?: { closing?: boolean } }) => void) => () => void;
+    };
+    const sub = nav.addListener('transitionEnd', (e) => {
+      if (!e?.data?.closing) setSettled(true);
+    });
+    const fallback = setTimeout(() => setSettled(true), 600);
+    return () => {
+      sub();
+      clearTimeout(fallback);
+    };
+  }, [navigation]);
   return (
     <View style={styles.wrap}>
       <View style={styles.titles}>
@@ -96,8 +121,13 @@ export function CheckoutStepper({ step }: { step: number }) {
               </View>
             )}
             {i < CHECKOUT_STEPS.length - 1 ? (
-              // The connector leading INTO the current step fills in on mount.
-              <StepLine active={i < step} flex={2} animateOnMount={i === step - 1} />
+              // The connector leading INTO the current step fills in once the page settles.
+              <StepLine
+                active={i < step}
+                flex={2}
+                animateOnMount={i === step - 1}
+                play={settled}
+              />
             ) : null}
           </Fragment>
         ))}
