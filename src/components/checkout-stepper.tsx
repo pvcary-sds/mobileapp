@@ -18,10 +18,20 @@ import { CHECKOUT_STEPS } from '@/lib/checkout-context';
  */
 
 /** One 3px line — a leading/trailing stub (`flex` 1) or a connector between two
- *  circles (`flex` 2). Gray base with a Primary/600 fill that animates 0↔100%. */
-function StepLine({ active, flex = 1 }: { active: boolean; flex?: number }) {
+ *  circles (`flex` 2). Gray base with a Primary/600 fill that animates 0↔100%.
+ *  `animateOnMount` starts the fill empty so it grows in when the page mounts — used
+ *  for the connector leading into the current step, so it fills as you arrive. */
+function StepLine({
+  active,
+  flex = 1,
+  animateOnMount = false,
+}: {
+  active: boolean;
+  flex?: number;
+  animateOnMount?: boolean;
+}) {
   const theme = useTheme();
-  const fill = useRef(new Animated.Value(active ? 1 : 0)).current;
+  const fill = useRef(new Animated.Value(animateOnMount ? 0 : active ? 1 : 0)).current;
   useEffect(() => {
     Animated.timing(fill, {
       toValue: active ? 1 : 0,
@@ -85,7 +95,10 @@ export function CheckoutStepper({ step }: { step: number }) {
                 <Text style={[styles.num, { color: theme.onPrimary }]}>{i + 1}</Text>
               </View>
             )}
-            {i < CHECKOUT_STEPS.length - 1 ? <StepLine active={i < step} flex={2} /> : null}
+            {i < CHECKOUT_STEPS.length - 1 ? (
+              // The connector leading INTO the current step fills in on mount.
+              <StepLine active={i < step} flex={2} animateOnMount={i === step - 1} />
+            ) : null}
           </Fragment>
         ))}
         {/* Trailing stub — never filled. */}
