@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
@@ -7,6 +8,7 @@ import { router } from 'expo-router';
 import { SectionDivider } from '@/components/section-divider';
 import { CheckoutStepper } from '@/components/checkout-stepper';
 import { Field, SelectField } from '@/components/checkout-fields';
+import { StatePicker } from '@/components/state-picker';
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useCheckout } from '@/lib/checkout-context';
@@ -24,6 +26,7 @@ export default function ContactStep() {
   const insets = useSafeAreaInsets();
   const c = useCheckout();
   const items = useCartItems();
+  const [statePickerOpen, setStatePickerOpen] = useState(false);
 
   const handleContinue = () => {
     if (items.length === 0) {
@@ -106,14 +109,12 @@ export default function ContactStep() {
             autoCapitalize="words"
           />
           <View style={styles.row}>
-            <Field
+            <SelectField
               label="State"
-              placeholder="IL"
               value={c.stateCode}
-              onChangeText={c.setStateCode}
-              autoCapitalize="characters"
+              placeholder="State"
+              onPress={() => setStatePickerOpen(true)}
               style={styles.rowItem}
-              chevron
             />
             <Field
               label="Zip"
@@ -136,6 +137,13 @@ export default function ContactStep() {
           <Text style={[styles.continueLabel, { color: theme.onPrimary }]}>Continue</Text>
         </Pressable>
       </ScrollView>
+
+      <StatePicker
+        visible={statePickerOpen}
+        value={c.stateCode}
+        onSelect={c.setStateCode}
+        onClose={() => setStatePickerOpen(false)}
+      />
     </View>
   );
 }

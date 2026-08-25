@@ -88,24 +88,31 @@ export function Field({
   );
 }
 
-/** A labelled select field — looks like an input, shows the value + a chevron. */
+/** A labelled select field — looks like an input, shows the value (or a Gray/500
+ *  placeholder when empty) + a chevron, and opens a picker on tap. */
 export function SelectField({
   label,
   value,
+  placeholder,
   onPress,
   required = true,
+  style,
 }: {
   label: string;
   value: string;
+  placeholder?: string;
   onPress: () => void;
   required?: boolean;
+  style?: StyleProp<ViewStyle>;
 }) {
   const theme = useTheme();
   return (
-    <View>
+    <View style={style}>
       <FieldLabel label={label} required={required} />
       <Pressable style={[styles.input, styles.select, { borderColor: theme.border }]} onPress={onPress}>
-        <Text style={[styles.selectValue, { color: theme.text }]}>{value}</Text>
+        <Text style={[styles.selectValue, { color: value ? theme.text : theme.textSecondary }]}>
+          {value || placeholder}
+        </Text>
         <Ionicons name="chevron-down" size={20} color={theme.textSecondary} />
       </Pressable>
     </View>
