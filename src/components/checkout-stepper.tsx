@@ -36,12 +36,9 @@ function StepLine({
     Animated.timing(fill, {
       toValue: active ? 1 : 0,
       duration: 280,
-      // Wait out the page-slide transition so the fill is actually seen growing in,
-      // not completed while the page is still sliding on.
-      delay: animateOnMount ? 360 : 0,
       useNativeDriver: false, // animating width — not supported on the native driver
     }).start();
-  }, [active, fill, animateOnMount]);
+  }, [active, fill]);
   return (
     <View style={[styles.stepLine, { flex, backgroundColor: theme.stepTrack }]}>
       <Animated.View
