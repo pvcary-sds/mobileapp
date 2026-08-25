@@ -38,6 +38,11 @@ add new ones here rather than leaving them only in chat/session notes.
       the API's API.md). Add an email field to the checkout contact step, pass it
       to `POST /v1/checkout`, and **persist it locally** so `GET /v1/coupons?email=`
       can hide already-used codes.
+- [ ] **Wire the checkout legal links.** On the Payment step
+      (`src/app/(tabs)/cart/checkout/payment.tsx`) the "By ordering, I agree…"
+      line has underlined **Terms of Use** and **Privacy Policy** spans that don't
+      do anything yet. Give each an `onPress` (open the doc — in-app screen or the
+      hosted URL via `Linking`).
 - [ ] **Cart persistence.** The cart is in-memory (`src/lib/cart-store.ts`) and
       resets on app restart — persist it via AsyncStorage.
 - [ ] **Collapse redundant `CartItem` fields.** `title` / `size` / `price` /

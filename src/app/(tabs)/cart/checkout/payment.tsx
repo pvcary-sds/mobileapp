@@ -183,9 +183,17 @@ export default function PaymentStep() {
           {paying ? (
             <ActivityIndicator color={theme.onPrimary} />
           ) : (
-            <Text style={[styles.continueLabel, { color: theme.onPrimary }]}>Continue to payment</Text>
+            <Text style={[styles.continueLabel, { color: theme.onPrimary }]}>
+              Continue with Credit Card
+            </Text>
           )}
         </Pressable>
+
+        {/* Legal — 12 below the button; underlined spans are tappable (TODO: wire). */}
+        <Text style={[styles.terms, { color: theme.textSecondary }]}>
+          By ordering, I agree to be bound by the <Text style={styles.termsLink}>Terms of Use</Text>{' '}
+          and <Text style={styles.termsLink}>Privacy Policy</Text>
+        </Text>
       </ScrollView>
     </View>
   );
@@ -273,5 +281,15 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bodySemiBold,
     fontSize: 16,
     lineHeight: 24,
+  },
+  terms: {
+    marginTop: 12, // 12 below the button
+    textAlign: 'center',
+    fontFamily: FontFamily.body, // Body 2 / Regular 14/20, Gray/500
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  termsLink: {
+    textDecorationLine: 'underline', // inherits the Gray/500 color
   },
 });
