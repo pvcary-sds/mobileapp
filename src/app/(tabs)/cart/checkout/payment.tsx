@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
@@ -176,8 +185,25 @@ export default function PaymentStep() {
           <Text style={[styles.grandAmount, { color: theme.text }]}>{formatUSD(dTotal)}</Text>
         </View>
 
+        {/* Apple Pay — iPhone only, 12 above the card button. Visual for now; the real
+            Platform Pay flow is a TODO (needs an Apple Merchant ID + new build). */}
+        {Platform.OS === 'ios' ? (
+          <Pressable
+            style={[styles.applePay, { backgroundColor: theme.text }]}
+            onPress={() => {
+              // TODO: Apple Pay via @stripe/stripe-react-native Platform Pay.
+            }}>
+            <Text style={[styles.applePayWith, { color: theme.onPrimary }]}>Continue with</Text>
+            <Text style={[styles.applePayMark, { color: theme.onPrimary }]}>{''} Pay</Text>
+          </Pressable>
+        ) : null}
+
         <Pressable
-          style={[styles.continue, { backgroundColor: theme.primary }]}
+          style={[
+            styles.continue,
+            Platform.OS === 'ios' && styles.continueTight,
+            { backgroundColor: theme.primary },
+          ]}
           disabled={paying}
           onPress={handlePay}>
           {paying ? (
@@ -270,12 +296,35 @@ const styles = StyleSheet.create({
     fontSize: 20,
     lineHeight: 28,
   },
+  // Apple Pay button (iOS) — gray/black fill, "Continue with  Pay".
+  applePay: {
+    marginTop: 24,
+    height: 48,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  applePayWith: {
+    fontFamily: FontFamily.bodySemiBold, // Body 1 / SemiBold 16/24, white
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  applePayMark: {
+    marginLeft: 8, // 8 to the right of "with"
+    // No fontFamily → iOS system font (SF Pro), which renders the  logo; Semibold 20.
+    fontWeight: '600',
+    fontSize: 20,
+  },
   continue: {
     marginTop: 24,
     height: 48,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  continueTight: {
+    marginTop: 12, // sits 12 below the Apple Pay button
   },
   continueLabel: {
     fontFamily: FontFamily.bodySemiBold,
