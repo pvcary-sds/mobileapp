@@ -68,11 +68,11 @@ function StepLine({
 export function CheckoutStepper({ step }: { step: number }) {
   const theme = useTheme();
   const navigation = useNavigation();
-  // Play the incoming connector's fill once the page has slid in.
+  // On arrival the previous step is still shown as current. Then, in order:
+  //   1. `settled` (page slid in) → the previous step checks + the connector fills.
+  //   2. the fill completes → `revealed` → the new step becomes current.
   const [settled, setSettled] = useState(false);
-  // Circles/titles reflect `shownStep`, which starts one behind and advances to
-  // `step` only after the connector fill finishes.
-  const [shownStep, setShownStep] = useState(step > 0 ? step - 1 : step);
+  const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
     // `transitionEnd` is a native-stack event, not in the generic navigation type.
@@ -89,6 +89,13 @@ export function CheckoutStepper({ step }: { step: number }) {
     };
   }, [navigation]);
 
+  // How many leading steps show a check, and which step (if any) is the outlined
+  // current one. Before `settled`: prev step still current. After `settled` but
+  // before `revealed`: prev step checked, none current (the line is filling). After
+  // `revealed`: the new step is current.
+  const checkedCount = step === 0 ? 0 : settled ? step : step - 1;
+  const currentIdx = step === 0 ? 0 : revealed ? step : settled ? -1 : step - 1;
+
   return (
     <View style={styles.wrap}>
       <View style={styles.titles}>
@@ -96,8 +103,8 @@ export function CheckoutStepper({ step }: { step: number }) {
           <View key={label} style={styles.cell}>
             <Text
               style={[
-                i === shownStep ? styles.titleCurrent : styles.title,
-                { color: i > shownStep ? theme.textSecondary : theme.text },
+                i === currentIdx ? styles.titleCurrent : styles.title,
+                { color: i < checkedCount || i === currentIdx ? theme.text : theme.textSecondary },
               ]}>
               {label}
             </Text>
@@ -110,11 +117,11 @@ export function CheckoutStepper({ step }: { step: number }) {
         <StepLine active flex={1} />
         {CHECKOUT_STEPS.map((label, i) => (
           <Fragment key={label}>
-            {i < shownStep ? (
+            {i < checkedCount ? (
               <View style={[styles.circle, { backgroundColor: theme.stepActive }]}>
                 <Ionicons name="checkmark" size={13} color={theme.onPrimary} />
               </View>
-            ) : i === shownStep ? (
+            ) : i === currentIdx ? (
               <View
                 style={[
                   styles.circle,
@@ -130,17 +137,18 @@ export function CheckoutStepper({ step }: { step: number }) {
             )}
             {i < CHECKOUT_STEPS.length - 1 ? (
               i === step - 1 ? (
-                // The connector INTO the current step: fill it in, then advance the
-                // circles/titles (setShownStep) so they change right after the animation.
+                // Connector INTO the current step: fills once the page settles (the
+                // prev step has just checked); on completion, reveal the new current.
                 <StepLine
                   active
                   flex={2}
                   animateOnMount
                   play={settled}
-                  onFilled={() => setShownStep(step)}
+                  onFilled={() => setRevealed(true)}
                 />
               ) : (
-                <StepLine active={i < shownStep} flex={2} />
+                // Connectors before the target are already full; those after are gray.
+                <StepLine active={i < step - 1} flex={2} />
               )
             ) : null}
           </Fragment>
