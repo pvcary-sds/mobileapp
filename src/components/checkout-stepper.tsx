@@ -9,32 +9,33 @@ import { useTheme } from '@/hooks/use-theme';
 import { CHECKOUT_STEPS } from '@/lib/checkout-context';
 
 /**
- * The checkout step indicator (Contact · Payment · Confirmation). Rendered at the
- * top of each step screen's scroll content, so it scrolls with the page. Three
- * states per step:
- *   - **completed** (before current): Primary/600 circle + white check; title Body2/Medium.
+ * The checkout step indicator (Contact · Payment · Confirmation), at the top of
+ * each step screen's scroll content. On arriving at a step, the connector leading
+ * into it grows in (once the page has slid on), and only when that fill FINISHES
+ * do the circle + title advance — so the line reaches the next circle, then it
+ * lights up. Three states per step:
+ *   - **completed**: Primary/600 circle + white check; title Body2/Medium.
  *   - **current**: outlined circle (white fill, 2px Primary/600 border) + Primary/600
  *     number; title Body2/Bold.
  *   - **upcoming**: Gray/300 circle + white number; title Body2/Medium, Gray/500.
- * The Primary/600 fill runs up to the current circle; everything to its right is gray.
  */
 
 /** One 3px line — a leading/trailing stub (`flex` 1) or a connector between two
  *  circles (`flex` 2). Gray base with a Primary/600 fill that animates 0↔100%.
- *  `animateOnMount` starts the fill empty so it grows in when the page mounts — used
- *  for the connector leading into the current step, so it fills as you arrive. */
+ *  `animateOnMount` starts it empty (held until `play`) and calls `onFilled` when the
+ *  grow-in completes. */
 function StepLine({
   active,
   flex = 1,
   animateOnMount = false,
   play = true,
+  onFilled,
 }: {
   active: boolean;
   flex?: number;
   animateOnMount?: boolean;
-  /** For an `animateOnMount` line, hold the fill until this flips true (the page
-   *  has finished sliding in), so the grow-in is actually seen. */
   play?: boolean;
+  onFilled?: () => void;
 }) {
   const theme = useTheme();
   const fill = useRef(new Animated.Value(animateOnMount ? 0 : active ? 1 : 0)).current;
@@ -44,7 +45,10 @@ function StepLine({
       toValue: active ? 1 : 0,
       duration: 280,
       useNativeDriver: false, // animating width — not supported on the native driver
-    }).start();
+    }).start(({ finished }) => {
+      if (finished && animateOnMount) onFilled?.();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, fill, animateOnMount, play]);
   return (
     <View style={[styles.stepLine, { flex, backgroundColor: theme.stepTrack }]}>
@@ -64,9 +68,12 @@ function StepLine({
 export function CheckoutStepper({ step }: { step: number }) {
   const theme = useTheme();
   const navigation = useNavigation();
-  // Play the incoming connector's fill once the page has slid in — driven by the
-  // navigator's transitionEnd, with a fallback in case it doesn't fire.
+  // Play the incoming connector's fill once the page has slid in.
   const [settled, setSettled] = useState(false);
+  // Circles/titles reflect `shownStep`, which starts one behind and advances to
+  // `step` only after the connector fill finishes.
+  const [shownStep, setShownStep] = useState(step > 0 ? step - 1 : step);
+
   useEffect(() => {
     // `transitionEnd` is a native-stack event, not in the generic navigation type.
     const nav = navigation as unknown as {
@@ -81,6 +88,7 @@ export function CheckoutStepper({ step }: { step: number }) {
       clearTimeout(fallback);
     };
   }, [navigation]);
+
   return (
     <View style={styles.wrap}>
       <View style={styles.titles}>
@@ -88,8 +96,8 @@ export function CheckoutStepper({ step }: { step: number }) {
           <View key={label} style={styles.cell}>
             <Text
               style={[
-                i === step ? styles.titleCurrent : styles.title,
-                { color: i > step ? theme.textSecondary : theme.text },
+                i === shownStep ? styles.titleCurrent : styles.title,
+                { color: i > shownStep ? theme.textSecondary : theme.text },
               ]}>
               {label}
             </Text>
@@ -102,11 +110,11 @@ export function CheckoutStepper({ step }: { step: number }) {
         <StepLine active flex={1} />
         {CHECKOUT_STEPS.map((label, i) => (
           <Fragment key={label}>
-            {i < step ? (
+            {i < shownStep ? (
               <View style={[styles.circle, { backgroundColor: theme.stepActive }]}>
                 <Ionicons name="checkmark" size={13} color={theme.onPrimary} />
               </View>
-            ) : i === step ? (
+            ) : i === shownStep ? (
               <View
                 style={[
                   styles.circle,
@@ -121,13 +129,19 @@ export function CheckoutStepper({ step }: { step: number }) {
               </View>
             )}
             {i < CHECKOUT_STEPS.length - 1 ? (
-              // The connector leading INTO the current step fills in once the page settles.
-              <StepLine
-                active={i < step}
-                flex={2}
-                animateOnMount={i === step - 1}
-                play={settled}
-              />
+              i === step - 1 ? (
+                // The connector INTO the current step: fill it in, then advance the
+                // circles/titles (setShownStep) so they change right after the animation.
+                <StepLine
+                  active
+                  flex={2}
+                  animateOnMount
+                  play={settled}
+                  onFilled={() => setShownStep(step)}
+                />
+              ) : (
+                <StepLine active={i < shownStep} flex={2} />
+              )
             ) : null}
           </Fragment>
         ))}
