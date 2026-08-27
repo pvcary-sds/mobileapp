@@ -38,6 +38,23 @@ add new ones here rather than leaving them only in chat/session notes.
       the API's API.md). Add an email field to the checkout contact step, pass it
       to `POST /v1/checkout`, and **persist it locally** so `GET /v1/coupons?email=`
       can hide already-used codes.
+- [ ] **Wire the checkout legal links.** On the Payment step
+      (`src/app/(tabs)/cart/checkout/payment.tsx`) the "By ordering, I agree…"
+      line has underlined **Terms of Use** and **Privacy Policy** spans that don't
+      do anything yet. Give each an `onPress` (open the doc — in-app screen or the
+      hosted URL via `Linking`).
+- [ ] **"Track your order" screen.** The API now stores each placed order and keeps
+      it fresh from Prodigi webhooks (`pvcary-sds/api` — the `orders` table +
+      `POST /v1/webhooks/prodigi`). Build a screen that polls `GET /v1/orders/:id`
+      and shows `stage`/`progress`, the shipment **`dispatchDate`** + carrier +
+      **tracking** link, and per-item status. Reachable from the Confirmation step
+      (thread the order id through) and, later, an order-history list. **Note:**
+      read-by-id has no auth yet, and there's no "my orders" list until the API gets
+      a user model — so entry is via the confirmation for now.
+- [ ] **Show the order date on Confirmation.** `runCheckout` only returns the
+      `orderId` today; thread the order's `created` through so Confirmation can show
+      when it was placed. (No delivery estimate is available at placement — Prodigi
+      returns none; those dates arrive later via the tracking screen above.)
 - [ ] **Cart persistence.** The cart is in-memory (`src/lib/cart-store.ts`) and
       resets on app restart — persist it via AsyncStorage.
 - [ ] **Collapse redundant `CartItem` fields.** `title` / `size` / `price` /
