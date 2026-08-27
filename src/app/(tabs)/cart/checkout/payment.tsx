@@ -106,6 +106,7 @@ export default function PaymentStep() {
       switch (outcome.status) {
         case 'ordered':
           c.setOrderId(outcome.orderId);
+          c.setOrderTotal(outcome.total);
           cartStore.clear();
           router.replace('/cart/checkout/confirmation');
           break;

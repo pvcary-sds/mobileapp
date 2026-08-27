@@ -53,6 +53,9 @@ type CheckoutContextValue = {
   setTaxLoading: (v: boolean) => void;
   orderId: string;
   setOrderId: (v: string) => void;
+  /** The amount actually charged (from the checkout), for the Confirmation screen. */
+  orderTotal: string;
+  setOrderTotal: (v: string) => void;
   // Derived
   /** All required contact + shipping fields valid (address complete enough for tax). */
   addressReady: boolean;
@@ -77,6 +80,7 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
   const [pricing, setPricing] = useState<CheckoutPricing | null>(null);
   const [taxLoading, setTaxLoading] = useState(false);
   const [orderId, setOrderId] = useState('');
+  const [orderTotal, setOrderTotal] = useState('');
 
   const contactError =
     validateName(name) ||
@@ -123,6 +127,8 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
     setTaxLoading,
     orderId,
     setOrderId,
+    orderTotal,
+    setOrderTotal,
     addressReady,
     contactError,
     shipTo,

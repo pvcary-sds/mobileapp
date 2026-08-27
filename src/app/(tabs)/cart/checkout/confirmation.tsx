@@ -1,48 +1,108 @@
-import { Ionicons } from '@expo/vector-icons';
+import { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SvgXml } from 'react-native-svg';
 
 import { router } from 'expo-router';
 
 import { CheckoutStepper } from '@/components/checkout-stepper';
 import { FontFamily } from '@/constants/theme';
+import { ORDER_CONFIRMED_ILLUSTRATION } from '@/constants/illustrations';
 import { useTheme } from '@/hooks/use-theme';
-import { useCheckout } from '@/lib/checkout-context';
+import { formatUSD, useCheckout } from '@/lib/checkout-context';
 
-/** Checkout step 3 — Confirmation (placeholder). Shown after the order is placed;
- *  Done exits the whole checkout back to the cart. */
+/** One table row: a label on the left, a value block on the right. */
+function Row({ label, children }: { label: string; children: ReactNode }) {
+  const theme = useTheme();
+  return (
+    <View style={styles.row}>
+      <Text style={[styles.rowLabel, { color: theme.text }]}>{label}</Text>
+      <View style={styles.rowValue}>{children}</View>
+    </View>
+  );
+}
+
+/** Checkout step 3 — Confirmation. Shown after the order is placed; the buttons
+ *  exit checkout and land on the Orders / Home tabs. */
 export default function ConfirmationStep() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const c = useCheckout();
-  const firstName = c.name.trim().split(' ')[0];
+
+  const paid = c.orderTotal || c.pricing?.total || '';
+  const stateCode = c.stateCode.trim().toUpperCase();
+
+  // Reset the checkout stack, then switch to the target tab, so re-opening Cart
+  // shows the (now empty) cart rather than this confirmation.
+  const leaveTo = (href: '/orders' | '/') => {
+    router.dismissTo('/cart');
+    router.navigate(href);
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <CheckoutStepper step={2} />
-        <View style={[styles.badge, { backgroundColor: theme.stepActive }]}>
-          <Ionicons name="checkmark" size={40} color={theme.onPrimary} />
-        </View>
-        <Text style={[styles.title, { color: theme.text }]}>Order placed</Text>
-        <Text style={[styles.body, { color: theme.textSecondary }]}>
-          Thanks{firstName ? `, ${firstName}` : ''}! Your order is confirmed and heading to print.
-        </Text>
-        {c.orderId ? (
-          <Text style={[styles.ref, { color: theme.text }]}>Confirmation {c.orderId}</Text>
-        ) : null}
-        <Text style={[styles.body, { color: theme.textSecondary }]}>
-          We’ll email your receipt and shipping updates{c.email.trim() ? ` to ${c.email.trim()}` : ''}.
+
+        <SvgXml
+          xml={ORDER_CONFIRMED_ILLUSTRATION}
+          width={136}
+          height={136}
+          style={styles.illustration}
+        />
+
+        <Text style={[styles.title, { color: theme.text }]}>Order Confirmed</Text>
+        <Text style={[styles.desc, { color: theme.textTertiary }]}>
+          Your order has been successfully placed. We’ll send you an email once it has been shipped.
         </Text>
 
-        <Pressable
-          style={[styles.done, { backgroundColor: theme.primary }]}
-          onPress={() => router.dismissTo('/cart')}>
-          <Text style={[styles.doneLabel, { color: theme.onPrimary }]}>Done</Text>
-        </Pressable>
+        {/* Details table — full-width rows separated by hairline dividers. */}
+        <View style={styles.table}>
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+          <Row label="Order number">
+            <Text style={[styles.rowValueText, { color: theme.text }]}>{c.orderId || '—'}</Text>
+          </Row>
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+          <Row label="Shipping details">
+            <View style={styles.shipTo}>
+              <Text style={[styles.shipLine, { color: theme.text }]}>{c.line1.trim()}</Text>
+              <Text style={[styles.shipLine, { color: theme.text }]}>
+                {c.city.trim()}, {stateCode} {c.zip.trim()}
+              </Text>
+              <Text style={[styles.shipLine, { color: theme.text }]}>United States</Text>
+            </View>
+          </Row>
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+          <Row label="Paid">
+            <Text style={[styles.rowValueText, { color: theme.text }]}>
+              {paid ? formatUSD(Number(paid)) : '—'}
+            </Text>
+          </Row>
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+          <Row label="Email">
+            <Text style={[styles.rowValueText, { color: theme.text }]}>{c.email.trim()}</Text>
+          </Row>
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+        </View>
       </ScrollView>
+
+      {/* Actions, pinned 24 above the bottom safe area. */}
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 24 }]}>
+        <Pressable
+          style={[styles.btn, { backgroundColor: theme.infoBg, borderColor: theme.border }]}
+          onPress={() => leaveTo('/orders')}>
+          <Text style={[styles.btnLabel, { color: theme.infoFg }]}>View order details</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.btn, styles.btnSecondary, { backgroundColor: theme.background, borderColor: theme.border }]}
+          onPress={() => leaveTo('/')}>
+          <Text style={[styles.btnLabel, { color: theme.text }]}>Return home</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -52,47 +112,80 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    paddingTop: 24, // stepper sits 24 below the nav bar
+    paddingTop: 24, // stepper 24 below the nav bar
     paddingHorizontal: 16,
-    alignItems: 'center',
   },
-  badge: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
+  illustration: {
+    alignSelf: 'center',
+    marginTop: 8, // 24 (stepper marginBottom) + 8 = 32 below the stepper
   },
   title: {
-    fontFamily: FontFamily.title,
-    fontSize: 24,
-    lineHeight: 32,
-    marginBottom: 8,
-  },
-  body: {
-    fontFamily: FontFamily.body,
-    fontSize: 16,
-    lineHeight: 24,
+    marginTop: 24, // 24 below the image
     textAlign: 'center',
-    marginTop: 8,
+    fontFamily: FontFamily.title, // Huge / SemiBold 28/36
+    fontSize: 28,
+    lineHeight: 36,
   },
-  ref: {
-    fontFamily: FontFamily.bodySemiBold,
+  desc: {
+    marginTop: 4, // 4 below the title
+    textAlign: 'center',
+    fontFamily: FontFamily.body, // Body 1 / Regular 16/24, Gray/700
     fontSize: 16,
     lineHeight: 24,
-    marginTop: 12,
   },
-  done: {
-    alignSelf: 'stretch',
-    marginTop: 24,
+  table: {
+    marginTop: 24, // 24 below the description
+  },
+  divider: {
+    height: 1, // 1px Gray/200
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 16,
+    paddingVertical: 16,
+  },
+  rowLabel: {
+    fontFamily: FontFamily.body, // Body 1 / Regular 16/24, Gray/black
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  rowValue: {
+    flex: 1, // takes the remaining width; value sits at the right
+    alignItems: 'flex-end',
+  },
+  rowValueText: {
+    fontFamily: FontFamily.body, // Body 1 / Regular 16/24
+    fontSize: 16,
+    lineHeight: 24,
+    textAlign: 'right',
+  },
+  shipTo: {
+    alignItems: 'flex-start', // address block is leading-aligned, on the right side
+  },
+  shipLine: {
+    fontFamily: FontFamily.body, // Body 1 / Regular 16/24, leading-aligned
+    fontSize: 16,
+    lineHeight: 24,
+    textAlign: 'left',
+  },
+  footer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  btn: {
     height: 48,
     borderRadius: 8,
+    borderWidth: 1, // Gray/200 stroke
     alignItems: 'center',
     justifyContent: 'center',
   },
-  doneLabel: {
-    fontFamily: FontFamily.bodySemiBold,
+  btnSecondary: {
+    marginTop: 12, // 12 below the top button
+  },
+  btnLabel: {
+    fontFamily: FontFamily.bodySemiBold, // Body 1 / SemiBold 16/24
     fontSize: 16,
     lineHeight: 24,
   },
