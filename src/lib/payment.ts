@@ -36,7 +36,7 @@ export type CheckoutFlowInput = {
 };
 
 export type CheckoutFlowOutcome =
-  | { status: 'ordered'; orderId: string; paymentIntentId: string; total: string }
+  | { status: 'ordered'; orderId: string; paymentIntentId: string; total: string; created: string }
   | { status: 'canceled' } // user dismissed the sheet — nothing charged
   | { status: 'unavailable' } // no Stripe-enabled build, or no publishable key
   | { status: 'payment_error'; message: string } // failed at/before payment — NOT charged
@@ -134,6 +134,7 @@ export async function runCheckout(input: CheckoutFlowInput): Promise<CheckoutFlo
       orderId: order.id ?? '',
       paymentIntentId,
       total: checkout.checkout.total,
+      created: order.created ?? '',
     };
   } catch (err) {
     return {

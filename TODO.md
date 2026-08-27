@@ -35,13 +35,30 @@ add new ones here rather than leaving them only in chat/session notes.
       builder edits (crop/filter/adjust/zoom) so the print matches what the customer
       designed. Export in `runCheckout`'s upload step (`src/lib/payment.ts` →
       `src/api/uploads.ts`); honor the print frame from `docs/customize-builder.md`.
+- [ ] **State picker on the review screen.** The State field is a plain text input
+      with a chevron; make it a real picker (USPS 2-letter list, see
+      `src/lib/checkout-form.ts`).
+- [ ] **Wire the checkout legal links.** On the Payment step
+      (`src/app/(tabs)/cart/checkout/payment.tsx`) the "By ordering, I agree…"
+      line has underlined **Terms of Use** and **Privacy Policy** spans that don't
+      do anything yet. Give each an `onPress` (open the doc — in-app screen or the
+      hosted URL via `Linking`).
+- [ ] **"Track your order" screen.** The API now stores each placed order and keeps
+      it fresh from Prodigi webhooks (`pvcary-sds/api` — the `orders` table +
+      `POST /v1/webhooks/prodigi`). Build a screen that polls `GET /v1/orders/:id`
+      and shows `stage`/`progress`, the shipment **`dispatchDate`** + carrier +
+      **tracking** link, and per-item status. Reachable from the Confirmation step
+      (thread the order id through) and, later, an order-history list. **Note:**
+      read-by-id has no auth yet, and there's no "my orders" list until the API gets
+      a user model — so entry is via the confirmation for now.
+- [ ] **Show the order date on Confirmation.** `runCheckout` only returns the
+      `orderId` today; thread the order's `created` through so Confirmation can show
+      when it was placed. (No delivery estimate is available at placement — Prodigi
+      returns none; those dates arrive later via the tracking screen above.)
 - [ ] **Persist the customer email.** It's now *collected* on the review screen and
       passed to `POST /v1/checkout` (so the 1×-per-customer coupon limit binds), but
       not yet **stored locally** — persist it so `GET /v1/coupons?email=` can hide
       already-used codes across sessions.
-- [ ] **State picker on the review screen.** The State field is a plain text input
-      with a chevron; make it a real picker (USPS 2-letter list, see
-      `src/lib/checkout-form.ts`).
 - [ ] **Cart persistence.** The cart is in-memory (`src/lib/cart-store.ts`) and
       resets on app restart — persist it via AsyncStorage.
 - [ ] **Collapse redundant `CartItem` fields.** `title` / `size` / `price` /

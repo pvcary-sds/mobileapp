@@ -45,6 +45,11 @@ export const Colors = {
   required: Primary[600],
   iconDisabled: Gray[300], // Gray/300 — a disabled icon/control
 
+  // Checkout stepper — the CURRENT step's circle is Primary/600 (white check);
+  // every other circle + the connecting lines are Gray/300.
+  stepActive: Primary[600],
+  stepTrack: Gray[300],
+
   // Active promo "Apply" — Brand/Light Blue 3 fill + Brand/Dark Blue text.
   promoActiveBg: Brand.lightBlue3,
   promoActiveText: Brand.darkBlue,
