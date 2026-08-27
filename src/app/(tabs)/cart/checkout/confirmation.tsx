@@ -1,15 +1,25 @@
-import { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ReactNode, useEffect, useState } from 'react';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
 
 import { router } from 'expo-router';
 
+import { getOrder, type OrderShipment } from '@/api/order';
 import { CheckoutStepper } from '@/components/checkout-stepper';
 import { FontFamily } from '@/constants/theme';
 import { ORDER_CONFIRMED_ILLUSTRATION } from '@/constants/illustrations';
 import { useTheme } from '@/hooks/use-theme';
 import { formatUSD, useCheckout } from '@/lib/checkout-context';
+
+/** ISO → "Aug 27, 2026" (empty string if missing/unparseable). */
+function formatDate(iso: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return isNaN(d.getTime())
+    ? ''
+    : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 /** One table row: a label on the left, a value block on the right. */
 function Row({ label, children }: { label: string; children: ReactNode }) {
@@ -31,9 +41,27 @@ export default function ConfirmationStep() {
 
   const paid = c.orderTotal || c.pricing?.total || '';
   const stateCode = c.stateCode.trim().toUpperCase();
+  const orderDate = formatDate(c.orderCreated);
 
-  // Reset the checkout stack, then switch to the target tab, so re-opening Cart
-  // shows the (now empty) cart rather than this confirmation.
+  // Tracking isn't available at placement (Prodigi hasn't shipped) — fetch the live
+  // order once and show a Tracking row only if a shipment with tracking exists.
+  const [tracking, setTracking] = useState<OrderShipment['tracking']>(null);
+  useEffect(() => {
+    if (!c.orderId) return;
+    const controller = new AbortController();
+    getOrder(c.orderId, controller.signal)
+      .then((res) => {
+        const t = res.order.shipments?.[0]?.tracking ?? null;
+        if (t?.number || t?.url) setTracking(t);
+      })
+      .catch(() => {}); // no tracking yet is the normal case — stay silent
+    return () => controller.abort();
+  }, [c.orderId]);
+
+  const Divider = () => <View style={[styles.divider, { backgroundColor: theme.border }]} />;
+
+  // Reset the checkout stack, then switch tabs, so re-opening Cart shows the (now
+  // empty) cart rather than this confirmation.
   const leaveTo = (href: '/orders' | '/') => {
     router.dismissTo('/cart');
     router.navigate(href);
@@ -41,7 +69,9 @@ export default function ConfirmationStep() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}>
         <CheckoutStepper step={2} />
 
         <SvgXml
@@ -58,51 +88,92 @@ export default function ConfirmationStep() {
 
         {/* Details table — full-width rows separated by hairline dividers. */}
         <View style={styles.table}>
-          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+          <Divider />
 
           <Row label="Order number">
             <Text style={[styles.rowValueText, { color: theme.text }]}>{c.orderId || '—'}</Text>
           </Row>
-          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+          <Divider />
+
+          {orderDate ? (
+            <>
+              <Row label="Order date">
+                <Text style={[styles.rowValueText, { color: theme.text }]}>{orderDate}</Text>
+              </Row>
+              <Divider />
+            </>
+          ) : null}
+
+          {c.orderItems.length > 0 ? (
+            <>
+              <Row label="Items">
+                <View style={styles.block}>
+                  {c.orderItems.map((it, i) => (
+                    <Text key={i} style={[styles.blockLine, { color: theme.text }]}>
+                      {it.quantity} × {it.title} ({it.size})
+                    </Text>
+                  ))}
+                </View>
+              </Row>
+              <Divider />
+            </>
+          ) : null}
 
           <Row label="Shipping details">
-            <View style={styles.shipTo}>
-              <Text style={[styles.shipLine, { color: theme.text }]}>{c.line1.trim()}</Text>
-              <Text style={[styles.shipLine, { color: theme.text }]}>
+            <View style={styles.block}>
+              <Text style={[styles.blockLine, { color: theme.text }]}>{c.line1.trim()}</Text>
+              <Text style={[styles.blockLine, { color: theme.text }]}>
                 {c.city.trim()}, {stateCode} {c.zip.trim()}
               </Text>
-              <Text style={[styles.shipLine, { color: theme.text }]}>United States</Text>
+              <Text style={[styles.blockLine, { color: theme.text }]}>United States</Text>
             </View>
           </Row>
-          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+          <Divider />
+
+          {tracking ? (
+            <>
+              <Row label="Tracking">
+                {tracking.url ? (
+                  <Pressable onPress={() => Linking.openURL(tracking.url!)}>
+                    <Text style={[styles.rowValueText, styles.link, { color: theme.primary }]}>
+                      {tracking.number ?? 'Track shipment'}
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <Text style={[styles.rowValueText, { color: theme.text }]}>{tracking.number}</Text>
+                )}
+              </Row>
+              <Divider />
+            </>
+          ) : null}
 
           <Row label="Paid">
             <Text style={[styles.rowValueText, { color: theme.text }]}>
               {paid ? formatUSD(Number(paid)) : '—'}
             </Text>
           </Row>
-          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+          <Divider />
 
           <Row label="Email">
             <Text style={[styles.rowValueText, { color: theme.text }]}>{c.email.trim()}</Text>
           </Row>
-          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+          <Divider />
+        </View>
+
+        {/* Actions — 24 below the table, 24 above the bottom safe area. */}
+        <View style={styles.actions}>
+          <Pressable
+            style={[styles.btn, { backgroundColor: theme.infoBg, borderColor: theme.border }]}
+            onPress={() => leaveTo('/orders')}>
+            <Text style={[styles.btnLabel, { color: theme.infoFg }]}>View order details</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.btn, styles.btnSecondary, { backgroundColor: theme.background, borderColor: theme.border }]}
+            onPress={() => leaveTo('/')}>
+            <Text style={[styles.btnLabel, { color: theme.text }]}>Return home</Text>
+          </Pressable>
         </View>
       </ScrollView>
-
-      {/* Actions, pinned 24 above the bottom safe area. */}
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 24 }]}>
-        <Pressable
-          style={[styles.btn, { backgroundColor: theme.infoBg, borderColor: theme.border }]}
-          onPress={() => leaveTo('/orders')}>
-          <Text style={[styles.btnLabel, { color: theme.infoFg }]}>View order details</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.btn, styles.btnSecondary, { backgroundColor: theme.background, borderColor: theme.border }]}
-          onPress={() => leaveTo('/')}>
-          <Text style={[styles.btnLabel, { color: theme.text }]}>Return home</Text>
-        </Pressable>
-      </View>
     </View>
   );
 }
@@ -161,18 +232,20 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     textAlign: 'right',
   },
-  shipTo: {
-    alignItems: 'flex-start', // address block is leading-aligned, on the right side
+  link: {
+    textDecorationLine: 'underline',
   },
-  shipLine: {
-    fontFamily: FontFamily.body, // Body 1 / Regular 16/24, leading-aligned
+  block: {
+    alignItems: 'flex-start', // multi-line value: leading-aligned, on the right side
+  },
+  blockLine: {
+    fontFamily: FontFamily.body, // Body 1 / Regular 16/24
     fontSize: 16,
     lineHeight: 24,
     textAlign: 'left',
   },
-  footer: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
+  actions: {
+    marginTop: 24, // 24 below the table
   },
   btn: {
     height: 48,

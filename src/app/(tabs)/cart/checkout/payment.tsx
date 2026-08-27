@@ -107,6 +107,11 @@ export default function PaymentStep() {
         case 'ordered':
           c.setOrderId(outcome.orderId);
           c.setOrderTotal(outcome.total);
+          c.setOrderCreated(outcome.created);
+          // Snapshot the items before the cart is cleared.
+          c.setOrderItems(
+            items.map((i) => ({ title: i.title, size: i.size, quantity: i.quantity })),
+          );
           cartStore.clear();
           router.replace('/cart/checkout/confirmation');
           break;

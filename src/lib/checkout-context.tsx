@@ -25,6 +25,9 @@ export function formatUSD(n: number): string {
   return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+/** A line on the placed order, for the Confirmation summary. */
+export type OrderItemSummary = { title: string; size: string; quantity: number };
+
 type CheckoutContextValue = {
   // Contact
   name: string;
@@ -56,6 +59,12 @@ type CheckoutContextValue = {
   /** The amount actually charged (from the checkout), for the Confirmation screen. */
   orderTotal: string;
   setOrderTotal: (v: string) => void;
+  /** The order's `created` timestamp (ISO), captured at placement. */
+  orderCreated: string;
+  setOrderCreated: (v: string) => void;
+  /** A snapshot of what was ordered — captured before the cart is cleared. */
+  orderItems: OrderItemSummary[];
+  setOrderItems: (v: OrderItemSummary[]) => void;
   // Derived
   /** All required contact + shipping fields valid (address complete enough for tax). */
   addressReady: boolean;
@@ -81,6 +90,8 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
   const [taxLoading, setTaxLoading] = useState(false);
   const [orderId, setOrderId] = useState('');
   const [orderTotal, setOrderTotal] = useState('');
+  const [orderCreated, setOrderCreated] = useState('');
+  const [orderItems, setOrderItems] = useState<OrderItemSummary[]>([]);
 
   const contactError =
     validateName(name) ||
@@ -129,6 +140,10 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
     setOrderId,
     orderTotal,
     setOrderTotal,
+    orderCreated,
+    setOrderCreated,
+    orderItems,
+    setOrderItems,
     addressReady,
     contactError,
     shipTo,

@@ -37,6 +37,17 @@ export type PlaceOrderRequest = {
 };
 
 /** The order as the API shapes it (Prodigi lifecycle flattened onto our fields). */
+/** A shipment on the order — fills in (with tracking) as fulfillment progresses. */
+export type OrderShipment = {
+  id: string | null;
+  status: string | null;
+  dispatchDate: string | null;
+  carrier: { name: string | null; service: string | null } | null;
+  tracking: { number: string | null; url: string | null } | null;
+  labCode: string | null;
+  itemIds: string[];
+};
+
 export type PlacedOrder = {
   id: string | null;
   idempotencyKey: string | null;
@@ -53,7 +64,7 @@ export type PlacedOrder = {
     copies: number | null;
     status: string | null;
   }[];
-  shipments: unknown[];
+  shipments: OrderShipment[];
   charges: unknown[];
 };
 
@@ -61,6 +72,14 @@ export type PlaceOrderResponse = {
   idempotencyKey: string;
   order: PlacedOrder;
 };
+
+/** `GET /v1/orders/:id` — the current order state (store-backed; tracking fills in). */
+export async function getOrder(orderId: string, signal?: AbortSignal): Promise<{ order: PlacedOrder }> {
+  return apiRequest<{ order: PlacedOrder }>(`/orders/${encodeURIComponent(orderId)}`, {
+    query: { fulfillmentType: DEFAULT_FULFILLMENT },
+    signal,
+  });
+}
 
 /**
  * Place the order. This is the money-spending call (Prodigi bills our account),
