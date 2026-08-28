@@ -60,11 +60,15 @@ export default function ConfirmationStep() {
 
   const Divider = () => <View style={[styles.divider, { backgroundColor: theme.border }]} />;
 
-  // Reset the checkout stack, then switch tabs, so re-opening Cart shows the (now
-  // empty) cart rather than this confirmation.
-  const leaveTo = (href: '/orders' | '/') => {
+  // Reset the checkout stack (so re-opening Cart shows the now-empty cart), then go.
+  const goHome = () => {
     router.dismissTo('/cart');
-    router.navigate(href);
+    router.navigate('/');
+  };
+  const goToOrder = () => {
+    router.dismissTo('/cart');
+    if (c.orderId) router.navigate({ pathname: '/orders/[id]', params: { id: c.orderId } });
+    else router.navigate('/orders');
   };
 
   return (
@@ -164,12 +168,12 @@ export default function ConfirmationStep() {
         <View style={styles.actions}>
           <Pressable
             style={[styles.btn, { backgroundColor: theme.infoBg, borderColor: theme.border }]}
-            onPress={() => leaveTo('/orders')}>
+            onPress={goToOrder}>
             <Text style={[styles.btnLabel, { color: theme.infoFg }]}>View order details</Text>
           </Pressable>
           <Pressable
             style={[styles.btn, styles.btnSecondary, { backgroundColor: theme.background, borderColor: theme.border }]}
-            onPress={() => leaveTo('/')}>
+            onPress={goHome}>
             <Text style={[styles.btnLabel, { color: theme.text }]}>Return home</Text>
           </Pressable>
         </View>

@@ -19,6 +19,7 @@ import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { cartStore, useAppliedCoupon, useCartItems } from '@/lib/cart-store';
 import { formatUSD, useCheckout } from '@/lib/checkout-context';
+import { orderHistory } from '@/lib/order-history';
 import { runCheckout } from '@/lib/payment';
 
 /** Checkout step 2 — Order details + payment. The tax preview runs on entering
@@ -104,17 +105,29 @@ export default function PaymentStep() {
       });
 
       switch (outcome.status) {
-        case 'ordered':
+        case 'ordered': {
+          // Snapshot the items before the cart is cleared.
+          const itemSummary = items.map((i) => ({
+            title: i.title,
+            size: i.size,
+            quantity: i.quantity,
+          }));
           c.setOrderId(outcome.orderId);
           c.setOrderTotal(outcome.total);
           c.setOrderCreated(outcome.created);
-          // Snapshot the items before the cart is cleared.
-          c.setOrderItems(
-            items.map((i) => ({ title: i.title, size: i.size, quantity: i.quantity })),
-          );
+          c.setOrderItems(itemSummary);
+          // Record it in the device-local order history (backs the Orders tab).
+          orderHistory.add({
+            orderId: outcome.orderId,
+            created: outcome.created,
+            total: outcome.total,
+            shippingMethod: 'Standard',
+            items: itemSummary,
+          });
           cartStore.clear();
           router.replace('/cart/checkout/confirmation');
           break;
+        }
         case 'canceled':
           break;
         case 'unavailable':

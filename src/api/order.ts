@@ -63,6 +63,10 @@ export type PlacedOrder = {
     sku: string | null;
     copies: number | null;
     status: string | null;
+    /** Prodigi's rendered preview (short-lived signed URL); nice for display. */
+    thumbnailUrl: string | null;
+    /** Our durable S3 upload. */
+    assetUrl: string | null;
   }[];
   shipments: OrderShipment[];
   charges: unknown[];
