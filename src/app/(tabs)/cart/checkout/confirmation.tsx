@@ -123,7 +123,7 @@ export default function ConfirmationStep() {
             </>
           ) : null}
 
-          <Row label="Shipping details">
+          <Row label="Shipping address">
             <View style={styles.block}>
               <Text style={[styles.blockLine, { color: theme.text }]}>{c.line1.trim()}</Text>
               <Text style={[styles.blockLine, { color: theme.text }]}>
@@ -131,6 +131,12 @@ export default function ConfirmationStep() {
               </Text>
               <Text style={[styles.blockLine, { color: theme.text }]}>United States</Text>
             </View>
+          </Row>
+          <Divider />
+
+          {/* Shipping method — hardcoded Standard/Free today (no method choice yet). */}
+          <Row label="Shipping method">
+            <Text style={[styles.rowValueText, { color: theme.text }]}>Standard · Free</Text>
           </Row>
           <Divider />
 
