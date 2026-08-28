@@ -240,13 +240,13 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   block: {
-    alignItems: 'flex-start', // multi-line value: leading-aligned, on the right side
+    alignSelf: 'stretch', // fill the value column so each line can trail to the edge
   },
   blockLine: {
     fontFamily: FontFamily.body, // Body 1 / Regular 16/24
     fontSize: 16,
     lineHeight: 24,
-    textAlign: 'left',
+    textAlign: 'right', // trailing-aligned (incl. the 2nd/3rd lines)
   },
   actions: {
     marginTop: 24, // 24 below the table
