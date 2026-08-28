@@ -60,11 +60,15 @@ export default function ConfirmationStep() {
 
   const Divider = () => <View style={[styles.divider, { backgroundColor: theme.border }]} />;
 
-  // Reset the checkout stack, then switch tabs, so re-opening Cart shows the (now
-  // empty) cart rather than this confirmation.
-  const leaveTo = (href: '/orders' | '/') => {
+  // Reset the checkout stack (so re-opening Cart shows the now-empty cart), then go.
+  const goHome = () => {
     router.dismissTo('/cart');
-    router.navigate(href);
+    router.navigate('/');
+  };
+  const goToOrder = () => {
+    router.dismissTo('/cart');
+    if (c.orderId) router.navigate({ pathname: '/orders/[id]', params: { id: c.orderId } });
+    else router.navigate('/orders');
   };
 
   return (
@@ -164,12 +168,12 @@ export default function ConfirmationStep() {
         <View style={styles.actions}>
           <Pressable
             style={[styles.btn, { backgroundColor: theme.infoBg, borderColor: theme.border }]}
-            onPress={() => leaveTo('/orders')}>
+            onPress={goToOrder}>
             <Text style={[styles.btnLabel, { color: theme.infoFg }]}>View order details</Text>
           </Pressable>
           <Pressable
             style={[styles.btn, styles.btnSecondary, { backgroundColor: theme.background, borderColor: theme.border }]}
-            onPress={() => leaveTo('/')}>
+            onPress={goHome}>
             <Text style={[styles.btnLabel, { color: theme.text }]}>Return home</Text>
           </Pressable>
         </View>
@@ -236,13 +240,13 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   block: {
-    alignItems: 'flex-start', // multi-line value: leading-aligned, on the right side
+    alignSelf: 'stretch', // fill the value column so each line can trail to the edge
   },
   blockLine: {
     fontFamily: FontFamily.body, // Body 1 / Regular 16/24
     fontSize: 16,
     lineHeight: 24,
-    textAlign: 'left',
+    textAlign: 'right', // trailing-aligned (incl. the 2nd/3rd lines)
   },
   actions: {
     marginTop: 24, // 24 below the table
