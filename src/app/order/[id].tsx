@@ -202,6 +202,10 @@ export default function OrderDetailScreen() {
                 />
               </>
             ) : null}
+            <Divider style={styles.tableRule} />
+            {/* Always shown, even at zero: without it the rows above don't sum to
+                the total, and a customer reading a receipt will try to add them. */}
+            <SummaryRow label="Tax" value={formatUSD(Number(pricing.tax))} />
           </>
         ) : null}
         <Divider style={styles.tableRule} />
