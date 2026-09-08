@@ -138,7 +138,7 @@ export default function OrderDetailScreen() {
 
   if (state === 'loading') {
     return (
-      <View style={[styles.center, { backgroundColor: theme.background }]}>
+      <View style={[styles.loading, { backgroundColor: theme.background }]}>
         <ActivityIndicator color={theme.primary} />
       </View>
     );
@@ -394,6 +394,14 @@ export default function OrderDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  loading: {
+    // Top-anchored, not centred. A centred spinner sits mid-screen and then the
+    // content lands at the top, so the whole modal appears to expand outward from
+    // the middle as it opens — anchoring both to the top keeps it still.
+    flex: 1,
+    alignItems: 'center',
+    paddingTop: 32,
+  },
   errorText: {
     textAlign: 'center',
     fontFamily: FontFamily.body,
