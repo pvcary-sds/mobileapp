@@ -238,14 +238,8 @@ export default function OrderDetailScreen() {
 
           {/* How it's getting there, and where it is. */}
           <View>
-            {stored?.shippingMethod ? (
-              <SummaryRow label="Method" value={stored.shippingMethod} />
-            ) : null}
             {shipment?.dispatchDate ? (
-              <>
-                <Divider style={styles.tableRule} />
-                <SummaryRow label="Dispatched" value={formatDate(shipment.dispatchDate)} />
-              </>
+              <SummaryRow label="Dispatched" value={formatDate(shipment.dispatchDate)} />
             ) : null}
             {shipment?.carrier?.name ? (
               <>
@@ -279,7 +273,7 @@ export default function OrderDetailScreen() {
             ) : null}
           </View>
         </View>
-        <SectionDivider style={styles.tableEnd} />
+        <SectionDivider style={styles.shippingEnd} />
         </>
         )}
 
@@ -392,6 +386,11 @@ const styles = StyleSheet.create({
   },
   tableRule: {
     marginHorizontal: 0, // the content's own 16 padding already insets it
+  },
+  shippingEnd: {
+    // 24 below the address block. Unlike the summary table above, this section ends
+    // on a block with no padding of its own, so the whole 24 lives here.
+    marginTop: 24,
   },
   tableEnd: {
     // 24 from the last row's text to the break — the row already contributes its
