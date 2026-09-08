@@ -26,8 +26,17 @@ export default function TabsLayout() {
       iconColor={{ default: Colors.textSecondary, selected: Colors.text }}
       badgeBackgroundColor={Colors.primary} // Primary/500 cart-count badge (only the Cart tab has one)
       titlePositionAdjustment={{ vertical: 8 }} // best-effort 8px icon↔label gap
+      // NOTE: `default.color` is IGNORED on iOS — unselected labels render near-black
+      // whatever you set. Verified by probe: colouring `selected` red turns the
+      // selected label red, colouring `default` red changes nothing, and a flat
+      // `labelStyle` colours only the selected item. The JS does map it
+      // (`appearance.ios.js` → `tabBarItemTitleFontColor` for the `normal` state),
+      // so it's dropped in react-native-screens / UIKit's Liquid Glass tab bar —
+      // not patchable from here. Left in place for when that's fixed upstream.
+      // `lineHeight` isn't settable at all: NativeTabsLabelStyle is
+      // Pick<TextStyle, 'fontFamily' | 'fontSize' | 'fontStyle' | 'fontWeight' | 'color'>.
       labelStyle={{
-        // unselected: Body Medium 12, Gray 500
+        // unselected: Body Medium 12, Gray 500 — colour has no effect today, see above
         default: { color: Colors.textSecondary, fontFamily: NativeFontFamily.bodyMedium, fontSize: 12 },
         // selected: Body SemiBold 12, near-black (text)
         selected: { color: Colors.text, fontFamily: NativeFontFamily.bodySemiBold, fontSize: 12 },
