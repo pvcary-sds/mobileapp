@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router, useLocalSearchParams } from 'expo-router';
 
-import { cancelOrder, formatAddress, getOrder, spaceStage, type PlacedOrder } from '@/api/order';
+import { addressParts, cancelOrder, getOrder, spaceStage, type PlacedOrder } from '@/api/order';
 import { Divider } from '@/components/divider';
 import { OrderStatusPill } from '@/components/order-status-pill';
 import { SectionDivider } from '@/components/section-divider';
@@ -83,6 +83,7 @@ export default function OrderDetailScreen() {
 
   const [cancelling, setCancelling] = useState(false);
   const cancelled = order?.stage === 'Cancelled';
+  const address = addressParts(order);
 
   // Destructive and irreversible, so it asks first. On success we swap in the order
   // the API returns rather than re-fetching — it already reflects the cancellation.
@@ -209,14 +210,32 @@ export default function OrderDetailScreen() {
 
           <Divider style={styles.tableRule} />
 
-          {/* Where it's going, and how. */}
+          {/* Where it's going — mirrors the contact block above. */}
+          <View style={styles.contact}>
+            <View style={[styles.avatar, { backgroundColor: theme.neutralBg }]}>
+              <Text style={styles.avatarEmoji}>🏠</Text>
+            </View>
+            <View style={styles.contactLines}>
+              {address?.street ? (
+                <Text style={[styles.contactName, { color: theme.text }]}>{address.street}</Text>
+              ) : null}
+              {address?.cityStateZip ? (
+                <Text style={[styles.contactMeta, { color: theme.textSecondary }]}>
+                  {address.cityStateZip}
+                </Text>
+              ) : null}
+              {address?.country ? (
+                <Text style={[styles.contactMeta, { color: theme.textSecondary }]}>
+                  {address.country}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+
+          {/* How it's getting there, and where it is. */}
           <View>
-            <SummaryRow label="Address" value={formatAddress(order)} lines={2} />
             {stored?.shippingMethod ? (
-              <>
-                <Divider style={styles.tableRule} />
-                <SummaryRow label="Method" value={stored.shippingMethod} />
-              </>
+              <SummaryRow label="Method" value={stored.shippingMethod} />
             ) : null}
             {shipment?.dispatchDate ? (
               <>

@@ -97,26 +97,45 @@ export function spaceStage(stage: string | null): string {
   return stage.replace(/([a-z])([A-Z])/g, '$1 $2');
 }
 
+/** "Glen Ellyn, IL 60137" from whichever parts the order has. */
+function cityStateZip(a: Partial<CheckoutShipTo>): string {
+  return [a.city?.trim(), [a.state?.trim().toUpperCase(), a.zip?.trim()].filter(Boolean).join(' ')]
+    .filter(Boolean)
+    .join(', ');
+}
+
 /**
- * The ship-to stacked for display — street, then any second line, then
- * "city, ST zip". No country: we ship US-only today, so it's noise. Any line the
- * order is missing is dropped rather than rendered blank.
+ * The ship-to stacked for display — street, any second line, then "city, ST zip".
+ * No country: the Orders list card has no room for it. Any line the order is
+ * missing is dropped rather than rendered blank.
  */
 export function addressLines(order: PlacedOrder | null): string[] {
   const a = order?.recipient?.address;
   if (!a) return [];
-  const cityZip = [
-    a.city?.trim(),
-    [a.state?.trim().toUpperCase(), a.zip?.trim()].filter(Boolean).join(' '),
-  ]
-    .filter(Boolean)
-    .join(', ');
-  return [a.line1?.trim(), a.line2?.trim(), cityZip].filter((l): l is string => !!l);
+  return [a.line1?.trim(), a.line2?.trim(), cityStateZip(a)].filter((l): l is string => !!l);
 }
 
 /** The same ship-to on one comma-separated line, for single-line contexts. */
 export function formatAddress(order: PlacedOrder | null): string {
   return addressLines(order).join(', ');
+}
+
+/**
+ * The ship-to split into its display rows, country included — the order detail
+ * screen stacks these three with different weights, so it needs them apart rather
+ * than pre-joined.
+ */
+export function addressParts(
+  order: PlacedOrder | null
+): { street: string; cityStateZip: string; country: string } | null {
+  const a = order?.recipient?.address;
+  if (!a) return null;
+  const code = a.countryCode?.trim().toUpperCase() ?? '';
+  return {
+    street: [a.line1?.trim(), a.line2?.trim()].filter(Boolean).join(', '),
+    cityStateZip: cityStateZip(a),
+    country: code === 'US' ? 'United States' : code,
+  };
 }
 
 /** `GET /v1/orders/:id` — the current order state (store-backed; tracking fills in). */
