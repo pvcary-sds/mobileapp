@@ -32,14 +32,18 @@ import { toast } from '@/lib/toast-store';
 function SummaryRow({
   label,
   value,
+  strong = false,
   lines = 1,
 }: {
   label: string;
   value: string;
+  /** Sets the row in SemiBold. Only the Total uses it — every row above is a
+   *  component of it, so the sum is what the eye should land on. */
+  strong?: boolean;
   lines?: number;
 }) {
   const theme = useTheme();
-  const text = [styles.tableText, { color: theme.text }];
+  const text = [styles.tableText, strong && styles.tableTextStrong, { color: theme.text }];
   return (
     <View style={styles.tableRow}>
       <Text style={text}>{label}</Text>
@@ -209,7 +213,11 @@ export default function OrderDetailScreen() {
           </>
         ) : null}
         <Divider style={styles.tableRule} />
-        <SummaryRow label="Total" value={stored?.total ? formatUSD(Number(stored.total)) : ''} />
+        <SummaryRow
+          label="Total"
+          value={stored?.total ? formatUSD(Number(stored.total)) : ''}
+          strong
+        />
         <Divider style={styles.tableRule} />
         {/* Present from placement, so it says so rather than disappearing until the
             carrier assigns one. */}
@@ -425,6 +433,9 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.body, // Body 1 / Regular 16/24, Gray/900
     fontSize: 16,
     lineHeight: 24,
+  },
+  tableTextStrong: {
+    fontFamily: FontFamily.bodySemiBold, // Body 1 / SemiBold 16/24 — the Total row
   },
   tableValue: {
     flexShrink: 1,
