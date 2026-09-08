@@ -153,6 +153,15 @@ export default function OrderDetailScreen() {
 
   const shipment = order.shipments?.[0] ?? null;
   const tracking = shipment?.tracking ?? null;
+  // Rendered only when it has rows: an empty View is still a flex child, so the
+  // section's `gap: 16` would add 16 below the track button before the section
+  // break's own margin — 40 where the design calls for 24.
+  const hasShipmentRows = !!(
+    shipment?.dispatchDate ||
+    shipment?.carrier?.name ||
+    tracking?.number
+  );
+
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -236,6 +245,7 @@ export default function OrderDetailScreen() {
           <TrackShippingButton url={trackingUrl} />
 
           {/* How it's getting there, and where it is. */}
+          {hasShipmentRows ? (
           <View>
             {shipment?.dispatchDate ? (
               <SummaryRow label="Dispatched" value={formatDate(shipment.dispatchDate)} />
@@ -271,6 +281,7 @@ export default function OrderDetailScreen() {
               </>
             ) : null}
           </View>
+          ) : null}
         </View>
         <SectionDivider style={styles.shippingEnd} />
         </>
