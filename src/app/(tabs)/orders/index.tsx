@@ -9,6 +9,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { addressLines, getOrder, spaceStage, type PlacedOrder } from '@/api/order';
 import { Divider } from '@/components/divider';
 import { OrderStatusPill } from '@/components/order-status-pill';
+import { TrackShippingButton } from '@/components/track-shipping-button';
 import { SegmentedTabs } from '@/components/segmented-tabs';
 import { ToastHost } from '@/components/toast-host';
 import { PACKAGE_ICON } from '@/constants/builder-icons';
@@ -45,26 +46,6 @@ function PrintThumb({ thumbnailUrl, assetUrl }: Omit<Thumb, 'id'>) {
 
 /** How many prints show before the rest collapse into a "+N" chip. */
 const MAX_THUMBS = 2;
-
-/**
- * The tracking button under the address. Only rendered once the shipment actually
- * has a tracking URL — Prodigi has no shipment, so no URL, until the order is
- * dispatched, and a button that silently does nothing is worse than no button.
- */
-function TrackingButton({ url }: { url: string }) {
-  const theme = useTheme();
-  return (
-    <Pressable
-      onPress={() => Linking.openURL(url)}
-      style={[
-        styles.trackingButton,
-        { backgroundColor: theme.background, borderColor: theme.border },
-      ]}>
-      <SvgXml xml={PACKAGE_ICON} width={24} height={24} color={theme.text} />
-      <Text style={[styles.trackingLabel, { color: theme.text }]}>Track shipping</Text>
-    </Pressable>
-  );
-}
 
 /** One order: its status + number, the prints it contains, and where it is. */
 function OrderRow({ order, live }: { order: StoredOrder; live: Live | undefined }) {
@@ -163,7 +144,7 @@ function OrderRow({ order, live }: { order: StoredOrder; live: Live | undefined 
             </Text>
           </View>
         ) : null}
-        {trackingUrl ? <TrackingButton url={trackingUrl} /> : null}
+        {trackingUrl ? <TrackShippingButton url={trackingUrl} style={styles.trackingButton} /> : null}
       </View>
       )}
       <View
@@ -401,18 +382,6 @@ const styles = StyleSheet.create({
   },
   trackingButton: {
     marginTop: 12, // 12 below the address
-    height: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8, // 8 from the icon to the label
-    borderRadius: 8,
-    borderWidth: 2, // Gray/200
-  },
-  trackingLabel: {
-    fontFamily: FontFamily.bodySemiBold, // Body 1 / SemiBold 16/24
-    fontSize: 16,
-    lineHeight: 24,
   },
   detailsButton: {
     marginTop: 16, // 16 below the shipping-details container

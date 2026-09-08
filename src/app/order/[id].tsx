@@ -18,6 +18,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { addressParts, cancelOrder, getOrder, spaceStage, type PlacedOrder } from '@/api/order';
 import { Divider } from '@/components/divider';
 import { OrderStatusPill } from '@/components/order-status-pill';
+import { TrackShippingButton } from '@/components/track-shipping-button';
 import { SectionDivider } from '@/components/section-divider';
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -84,6 +85,7 @@ export default function OrderDetailScreen() {
   const [cancelling, setCancelling] = useState(false);
   const cancelled = order?.stage === 'Cancelled';
   const address = addressParts(order);
+  const trackingUrl = order?.shipments?.[0]?.tracking?.url ?? null;
 
   // Destructive and irreversible, so it asks first. On success we swap in the order
   // the API returns rather than re-fetching — it already reflects the cancellation.
@@ -231,6 +233,8 @@ export default function OrderDetailScreen() {
               ) : null}
             </View>
           </View>
+
+          {trackingUrl ? <TrackShippingButton url={trackingUrl} /> : null}
 
           {/* How it's getting there, and where it is. */}
           <View>
