@@ -28,21 +28,18 @@ import { liveOrders } from '@/lib/live-orders';
 import { orderHistory } from '@/lib/order-history';
 import { toast } from '@/lib/toast-store';
 
-/** One line of the summary table: label leading, value trailing. `strong` sets the
- *  whole row in SemiBold — the Total carries more weight than the rows above it. */
+/** One line of the summary table: label leading, value trailing. */
 function SummaryRow({
   label,
   value,
-  strong = false,
   lines = 1,
 }: {
   label: string;
   value: string;
-  strong?: boolean;
   lines?: number;
 }) {
   const theme = useTheme();
-  const text = [styles.tableText, strong && styles.tableTextStrong, { color: theme.text }];
+  const text = [styles.tableText, { color: theme.text }];
   return (
     <View style={styles.tableRow}>
       <Text style={text}>{label}</Text>
@@ -172,11 +169,11 @@ export default function OrderDetailScreen() {
         <Divider style={styles.tableRule} />
         <SummaryRow label="Date placed" value={formatDateTime(order.created)} />
         <Divider style={styles.tableRule} />
-        <SummaryRow
-          label="Total"
-          value={stored?.total ? formatUSD(Number(stored.total)) : ''}
-          strong
-        />
+        <SummaryRow label="Total" value={stored?.total ? formatUSD(Number(stored.total)) : ''} />
+        <Divider style={styles.tableRule} />
+        {/* Present from placement, so it says so rather than disappearing until the
+            carrier assigns one. */}
+        <SummaryRow label="Tracking number" value={tracking?.number ?? 'Not available'} />
         <SectionDivider style={styles.tableEnd} />
 
         {/* Shipping — hidden once cancelled: nothing is going anywhere, so the
@@ -234,7 +231,9 @@ export default function OrderDetailScreen() {
             </View>
           </View>
 
-          {trackingUrl ? <TrackShippingButton url={trackingUrl} /> : null}
+          {/* Always shown here, disabled until the carrier provides a URL — the
+              Orders list hides it instead, where there's no room to explain. */}
+          <TrackShippingButton url={trackingUrl} />
 
           {/* How it's getting there, and where it is. */}
           <View>
@@ -376,9 +375,6 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.body, // Body 1 / Regular 16/24, Gray/900
     fontSize: 16,
     lineHeight: 24,
-  },
-  tableTextStrong: {
-    fontFamily: FontFamily.bodySemiBold, // Body 1 / SemiBold 16/24 — the Total row
   },
   tableValue: {
     flexShrink: 1,

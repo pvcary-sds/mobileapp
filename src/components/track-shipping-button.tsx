@@ -9,9 +9,10 @@ import { useTheme } from '@/hooks/use-theme';
  * Opens the carrier's tracking page. 48 tall, white fill, 2px Gray/200 border,
  * parcel icon + label in Body 1 / SemiBold 16/24.
  *
- * Callers render it only once the shipment actually has a URL — Prodigi creates no
- * shipment, and so no tracking, until an order is dispatched, and a button that
- * silently does nothing is worse than no button.
+ * A null `url` renders it disabled rather than active-but-inert: Prodigi creates no
+ * shipment, and so no tracking, until an order is dispatched. The order detail screen
+ * shows it disabled so the affordance is discoverable; the Orders list omits it
+ * entirely, having no room to explain why it can't be used.
  *
  * Pass `style` for spacing: it sits 12 below the address on the Orders list card and
  * 16 below it on the order detail screen.
@@ -20,18 +21,21 @@ export function TrackShippingButton({
   url,
   style,
 }: {
-  url: string;
+  url: string | null;
   style?: StyleProp<ViewStyle>;
 }) {
   const theme = useTheme();
+  const tint = url ? theme.text : theme.textMuted;
 
   return (
     <Pressable
-      onPress={() => Linking.openURL(url)}
+      onPress={() => url && Linking.openURL(url)}
+      disabled={!url}
       accessibilityRole="button"
+      accessibilityState={{ disabled: !url }}
       style={[styles.button, { backgroundColor: theme.background, borderColor: theme.border }, style]}>
-      <SvgXml xml={PACKAGE_ICON} width={24} height={24} color={theme.text} />
-      <Text style={[styles.label, { color: theme.text }]}>Track shipping</Text>
+      <SvgXml xml={PACKAGE_ICON} width={24} height={24} color={tint} />
+      <Text style={[styles.label, { color: tint }]}>Track shipping</Text>
     </Pressable>
   );
 }
