@@ -384,7 +384,9 @@ const styles = StyleSheet.create({
   },
   contact: {
     flexDirection: 'row',
-    alignItems: 'center',
+    // Top-aligned, not centred: the circle should sit 16 below the section title,
+    // level with the name — centring it against a 2- or 3-line block pushes it down.
+    alignItems: 'flex-start',
   },
   avatar: {
     width: 48,
