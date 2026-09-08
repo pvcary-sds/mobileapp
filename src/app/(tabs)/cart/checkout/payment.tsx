@@ -111,6 +111,7 @@ export default function PaymentStep() {
             title: i.title,
             size: i.size,
             quantity: i.quantity,
+            price: i.price, // unit price at purchase — the Order details rows show it
           }));
           c.setOrderId(outcome.orderId);
           c.setOrderTotal(outcome.total);

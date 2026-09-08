@@ -24,7 +24,8 @@ export const Colors = {
   backgroundElement: Gray[100], // raised fills / image placeholders
   backgroundSelected: Gray[200], // pressed / subtle selected surface
   border: Gray[200], // card borders, dividers
-  borderStrong: Gray[300], // a step darker — segmented controls, emphasized dividers
+  borderStrong: Gray[300], // a step darker — emphasized dividers
+  borderSelected: Gray[400], // Gray/400 — outlines a selected segment
   lightBlueSurface: LightBlue[100], // LightBlue/100 — soft blue tile (size "Show more")
 
   // Brand / action
@@ -54,6 +55,11 @@ export const Colors = {
   promoActiveBg: Brand.lightBlue3,
   promoActiveText: Brand.darkBlue,
 
+  // Secondary action on the brand blue fill — Brand/Light Blue 3 + Brand/Dark Blue
+  // text (e.g. "View order details" on the Orders list).
+  brandActionBg: Brand.lightBlue3,
+  brandActionText: Brand.darkBlue,
+
   // Promo code error — Primary/200 stroke + Primary/600 message.
   promoErrorStroke: Primary[200],
   promoErrorText: Primary[600],
@@ -70,6 +76,7 @@ export const Colors = {
   // Coupon card — Brand light background + a faint black hairline (stroke/10).
   brandSurface: Brand.lightBackground, // #F5F5F0
   strokeFaint: Stroke[10], // black @ 10% — "Additional stroke/10"
+  strokeFainter: Stroke[5], // black @ 5% — "Additional stroke/5"
 
   // Discount / savings amounts (promo, discounts) — Primary/600.
   discount: Primary[600],
