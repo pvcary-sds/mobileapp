@@ -82,6 +82,8 @@ export default function OrderDetailScreen() {
   const [cancelling, setCancelling] = useState(false);
   const cancelled = order?.stage === 'Cancelled';
   const address = addressParts(order);
+  const pricing = stored?.pricing ?? null;
+  const itemCount = stored?.items.reduce((sum, i) => sum + i.quantity, 0) ?? 0;
   const trackingUrl = order?.shipments?.[0]?.tracking?.url ?? null;
 
   // Destructive and irreversible, so it asks first. On success we swap in the order
@@ -177,6 +179,31 @@ export default function OrderDetailScreen() {
         <SummaryRow label="Order number" value={`#${order.id ?? ''}`} />
         <Divider style={styles.tableRule} />
         <SummaryRow label="Date placed" value={formatDateTime(order.created)} />
+        {/* The priced breakdown, only for orders placed since it was snapshotted —
+            older ones carry the total alone. */}
+        {pricing ? (
+          <>
+            <Divider style={styles.tableRule} />
+            <SummaryRow
+              label={`Subtotal (${itemCount} ${itemCount === 1 ? 'item' : 'items'})`}
+              value={formatUSD(Number(pricing.subtotal))}
+            />
+            <Divider style={styles.tableRule} />
+            <SummaryRow
+              label="Estimated shipping"
+              value={Number(pricing.shipping) === 0 ? 'Free' : formatUSD(Number(pricing.shipping))}
+            />
+            {pricing.discount && Number(pricing.discount.amount) > 0 ? (
+              <>
+                <Divider style={styles.tableRule} />
+                <SummaryRow
+                  label="Discounts"
+                  value={`-${formatUSD(Number(pricing.discount.amount))}`}
+                />
+              </>
+            ) : null}
+          </>
+        ) : null}
         <Divider style={styles.tableRule} />
         <SummaryRow label="Total" value={stored?.total ? formatUSD(Number(stored.total)) : ''} />
         <Divider style={styles.tableRule} />

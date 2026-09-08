@@ -17,12 +17,22 @@ import type { OrderItemSummary } from '@/lib/checkout-context';
 
 const STORAGE_KEY = 'sds.order-history.v1';
 
+/** What the customer was charged, broken down. Optional: orders placed before this
+ *  was snapshotted only have the `total`. */
+export type StoredPricing = {
+  subtotal: string;
+  shipping: string;
+  tax: string;
+  discount?: { code: string; amount: string };
+};
+
 export type StoredOrder = {
   orderId: string;
   created: string; // ISO timestamp
   total: string; // retail paid, e.g. "64.35"
   shippingMethod: string;
   items: OrderItemSummary[];
+  pricing?: StoredPricing;
 };
 
 let orders: StoredOrder[] = [];
