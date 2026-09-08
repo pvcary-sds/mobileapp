@@ -6,6 +6,18 @@
 
 export const CHEVRON_LEFT = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
+/** `CHEVRON_LEFT` mirrored — the "drills into a detail screen" affordance. */
+export const CHEVRON_RIGHT = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+/** Parcel — the "track this shipment" affordance. Strokes converted to
+ *  `currentColor` (from Figma's black) so it tints with its label. */
+export const PACKAGE_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M8.32592 9.69236L5.40472 8.27882C3.80157 7.50308 3 7.11521 3 6.50098C3 5.88675 3.80157 5.49887 5.40472 4.72313L8.32592 3.30959C10.1288 2.43718 11.0303 2.00098 12 2.00098C12.9697 2.00098 13.8712 2.43718 15.6741 3.30959L18.5953 4.72313C20.1984 5.49887 21 5.88675 21 6.50098C21 7.11521 20.1984 7.50308 18.5953 8.27882L15.6741 9.69236C13.8712 10.5648 12.9697 11.001 12 11.001C11.0303 11.001 10.1288 10.5648 8.32592 9.69236Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M12 22.0005C11.1818 22.0005 10.4002 21.6703 8.83693 21.0099C4.94564 19.3662 3 18.5443 3 17.1618C3 16.7747 3 10.065 3 7.00049M12 22.0005C12.8182 22.0005 13.5998 21.6703 15.1631 21.0099C19.0544 19.3662 21 18.5443 21 17.1618L21 7.00049M12 22.0005L12 11.3553" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M6 12.0005L8 13.0005" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M17 4.00049L7 9.00049" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+
 // Destructive red (#C12000) is intrinsic to the icon, not a theme tint.
 export const DELETE_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19.5 5.5L18.8803 15.5251C18.7219 18.0864 18.6428 19.3671 18.0008 20.2879C17.6833 20.7431 17.2747 21.1273 16.8007 21.416C15.8421 22 14.559 22 11.9927 22C9.42312 22 8.1383 22 7.17905 21.4149C6.7048 21.1257 6.296 20.7408 5.97868 20.2848C5.33688 19.3626 5.25945 18.0801 5.10461 15.5152L4.5 5.5" stroke="#C12000" stroke-width="1.5" stroke-linecap="round"/><path d="M3 5.5H21M16.0557 5.5L15.3731 4.09173C14.9196 3.15626 14.6928 2.68852 14.3017 2.39681C14.215 2.3321 14.1231 2.27454 14.027 2.2247C13.5939 2 13.0741 2 12.0345 2C10.9688 2 10.436 2 9.99568 2.23412C9.8981 2.28601 9.80498 2.3459 9.71729 2.41317C9.32164 2.7167 9.10063 3.20155 8.65861 4.17126L8.05292 5.5" stroke="#C12000" stroke-width="1.5" stroke-linecap="round"/><path d="M9.5 16.5L9.5 10.5" stroke="#C12000" stroke-width="1.5" stroke-linecap="round"/><path d="M14.5 16.5L14.5 10.5" stroke="#C12000" stroke-width="1.5" stroke-linecap="round"/></svg>`;
 

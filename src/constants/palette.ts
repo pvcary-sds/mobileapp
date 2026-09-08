@@ -24,7 +24,7 @@ export const Gray = {
 export const Primary = {
   50: '#FEF6EE',
   100: '#FDEAD7',
-  200: '#F9DBAF',
+  200: '#F28E7A',
   300: '#F7B27A',
   400: '#F38744',
   500: '#E62600', // brand primary red — the primary action color (NOT orange)

@@ -11,15 +11,7 @@ import { FontFamily } from '@/constants/theme';
 import { ORDER_CONFIRMED_ILLUSTRATION } from '@/constants/illustrations';
 import { useTheme } from '@/hooks/use-theme';
 import { formatUSD, useCheckout } from '@/lib/checkout-context';
-
-/** ISO → "Aug 27, 2026" (empty string if missing/unparseable). */
-function formatDate(iso: string): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return isNaN(d.getTime())
-    ? ''
-    : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
+import { formatDate } from '@/lib/dates';
 
 /** One table row: a label on the left, a value block on the right. */
 function Row({ label, children }: { label: string; children: ReactNode }) {
@@ -65,10 +57,19 @@ export default function ConfirmationStep() {
     router.dismissTo('/cart');
     router.navigate('/');
   };
+  // Present the order details straight over this screen. Dismissing the checkout
+  // stack and switching tabs first (as this used to) meant the customer watched a
+  // pop and a tab change before the modal ever appeared.
   const goToOrder = () => {
-    router.dismissTo('/cart');
-    if (c.orderId) router.navigate({ pathname: '/orders/[id]', params: { id: c.orderId } });
-    else router.navigate('/orders');
+    if (c.orderId)
+      // `from` hides the cancel action: dismissing this modal returns to the
+      // confirmation screen, and cancelling would strand the customer on an
+      // "Order Confirmed" page for an order that no longer exists.
+      router.navigate({ pathname: '/order/[id]', params: { id: c.orderId, from: 'checkout' } });
+    else {
+      router.dismissTo('/cart');
+      router.navigate('/orders');
+    }
   };
 
   return (
@@ -129,7 +130,6 @@ export default function ConfirmationStep() {
               <Text style={[styles.blockLine, { color: theme.text }]}>
                 {c.city.trim()}, {stateCode} {c.zip.trim()}
               </Text>
-              <Text style={[styles.blockLine, { color: theme.text }]}>United States</Text>
             </View>
           </Row>
           <Divider />
@@ -146,7 +146,7 @@ export default function ConfirmationStep() {
                 {tracking.url ? (
                   <Pressable onPress={() => Linking.openURL(tracking.url!)}>
                     <Text style={[styles.rowValueText, styles.link, { color: theme.primary }]}>
-                      {tracking.number ?? 'Track shipment'}
+                      {tracking.number ?? 'Track shipping'}
                     </Text>
                   </Pressable>
                 ) : (

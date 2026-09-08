@@ -111,6 +111,7 @@ export default function PaymentStep() {
             title: i.title,
             size: i.size,
             quantity: i.quantity,
+            price: i.price, // unit price at purchase — the Order details rows show it
           }));
           c.setOrderId(outcome.orderId);
           c.setOrderTotal(outcome.total);
@@ -123,6 +124,25 @@ export default function PaymentStep() {
             total: outcome.total,
             shippingMethod: 'Standard',
             items: itemSummary,
+            // The priced breakdown, so the order detail page can show subtotal /
+            // shipping / discount rather than just the total.
+            ...(c.pricing
+              ? {
+                  pricing: {
+                    subtotal: c.pricing.subtotal,
+                    shipping: c.pricing.shipping,
+                    tax: c.pricing.tax,
+                    ...(c.pricing.discount
+                      ? {
+                          discount: {
+                            code: c.pricing.discount.code,
+                            amount: c.pricing.discount.amount,
+                          },
+                        }
+                      : {}),
+                  },
+                }
+              : {}),
           });
           cartStore.clear();
           router.replace('/cart/checkout/confirmation');

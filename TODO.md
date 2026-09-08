@@ -24,6 +24,30 @@ add new ones here rather than leaving them only in chat/session notes.
       `fixed` type (`src/services/coupons.ts` `Discount` union + `priceCoupon`, plus
       the app's `CouponDiscount`). See `docs/dynamodb-setup.md` / cart.md TODO notes.
 
+## Cancel order
+
+Prodigi supports cancellation (`POST /v4.0/orders/{id}/actions/cancel`), but it is
+**best-effort**: once an order reaches production Prodigi refuses it
+(`ActionNotAvailable` / `FailedToCancel`). Decisions taken while building this:
+
+- [ ] **No auth on cancel — anyone with an order id can cancel someone's order and
+      trigger a refund.** `GET /v1/orders/:id` and the new cancel endpoint are both
+      unauthenticated (there's no user model yet), so an order id is the only thing
+      standing between a stranger and cancelling a paid order. Accepted for now;
+      close it when the API gets a user model, or gate cancel on the recipient's
+      email in the meantime.
+- [x] **Cancelled orders live in the Completed tab.** Both `Complete` and
+      `Cancelled` are terminal, so the Orders list treats them the same — a
+      cancelled order would otherwise sit in Pending forever.
+- [ ] **A cancelled order's coupon is not released.** Redemption is recorded at
+      placement (`POST /v1/orders`) and never reversed, so a one-time code is spent
+      even if the order is cancelled and refunded. The customer can't reuse it.
+- [x] **Cancellation is blocked once fulfilment has started** — not offered as a
+      partial refund. Prodigi refunds shipping only after fulfilment begins, and we
+      charge the customer $0 shipping (it's baked into the retail price), so a
+      post-fulfilment "cancel" would refund nothing. A button that cancels without
+      refunding is worse than no button, so the API refuses and the app hides it.
+
 ## Mobile app
 
 - [ ] **Wire the PDP share action.** The PDP header has a share icon

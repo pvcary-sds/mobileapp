@@ -12,6 +12,8 @@ import {
 import { useFonts } from 'expo-font';
 import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+
+import { ModalCloseButton } from '@/components/modal-close-button';
 import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -79,6 +81,17 @@ export default function RootLayout() {
             <Stack.Screen
               name="builder/[sku]"
               options={{ title: '', headerBackTitle: 'Back', gestureEnabled: false }}
+            />
+            {/* Order details — a modal at the ROOT so it presents over whatever is
+                on screen (Orders list, or Confirmation right after checkout) in a
+                single transition. */}
+            <Stack.Screen
+              name="order/[id]"
+              options={{
+                title: 'Order details',
+                presentation: 'modal',
+                headerLeft: () => <ModalCloseButton />,
+              }}
             />
           </Stack>
           <StatusBar style="dark" />

@@ -26,7 +26,14 @@ export function formatUSD(n: number): string {
 }
 
 /** A line on the placed order, for the Confirmation summary. */
-export type OrderItemSummary = { title: string; size: string; quantity: number };
+/** `price` is the unit price at purchase. Optional: orders placed before it was
+ *  snapshotted don't carry one, so render it only when present. */
+export type OrderItemSummary = {
+  title: string;
+  size: string;
+  quantity: number;
+  price?: string;
+};
 
 type CheckoutContextValue = {
   // Contact
