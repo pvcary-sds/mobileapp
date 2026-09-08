@@ -182,13 +182,35 @@ export default function OrderDetailScreen() {
         <>
         <View style={styles.shipping}>
           <Text style={[styles.productsTitle, { color: theme.text }]}>Shipping</Text>
+          {/* Who it's going to. The section's `gap: 16` supplies the 16 below the
+              title, above the divider, and above the location rows. */}
+          <View style={styles.contact}>
+            <View style={[styles.avatar, { backgroundColor: theme.neutralBg }]}>
+              <Text style={styles.avatarEmoji}>👤</Text>
+            </View>
+            <View style={styles.contactLines}>
+              {order.recipient?.name ? (
+                <Text style={[styles.contactName, { color: theme.text }]}>
+                  {order.recipient.name}
+                </Text>
+              ) : null}
+              {order.recipient?.email ? (
+                <Text style={[styles.contactMeta, { color: theme.textSecondary }]}>
+                  {order.recipient.email}
+                </Text>
+              ) : null}
+              {order.recipient?.phone ? (
+                <Text style={[styles.contactMeta, { color: theme.textSecondary }]}>
+                  {order.recipient.phone}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+
+          <Divider style={styles.tableRule} />
+
+          {/* Where it's going, and how. */}
           <View>
-            {order.recipient?.name ? (
-              <>
-                <SummaryRow label="Ship to" value={order.recipient.name} />
-                <Divider style={styles.tableRule} />
-              </>
-            ) : null}
             <SummaryRow label="Address" value={formatAddress(order)} lines={2} />
             {stored?.shippingMethod ? (
               <>
@@ -358,7 +380,36 @@ const styles = StyleSheet.create({
   },
   shipping: {
     marginTop: 24, // 24 below the section break
-    gap: 16, // 16 from the title to the first row
+    gap: 16, // title → contact → divider → location, 16 between each
+  },
+  contact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24, // circular at 48
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarEmoji: {
+    fontSize: 24, // Title 1 / Regular 24/32
+    lineHeight: 32,
+  },
+  contactLines: {
+    flex: 1,
+    marginLeft: 12, // 12 to the right of the circle
+  },
+  contactName: {
+    fontFamily: FontFamily.bodyMedium, // Body 1 / Medium 16/24, Gray/900
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  contactMeta: {
+    fontFamily: FontFamily.body, // Body 1 / Regular 16/24, Gray/500
+    fontSize: 16,
+    lineHeight: 24,
   },
   products: {
     marginTop: 24, // 24 below Shipping information
