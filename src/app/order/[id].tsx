@@ -17,6 +17,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 
 import { cancelOrder, formatAddress, getOrder, spaceStage, type PlacedOrder } from '@/api/order';
 import { Divider } from '@/components/divider';
+import { OrderStatusPill } from '@/components/order-status-pill';
 import { SectionDivider } from '@/components/section-divider';
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -157,7 +158,12 @@ export default function OrderDetailScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}>
         {/* Summary table — label leading, value trailing, hairlines between. */}
-        <SummaryRow label="Order status" value={spaceStage(order.stage)} />
+        {/* Rendered directly rather than through SummaryRow: the value is a pill,
+            not text, and it matches the badge on the Orders list. */}
+        <View style={styles.tableRow}>
+          <Text style={[styles.tableText, { color: theme.text }]}>Order status</Text>
+          <OrderStatusPill label={spaceStage(order.stage)} cancelled={cancelled} />
+        </View>
         <Divider style={styles.tableRule} />
         <SummaryRow label="Order number" value={`#${order.id ?? ''}`} />
         <Divider style={styles.tableRule} />

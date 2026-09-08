@@ -8,6 +8,7 @@ import { router, useFocusEffect } from 'expo-router';
 
 import { addressLines, getOrder, spaceStage, type PlacedOrder } from '@/api/order';
 import { Divider } from '@/components/divider';
+import { OrderStatusPill } from '@/components/order-status-pill';
 import { SegmentedTabs } from '@/components/segmented-tabs';
 import { ToastHost } from '@/components/toast-host';
 import { PACKAGE_ICON } from '@/constants/builder-icons';
@@ -102,16 +103,7 @@ function OrderRow({ order, live }: { order: StoredOrder; live: Live | undefined 
   return (
     <Pressable onPress={() => router.push(`/order/${order.orderId}`)}>
       <View style={styles.rowTop}>
-        {/* Cancelled reads as a problem state, so it takes the Label/red pair. */}
-        <View
-          style={[
-            styles.statePill,
-            { backgroundColor: cancelled ? theme.errorBg : theme.neutralBg },
-          ]}>
-          <Text style={[styles.state, { color: cancelled ? theme.errorFg : theme.neutralFg }]}>
-            {label}
-          </Text>
-        </View>
+        <OrderStatusPill label={label} cancelled={cancelled} />
         <View style={styles.spacer} />
         <Text style={[styles.orderId, { color: theme.text }]} numberOfLines={1}>
           {`#${order.orderId}`}
@@ -317,17 +309,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16, // 16 to the leading / trailing page edges
-  },
-  statePill: {
-    height: 28,
-    justifyContent: 'center',
-    paddingHorizontal: 12, // 12 from the text to the pill's leading / trailing edges
-    borderRadius: 14, // fully rounded at 28 tall
-  },
-  state: {
-    fontFamily: FontFamily.bodyMedium, // Body 2 / Medium 14/20, Label/default dark
-    fontSize: 14,
-    lineHeight: 20,
   },
   spacer: {
     flex: 1, // pushes the two to opposite ends
