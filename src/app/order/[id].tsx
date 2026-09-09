@@ -143,7 +143,7 @@ export default function OrderDetailScreen() {
   if (state === 'loading') {
     return (
       <View style={[styles.loading, { backgroundColor: theme.background }]}>
-        <ActivityIndicator color={theme.primary} />
+        <ActivityIndicator color={theme.textSecondary} />
       </View>
     );
   }
