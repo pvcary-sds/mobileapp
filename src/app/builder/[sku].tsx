@@ -252,8 +252,16 @@ export default function BuilderScreen() {
   // canvas area. The photo is clipped to this — what's inside is what prints.
   // Prefer the exact Prodigi print pixel canvas (so the crop matches the print
   // edge-to-edge); fall back to the nominal size label until the spec loads.
-  const printPixels = printSpec?.printAreaSizes
-    ? (printSpec.printAreaSizes.default ?? Object.values(printSpec.printAreaSizes)[0])
+  // Only trust the spec once it's for the size we're actually showing. `useAsync`
+  // keeps the previous result during a refetch, so after a size change this would
+  // otherwise hold the OLD size's pixel canvas until the network returned — the
+  // frame sat at the wrong ratio and then snapped, which read as a flash.
+  //
+  // The nominal label ("16x20 in") gives the right ratio to within ~1% instantly,
+  // so the frame resizes with the label and the exact canvas refines it silently.
+  const freshSpec = printSpec?.sku === activeSku ? printSpec : undefined;
+  const printPixels = freshSpec?.printAreaSizes
+    ? (freshSpec.printAreaSizes.default ?? Object.values(freshSpec.printAreaSizes)[0])
     : undefined;
   const frameDims: [number, number] | null =
     printPixels?.horizontalResolution && printPixels?.verticalResolution
