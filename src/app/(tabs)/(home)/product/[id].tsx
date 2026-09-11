@@ -208,14 +208,9 @@ export default function ProductScreen() {
                   <Text style={[styles.sizeHeading, styles.finishHeading, { color: theme.text }]}>
                     Choose a finish
                   </Text>
-                  {/* Horizontal scroll, not a wrapping grid. The padding lives on the
-                      content (not the ScrollView) so chips scroll under the screen
-                      edge instead of being clipped 16 short of it. */}
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.finishScroll}
-                    contentContainerStyle={styles.finishRow}>
+                  {/* Wraps like the size grid rather than scrolling — the five
+                      finishes fall into two rows, so they're all visible at once. */}
+                  <View style={styles.finishRow}>
                     {finishes.map((f) => (
                       <FinishChip
                         key={f}
@@ -224,7 +219,7 @@ export default function ProductScreen() {
                         onPress={() => setSelectedFinish(f)}
                       />
                     ))}
-                  </ScrollView>
+                  </View>
                 </View>
               )}
 
@@ -518,12 +513,12 @@ const styles = StyleSheet.create({
   finishHeading: {
     paddingHorizontal: Spacing.three, // 16, matching the other sections
   },
-  finishScroll: {
-    marginTop: 4, // 4 below the "Choose a finish" title
-  },
   finishRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: Spacing.two, // 8
-    paddingHorizontal: Spacing.three, // 16 leading/trailing for the row itself
+    marginTop: 4, // 4 below the "Choose a finish" title
+    paddingHorizontal: Spacing.three, // 16, matching the size grid
   },
   finishChip: {
     height: 48,
