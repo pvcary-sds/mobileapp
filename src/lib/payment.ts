@@ -22,7 +22,17 @@ import { getStripePublishableKey, isStripeNativeAvailable } from '@/lib/stripe';
 type ShippingMethod = 'Budget' | 'Standard' | 'Express' | 'Overnight';
 
 /** One print to buy: its product SKU, copy count, and the local photo to upload. */
-export type CheckoutLine = { sku: string; copies: number; photoUri: string };
+export type CheckoutLine = {
+  sku: string;
+  copies: number;
+  photoUri: string;
+  /**
+   * Prodigi attributes for this line (e.g. `{ finish: "satin" }`). Must be sent
+   * identically to checkout AND to the order: checkout validates them before the
+   * PaymentIntent exists, and the order is what actually carries them to Prodigi.
+   */
+  attributes?: Record<string, string>;
+};
 
 export type CheckoutFlowInput = {
   /** Same key for checkout + order; a retry with it can't become a second order. */
@@ -71,7 +81,7 @@ export async function runCheckout(input: CheckoutFlowInput): Promise<CheckoutFlo
         shipTo: recipient.address,
         email: recipient.email,
         // One line per cart item (NOT aggregated) — matches the order's basket signature.
-        items: lines.map((l) => ({ sku: l.sku, copies: l.copies })),
+        items: lines.map((l) => ({ sku: l.sku, copies: l.copies, attributes: l.attributes })),
         couponCode,
       }),
       Promise.all(lines.map((l) => uploadPrintPhoto(l.photoUri, l.sku))),
@@ -127,7 +137,12 @@ export async function runCheckout(input: CheckoutFlowInput): Promise<CheckoutFlo
       paymentIntentId,
       shippingMethod,
       recipient,
-      items: lines.map((l, i) => ({ sku: l.sku, copies: l.copies, uploadKey: uploadKeys[i] })),
+      items: lines.map((l, i) => ({
+        sku: l.sku,
+        copies: l.copies,
+        uploadKey: uploadKeys[i],
+        attributes: l.attributes,
+      })),
     });
     return {
       status: 'ordered',
