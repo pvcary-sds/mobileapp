@@ -17,7 +17,7 @@ import { previewCheckout } from '@/api/checkout';
 import { CheckoutStepper } from '@/components/checkout-stepper';
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { cartStore, useAppliedCoupon, useCartItems } from '@/lib/cart-store';
+import { attributesFor, cartStore, useAppliedCoupon, useCartItems } from '@/lib/cart-store';
 import { formatUSD, useCheckout } from '@/lib/checkout-context';
 import { orderHistory } from '@/lib/order-history';
 import { runCheckout } from '@/lib/payment';
@@ -60,7 +60,7 @@ export default function PaymentStep() {
             zip: zip.trim(),
             countryCode: 'US',
           },
-          items: items.map((i) => ({ sku: i.sku, copies: i.quantity })),
+          items: items.map((i) => ({ sku: i.sku, copies: i.quantity, attributes: attributesFor(i) })),
           couponCode: appliedCoupon?.code,
         },
         controller.signal,
@@ -100,7 +100,12 @@ export default function PaymentStep() {
           phone: c.phone.trim() || undefined,
           address: c.shipTo,
         },
-        lines: items.map((i) => ({ sku: i.sku, copies: i.quantity, photoUri: i.photo.uri })),
+        lines: items.map((i) => ({
+          sku: i.sku,
+          copies: i.quantity,
+          photoUri: i.photo.uri,
+          attributes: attributesFor(i),
+        })),
         couponCode: appliedCoupon?.code,
       });
 

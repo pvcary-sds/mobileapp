@@ -40,6 +40,20 @@ export type CartItem = {
   selection: Selection;
 };
 
+/**
+ * The Prodigi `attributes` for a cart item, or undefined when it has none.
+ *
+ * Today that's just the chosen finish (aluminium). It rides on `selection`, which
+ * the builder already stores per item, so re-editing a print keeps the choice.
+ * The value is Prodigi's own string — `/v1/checkout` rejects an item whose SKU
+ * requires an attribute it doesn't carry, so this must reach BOTH the checkout
+ * and the order call with the same contents.
+ */
+export function attributesFor(item: CartItem): Record<string, string> | undefined {
+  const finish = item.selection?.finish;
+  return finish ? { finish } : undefined;
+}
+
 /** A coupon applied to the cart — shared so the Review screen can price with it. */
 export type AppliedCoupon = { code: string; discountAmount: string; freeShipping: boolean };
 

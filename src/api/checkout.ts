@@ -16,7 +16,12 @@ export type CheckoutShipTo = {
   countryCode: string; // 'US' only, today
 };
 
-export type CheckoutItem = { sku: string; copies: number };
+export type CheckoutItem = {
+  sku: string;
+  copies: number;
+  /** Prodigi attributes (e.g. finish). Validated server-side BEFORE payment. */
+  attributes?: Record<string, string>;
+};
 
 export type CheckoutRequest = {
   idempotencyKey: string;
