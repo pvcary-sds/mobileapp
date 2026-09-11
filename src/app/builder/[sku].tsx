@@ -9,6 +9,7 @@ import { SvgXml } from 'react-native-svg';
 
 import { getPrintAreaSizes } from '@/api/catalog';
 import { AdjustSlider } from '@/components/adjust-slider';
+import { SizePickerSheet } from '@/components/size-picker-sheet';
 import { PhotoCanvasBackground } from '@/components/photo-canvas-background';
 import { SkiaPhoto, SkiaThumb, useLocalSkiaImage } from '@/components/skia-photo';
 import { IDENTITY_ZOOM, ZoomPanFrame } from '@/components/zoom-pan-frame';
@@ -34,7 +35,7 @@ import { useAsync } from '@/hooks/use-async';
 import { useTheme } from '@/hooks/use-theme';
 import { cartStore } from '@/lib/cart-store';
 import { buildColorMatrix } from '@/lib/color-matrix';
-import { useSelection } from '@/lib/selection-store';
+import { selectionStore, useSelection } from '@/lib/selection-store';
 
 /** A raw photo as picked (from the PDP or the in-builder picker). */
 type RawPhoto = { uri: string; width?: number; height?: number };
@@ -183,9 +184,12 @@ export default function BuilderScreen() {
   // canvas (e.g. 3417×4317) so the frame is edge-to-edge accurate, plus the DPI
   // for a future low-resolution warning. Falls back to the nominal size label
   // while it loads or if it's unavailable.
+  // Keyed off the SELECTED variant, not the route param: the route sku is only
+  // the size the PDP opened with, and the in-builder picker can change it.
+  const activeSku = selection?.variant.sku ?? (sku as string);
   const { data: printSpec } = useAsync(
-    (signal) => getPrintAreaSizes(sku as string, undefined, signal),
-    [sku],
+    (signal) => getPrintAreaSizes(activeSku, undefined, signal),
+    [activeSku],
   );
 
   // Seed the picked photos from the route param into local state (with default
@@ -201,8 +205,8 @@ export default function BuilderScreen() {
   });
   const photoCount = Math.max(1, photos.length);
 
-  // Total = the selected size's unit price × number of photos.
-  // TODO: recompute the unit price when the in-builder size picker is wired.
+  // Total = the selected size's unit price × number of photos. `price` comes off
+  // the selection store, so picking a new size in the sheet re-prices this too.
   const totalLabel = formatUSD((Number(price) || 0) * photoCount);
 
   const [sizeOpen, setSizeOpen] = useState(false); // size picker open (chevron flips)
@@ -341,7 +345,7 @@ export default function BuilderScreen() {
     if (photos.length === 0 || !selection) return;
     const product = {
       productId: selection.product.id,
-      sku: sku ?? '',
+      sku: activeSku,
       title,
       size,
       price: price || '0',
@@ -469,10 +473,9 @@ export default function BuilderScreen() {
         </Pressable>
       </View>
 
-      {/* Size selector — top-right. Reflects the size chosen on the PDP. */}
-      {/* TODO: wire the size changer/picker (for now the tap just flips the chevron). */}
+      {/* Size selector — top-right. Opens the size sheet; the chevron reflects it. */}
       <Pressable
-        onPress={() => setSizeOpen((o) => !o)}
+        onPress={() => setSizeOpen(true)}
         style={[
           styles.sizeSelector,
           { borderColor: theme.borderStrong, backgroundColor: theme.background },
@@ -551,6 +554,21 @@ export default function BuilderScreen() {
       </View>
 
       {/* Filter sheet — a white panel pinned to the bottom, over everything. */}
+      {/* Size sheet — changing size updates the selection store, which re-derives
+          the label, the unit price, and the print spec the frame crops to. */}
+      {selection && (
+        <SizePickerSheet
+          visible={sizeOpen}
+          variants={selection.product.variants}
+          selectedSku={activeSku}
+          onSelect={(v) => {
+            selectionStore.set(selection.product, v, selection.finish);
+            setSizeOpen(false);
+          }}
+          onClose={() => setSizeOpen(false)}
+        />
+      )}
+
       {filterOpen && (
         <View
           style={[
