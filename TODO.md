@@ -24,6 +24,45 @@ add new ones here rather than leaving them only in chat/session notes.
       `fixed` type (`src/services/coupons.ts` `Discount` union + `priceCoupon`, plus
       the app's `CouponDiscount`). See `docs/dynamodb-setup.md` / cart.md TODO notes.
 
+## Product options (borders, frames, finishes)
+
+`ProductVariant` is `{ sku, size, price, orientation }` — **size is the only
+variant axis**. That held while acrylic was the only product; every product added
+since has options the model can't express, and Prodigi surfaces them two different
+ways:
+
+| Product | Option | How Prodigi models it |
+|---|---|---|
+| Maple wood | border — none / 1/4" / 1/2" | **in the SKU**: `…-NAT-NOBDR` / `-QTRBDR` / `-HALFBDR` |
+| Maple wood | finish — natural / white | **in the SKU**: `…-NAT-` / `-WHI-` |
+| Aluminium | finish — high gloss / mid-gloss / satin / sheer glossy / sheer matte | **an `attributes` value** on one SKU |
+
+- [ ] **Sell the wood border options (1/4" and 1/2").** We ship `NAT-NOBDR` only.
+      All three cost the same and report the same `productDimensions`, but the
+      printable area differs (11x14: 3300x4200 / 3240x4140 / 3150x4050), so the
+      crop ratio changes by 0.4–1.0%. The builder already prefers
+      `printAreaSizes.default` over the nominal size, so geometry is handled;
+      what's missing is a way to *choose* and a picker that doesn't read as
+      duplicate sizes. `import-variants.mjs --sku-match` currently narrows to one.
+- [ ] **Support attribute-based options (blocks selling aluminium).** Aluminium
+      SKUs **require** a `finish`; a quote or order without one is a
+      **400 from Prodigi**. `CartItem` has no attributes field and nothing in the
+      app ever sets `OrderItem.attributes` (`src/api/order.ts:27` — declared,
+      never populated), while the API passes whatever the client sends straight
+      through (`src/routes/order.ts:205`). **The customer is charged before the
+      Prodigi order is placed** (`order.ts:223` verifies the PaymentIntent,
+      `:266` calls `createProdigiOrder`), so an aluminium order would take the
+      money and then fail. Aluminium cannot ship until this is done.
+- [ ] **Decide how options reach the cart and the order.** Both kinds need to
+      survive PDP -> builder -> cart -> checkout -> order, and "Edit prints" has
+      to restore them (`CartItem.selection`). A SKU-encoded option changes the
+      `sku`; an attribute-encoded one changes `attributes` while the sku stays
+      put — the cart shouldn't need to know which.
+- [ ] **Guard the failure mode regardless.** Even once options exist, the API
+      should reject an order whose SKU has required attributes that are missing,
+      *before* it charges — rather than surfacing a Prodigi 400 after the money
+      has moved.
+
 ## Cancel order
 
 Prodigi supports cancellation (`POST /v4.0/orders/{id}/actions/cancel`), but it is
