@@ -40,11 +40,17 @@ export default function ProductScreen() {
   const [activeImage, setActiveImage] = useState(0);
   const [selecting, setSelecting] = useState(false);
   const [sizesExpanded, setSizesExpanded] = useState(false); // "Show N more" size chips
-
+  const [selectedFinish, setSelectedFinish] = useState<string | null>(null);
   const { data: product, error, loading, reload } = useAsync(
     (signal) => getProduct(id, signal),
     [id],
   );
+
+  // Finishes come from the API (Prodigi's own strings). Pre-select the first so a
+  // customer who ignores the picker still has a valid basket — /v1/checkout
+  // rejects an item whose SKU requires a finish and doesn't carry one.
+  const finishes = product?.finish ?? [];
+  const finish = selectedFinish ?? finishes[0] ?? undefined;
 
   const longText = useMemo(
     () => (product ? htmlToText(product.longDescription) : ''),
@@ -87,7 +93,7 @@ export default function ProductScreen() {
       const selectedVariant = product?.variants.find((v) => v.sku === selectedSku);
       // Capture the full selected product for the builder + cart (labels, print
       // spec, cart details) — the photos are transient so they ride the route.
-      if (product && selectedVariant) selectionStore.set(product, selectedVariant);
+      if (product && selectedVariant) selectionStore.set(product, selectedVariant, finish);
       router.push({
         pathname: '/builder/[sku]',
         params: { sku: selectedSku, photos: JSON.stringify(photos) },
@@ -195,6 +201,26 @@ export default function ProductScreen() {
                 </View>
               </View>
 
+              {/* Only when the product actually offers finishes — acrylic and wood
+                  return [], so the section is absent rather than empty. */}
+              {finishes.length > 0 && (
+                <View style={[styles.section, styles.finishSection]}>
+                  <Text style={[styles.sizeHeading, { color: theme.text }]}>
+                    Choose a finish
+                  </Text>
+                  <View style={styles.finishGrid}>
+                    {finishes.map((f) => (
+                      <FinishChip
+                        key={f}
+                        value={f}
+                        selected={f === finish}
+                        onPress={() => setSelectedFinish(f)}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
+
               <View style={styles.actionBlock}>
                 <Pressable
                   onPress={onContinue}
@@ -286,6 +312,46 @@ function SizeChip({
       <Text style={[styles.sizeText, { color: theme.text }]}>{variant.size} in</Text>
     </Pressable>
   );
+}
+
+/**
+ * One finish option. Borders mirror SizeChip (Gray/black when selected, Gray/200
+ * when not) but the label stays Gray/black Medium either way — selection is shown
+ * by the border alone, not by the type.
+ *
+ * `value` is Prodigi's string ("high gloss"); only the display is title-cased, so
+ * what reaches the order is what Prodigi expects.
+ */
+function FinishChip({
+  value,
+  selected,
+  onPress,
+}: {
+  value: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      style={[
+        styles.finishChip,
+        {
+          backgroundColor: theme.background,
+          borderColor: selected ? theme.text : theme.border,
+        },
+      ]}>
+      <Text style={[styles.finishText, { color: theme.text }]}>{titleCase(value)}</Text>
+    </Pressable>
+  );
+}
+
+/** "high gloss" -> "High Gloss". Display only — never mutate the value we send. */
+function titleCase(s: string): string {
+  return s.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 // Shipping-truck icon for the Free shipping badge. `currentColor` so the theme
@@ -436,6 +502,27 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.body, // Body / Regular
     fontSize: 14,
     lineHeight: 20,
+  },
+  finishSection: {
+    marginTop: 20, // 20 below the size section
+  },
+  finishGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two, // 8
+    marginTop: 4, // 4 below the "Choose a finish" title
+  },
+  finishChip: {
+    height: 48,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.three, // 16 leading/trailing from the label
+    borderRadius: Spacing.two, // 8
+    borderWidth: 1, // Gray/200, or Gray/black when selected
+  },
+  finishText: {
+    fontFamily: FontFamily.bodyMedium, // Body / Medium 16/24, Gray/black
+    fontSize: 16,
+    lineHeight: 24,
   },
   sizeGrid: {
     flexDirection: 'row',

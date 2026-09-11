@@ -9,7 +9,17 @@ import type { Product, ProductVariant } from '@/api/types';
  * full product details flow through cleanly instead of being squeezed into
  * route-param query strings.
  */
-export type Selection = { product: Product; variant: ProductVariant };
+export type Selection = {
+  product: Product;
+  variant: ProductVariant;
+  /**
+   * The chosen finish, for products that offer one (aluminium). Prodigi's own
+   * string, to be sent on as `attributes.finish` when the order is placed —
+   * `/v1/checkout` rejects an aluminium basket without it. Undefined for
+   * products with no finish choice.
+   */
+  finish?: string;
+};
 
 let selection: Selection | null = null;
 const listeners = new Set<() => void>();
@@ -20,8 +30,8 @@ function emit() {
 
 export const selectionStore = {
   get: (): Selection | null => selection,
-  set: (product: Product, variant: ProductVariant) => {
-    selection = { product, variant };
+  set: (product: Product, variant: ProductVariant, finish?: string) => {
+    selection = { product, variant, finish };
     emit();
   },
   clear: () => {

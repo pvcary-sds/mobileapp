@@ -61,6 +61,14 @@ export interface Product {
   skuPrefix: string;
   features: string[];
   materials: string[];
+  /**
+   * Selectable finishes, when the product has any (aluminium does; acrylic and
+   * wood return []). Values are Prodigi's own strings (e.g. "high gloss") and are
+   * sent back verbatim as `attributes.finish` — so display-case them, never edit
+   * them. An empty list means the product has no finish choice and the PDP hides
+   * the section.
+   */
+  finish: string[];
   packaging: string[];
   variants: ProductVariant[];
 }
