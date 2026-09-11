@@ -88,9 +88,10 @@ export function SizePickerSheet({
 
 const styles = StyleSheet.create({
   backdrop: {
+    // No scrim: the sheet slides over the builder and the dimming read as heavy
+    // for a picker this light. The area above it is still tappable to dismiss.
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
   },
   sheet: {
     maxHeight: '80%',
