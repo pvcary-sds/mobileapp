@@ -204,11 +204,18 @@ export default function ProductScreen() {
               {/* Only when the product actually offers finishes — acrylic and wood
                   return [], so the section is absent rather than empty. */}
               {finishes.length > 0 && (
-                <View style={[styles.section, styles.finishSection]}>
-                  <Text style={[styles.sizeHeading, { color: theme.text }]}>
+                <View style={styles.finishSection}>
+                  <Text style={[styles.sizeHeading, styles.finishHeading, { color: theme.text }]}>
                     Choose a finish
                   </Text>
-                  <View style={styles.finishGrid}>
+                  {/* Horizontal scroll, not a wrapping grid. The padding lives on the
+                      content (not the ScrollView) so chips scroll under the screen
+                      edge instead of being clipped 16 short of it. */}
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.finishScroll}
+                    contentContainerStyle={styles.finishRow}>
                     {finishes.map((f) => (
                       <FinishChip
                         key={f}
@@ -217,7 +224,7 @@ export default function ProductScreen() {
                         onPress={() => setSelectedFinish(f)}
                       />
                     ))}
-                  </View>
+                  </ScrollView>
                 </View>
               )}
 
@@ -505,12 +512,18 @@ const styles = StyleSheet.create({
   },
   finishSection: {
     marginTop: 20, // 20 below the size section
+    // No horizontal padding here — the heading and the scroll content pad
+    // themselves, so the row can run to the screen edge.
   },
-  finishGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two, // 8
+  finishHeading: {
+    paddingHorizontal: Spacing.three, // 16, matching the other sections
+  },
+  finishScroll: {
     marginTop: 4, // 4 below the "Choose a finish" title
+  },
+  finishRow: {
+    gap: Spacing.two, // 8
+    paddingHorizontal: Spacing.three, // 16 leading/trailing for the row itself
   },
   finishChip: {
     height: 48,
