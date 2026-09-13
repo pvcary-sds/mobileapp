@@ -40,17 +40,19 @@ export default function ProductScreen() {
   const [activeImage, setActiveImage] = useState(0);
   const [selecting, setSelecting] = useState(false);
   const [sizesExpanded, setSizesExpanded] = useState(false); // "Show N more" size chips
-  const [selectedFinish, setSelectedFinish] = useState<string | null>(null);
+  const [chosen, setChosen] = useState<Record<string, string>>({});
   const { data: product, error, loading, reload } = useAsync(
     (signal) => getProduct(id, signal),
     [id],
   );
 
-  // Finishes come from the API (Prodigi's own strings). Pre-select the first so a
-  // customer who ignores the picker still has a valid basket — /v1/checkout
-  // rejects an item whose SKU requires a finish and doesn't carry one.
-  const finishes = product?.finish ?? [];
-  const finish = selectedFinish ?? finishes[0] ?? undefined;
+  // One picker per Prodigi attribute the product exposes (finish, wrap, …). Each
+  // defaults to its first value, so a customer who ignores the pickers still has
+  // a valid basket — /v1/checkout rejects an item whose SKU requires an
+  // attribute it doesn't carry.
+  const options = product?.options ?? [];
+  const attributes: Record<string, string> = {};
+  for (const o of options) attributes[o.id] = chosen[o.id] ?? o.values[0];
 
   const longText = useMemo(
     () => (product ? htmlToText(product.longDescription) : ''),
@@ -93,7 +95,7 @@ export default function ProductScreen() {
       const selectedVariant = product?.variants.find((v) => v.sku === selectedSku);
       // Capture the full selected product for the builder + cart (labels, print
       // spec, cart details) — the photos are transient so they ride the route.
-      if (product && selectedVariant) selectionStore.set(product, selectedVariant, finish);
+      if (product && selectedVariant) selectionStore.set(product, selectedVariant, attributes);
       router.push({
         pathname: '/builder/[sku]',
         params: { sku: selectedSku, photos: JSON.stringify(photos) },
@@ -201,27 +203,27 @@ export default function ProductScreen() {
                 </View>
               </View>
 
-              {/* Only when the product actually offers finishes — acrylic and wood
-                  return [], so the section is absent rather than empty. */}
-              {finishes.length > 0 && (
-                <View style={styles.finishSection}>
+              {/* One section per option — none for acrylic, "Finish" for
+                  aluminium and Dibond, "Wrap" for canvas. */}
+              {options.map((option) => (
+                <View key={option.id} style={styles.finishSection}>
                   <Text style={[styles.sizeHeading, styles.finishHeading, { color: theme.text }]}>
-                    Choose a finish
+                    Choose a {option.label.toLowerCase()}
                   </Text>
-                  {/* Wraps like the size grid rather than scrolling — the five
-                      finishes fall into two rows, so they're all visible at once. */}
+                  {/* Wraps like the size grid rather than scrolling, so every
+                      value is visible at once. */}
                   <View style={styles.finishRow}>
-                    {finishes.map((f) => (
-                      <FinishChip
-                        key={f}
-                        value={f}
-                        selected={f === finish}
-                        onPress={() => setSelectedFinish(f)}
+                    {option.values.map((v) => (
+                      <OptionChip
+                        key={v}
+                        value={v}
+                        selected={v === attributes[option.id]}
+                        onPress={() => setChosen((c) => ({ ...c, [option.id]: v }))}
                       />
                     ))}
                   </View>
                 </View>
-              )}
+              ))}
 
               <View style={styles.actionBlock}>
                 <Pressable
@@ -317,14 +319,14 @@ function SizeChip({
 }
 
 /**
- * One finish option. Borders mirror SizeChip (Gray/black when selected, Gray/200
+ * One option value (a finish, a wrap, …). Borders mirror SizeChip (Gray/black when selected, Gray/200
  * when not) but the label stays Gray/black Medium either way — selection is shown
  * by the border alone, not by the type.
  *
  * `value` is Prodigi's string ("high gloss"); only the display is title-cased, so
  * what reaches the order is what Prodigi expects.
  */
-function FinishChip({
+function OptionChip({
   value,
   selected,
   onPress,

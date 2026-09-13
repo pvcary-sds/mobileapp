@@ -52,6 +52,13 @@ export interface ProductVariant {
 }
 
 /** The full product page (`GET /v1/products/{id}`). */
+/** One selectable Prodigi attribute (finish, wrap, …). */
+export interface ProductOption {
+  id: string;
+  label: string;
+  values: string[];
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -61,14 +68,17 @@ export interface Product {
   skuPrefix: string;
   features: string[];
   materials: string[];
-  /**
-   * Selectable finishes, when the product has any (aluminium does; acrylic and
-   * wood return []). Values are Prodigi's own strings (e.g. "high gloss") and are
-   * sent back verbatim as `attributes.finish` — so display-case them, never edit
-   * them. An empty list means the product has no finish choice and the PDP hides
-   * the section.
-   */
+  /** Legacy single-attribute field; prefer `options`. */
   finish: string[];
+  /**
+   * Non-size choices — `finish` on aluminium and Dibond, `wrap` on canvas, and
+   * whatever a future product exposes. Empty means no choices and no picker.
+   *
+   * `id` is the Prodigi attribute key, so the order sends
+   * `attributes[option.id] = chosenValue` with no translation. Values are
+   * Prodigi's own strings — display-case them, never edit them.
+   */
+  options: ProductOption[];
   packaging: string[];
   variants: ProductVariant[];
 }

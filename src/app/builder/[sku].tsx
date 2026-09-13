@@ -570,7 +570,7 @@ export default function BuilderScreen() {
           variants={selection.product.variants}
           selectedSku={activeSku}
           onSelect={(v) => {
-            selectionStore.set(selection.product, v, selection.finish);
+            selectionStore.set(selection.product, v, selection.attributes);
             setSizeOpen(false);
           }}
           onClose={() => setSizeOpen(false)}
