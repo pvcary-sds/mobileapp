@@ -79,6 +79,55 @@ ways:
       *before* it charges — rather than surfacing a Prodigi 400 after the money
       has moved.
 
+## Pricing — the canvas oversize shipping cliff
+
+Prodigi's stretched-canvas shipping is tiered by longest side, and the top tier is
+a **cliff, not a curve**. Measured 2026-09-13 (US→US, Standard, qty 1):
+
+| Longest side | Shipping |
+|---|---|
+| 6–8" | $21.55 |
+| 10–16" | $24.80 |
+| 18–24" | $25.90 |
+| 26–32" | $32.35 |
+| 36" | $34.55 |
+| 38–40" | $50.75 |
+| **42–60"** | **$232.20** |
+
+Crossing 40" multiplies shipping **4.6x**, and on those sizes shipping is **73% of
+landed cost**. The item price itself scales normally throughout — this is entirely
+carriage.
+
+Because shipping is free to the customer and baked into retail (see `PRICING.md`),
+that lands in the sticker price:
+
+| | Area | Shipping | Retail at 12% |
+|---|---|---|---|
+| `30x40` | 1200 in² | $50.75 | **$140** |
+| `20x60` | 1200 in² | $232.20 | **$365** |
+| `40x40` | 1600 in² | $50.75 | **$165** |
+| `40x50` | 2000 in² | $232.20 | **$390** |
+
+Same area, 2.6x the price. A customer seeing 40x40 at $165 next to 40x50 at $390
+reads that as a mistake.
+
+**Decision 2026-09-13: cap canvas at a 40" longest side.** 18 of the 80 sizes sit
+above the cliff and none are listed. That caps canvas at 40x40 / $165.
+
+- [ ] **Decide whether to sell above 40" at all.** Three options, none free:
+      (a) stay capped — simplest, loses the statement-piece end of the market;
+      (b) list them at ~$365–425 and accept the ladder looks broken;
+      (c) charge shipping separately on oversize items — which breaks the
+      free-shipping promise that is currently baked into every price on every
+      product, so it is not a canvas-only change.
+- [ ] **Check whether the cliff exists on other lines.** Acrylic goes to 30x40 and
+      wood to 30x40, both under the threshold, so it has not bitten yet — but the
+      next large-format product could hit it silently. Nothing in the pricing
+      script warns when shipping jumps disproportionately to size.
+- [ ] **Consider a guard in the pricing workflow.** A size whose shipping is >40%
+      of landed cost is almost certainly mispriced or shouldn't be listed; today
+      that is only caught by reading the table.
+
 ## Cancel order
 
 Prodigi supports cancellation (`POST /v4.0/orders/{id}/actions/cancel`), but it is
