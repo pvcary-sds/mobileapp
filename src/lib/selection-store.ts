@@ -13,12 +13,11 @@ export type Selection = {
   product: Product;
   variant: ProductVariant;
   /**
-   * The chosen finish, for products that offer one (aluminium). Prodigi's own
-   * string, to be sent on as `attributes.finish` when the order is placed —
-   * `/v1/checkout` rejects an aluminium basket without it. Undefined for
-   * products with no finish choice.
+   * The customer's chosen options, keyed by Prodigi attribute id —
+   * `{ finish: "satin" }`, `{ wrap: "Black" }`. Sent on as `attributes` when the
+   * order is placed; `/v1/checkout` rejects a basket missing a required one.
    */
-  finish?: string;
+  attributes: Record<string, string>;
 };
 
 let selection: Selection | null = null;
@@ -30,8 +29,12 @@ function emit() {
 
 export const selectionStore = {
   get: (): Selection | null => selection,
-  set: (product: Product, variant: ProductVariant, finish?: string) => {
-    selection = { product, variant, finish };
+  set: (
+    product: Product,
+    variant: ProductVariant,
+    attributes: Record<string, string> = {},
+  ) => {
+    selection = { product, variant, attributes };
     emit();
   },
   clear: () => {
