@@ -58,18 +58,25 @@ ways:
       to restore them (`CartItem.selection`). A SKU-encoded option changes the
       `sku`; an attribute-encoded one changes `attributes` while the sku stays
       put — the cart shouldn't need to know which.
-- [ ] **Show the canvas wrap — blocking `ImageWrap`/`MirrorWrap`.** Stretched
-      canvas requires a `wrap` (`ImageWrap` / `MirrorWrap` / `White` / `Black`),
-      all four at the same cost. It is unlike `finish`: finish changes the face,
-      which the builder already shows, while wrap changes the **edges**, which the
-      builder does not render at all — it draws a flat rectangle. On a 38mm (1.5")
-      stretcher those edges are very visible in the room, and with `ImageWrap` the
-      photo continues around them, so the customer is choosing something they
-      cannot see and cannot predict.
-      **Decision 2026-09-13: ship `White`/`Black` only.** A solid edge is
-      self-explanatory without a preview; the image-based wraps are not. Selling
-      them needs the builder to represent the edge — a depth/wrap preview, or at
-      minimum a diagram of the four options.
+- [ ] **Show the canvas wrap — blocking `ImageWrap` only.** Stretched canvas
+      requires a `wrap` (`ImageWrap` / `MirrorWrap` / `White` / `Black`), all four
+      at the same cost. It is unlike `finish`: finish changes the face, which the
+      builder already shows, while wrap changes the **edges**, which the builder
+      does not render at all — it draws a flat rectangle. On a 38mm (1.5")
+      stretcher those edges are very visible in the room.
+
+      **Decision 2026-09-13, revised: selling `Black` / `White` / `MirrorWrap`;
+      holding `ImageWrap`.** The line is whether the customer can predict the
+      result without seeing it:
+
+      | Wrap | Edges | Needs a preview? |
+      |---|---|---|
+      | `Black` / `White` | solid colour | no — self-explanatory |
+      | `MirrorWrap` | the face mirrored around the sides | no — purely additive; nothing leaves the face, so the crop frame stays accurate |
+      | `ImageWrap` | the photo continues around the sides | **yes** — what lands on the edge depends on what sits near the border of their crop, which the flat frame cannot convey |
+
+      So this item is now only about `ImageWrap`. Selling it needs the builder to
+      represent the edge — a depth/wrap preview, or at minimum a diagram.
       (Prodigi generates the wrap itself: the print area is only +0.09"/side on
       38mm and does not scale with depth, so this is a presentation problem, not a
       crop-geometry one. The frame stays the visible face.)
