@@ -35,7 +35,7 @@ different prices with nothing to tell them apart.
 ## The flow
 
 ```
-Choose a matte   ←  new; defaults to "No matte"
+Choose a matte   ←  new; "Matte" first and selected by default
 Choose a size    ←  existing grid, filtered to the chosen mount, prices follow
 Choose a frame color  ←  existing attribute picker, unchanged
 ```
@@ -132,6 +132,11 @@ existing import changes behaviour.
 
 - Render a **Choose a matte** picker above the size grid when `skuAxis` exists,
   defaulting to the value marked `isDefault`.
+- **Order and default for framed prints: `Matte` first and pre-selected**,
+  `No matte` second (decided 2026-09-14). The tier2 card's range is derived from
+  the cheapest variant so it reads "from $65" (unmatted 5x7) while the PDP opens
+  at $70 — a $5 gap at the very bottom size, accepted deliberately in favour of
+  leading with the better product.
 - Filter `product.variants` to the selected group before building the size grid.
 - Everything downstream is unchanged: the chosen variant already carries the
   right `sku` and `price`, so cart, checkout and order need no change at all.
@@ -166,8 +171,8 @@ separate decision, deliberately not made here.
 
 ## Open questions
 
-1. **Labels.** `"No matte"` / `"With matte"` is a guess. Prodigi's raw values
-   (`"No mount / Mat"`, `"2.4mm"`) are not customer-facing.
+1. ~~**Labels.**~~ Settled: **`Matte`** and **`No matte`**, matte first and
+   default. Prodigi's raw values (`"No mount / Mat"`, `"2.4mm"`) stay internal.
 2. **`16x24` is unmatted-only.** Selecting "With matte" should hide it rather
    than show a size that can't be ordered — falls out of filtering, but worth
    confirming it reads correctly.
