@@ -23,7 +23,7 @@ type Props = {
  * A full-width tier2 product tile: a bordered, shadowed container with a
  * full-bleed image on top, then 16px-inset name/price, description, and a
  * Select button:
- *   image (177) → [16] name / price → 4 → description → 16 → Select (48) → [16].
+ *   image (177) → [16] name / price → 4 → description (≤4 lines) → 16 → Select (48) → [16].
  * The outer view carries the shadow (no clipping); the inner view carries the
  * border + rounded corners and clips the image. Tapping the tile or Select
  * opens the product page. The price range comes from the API (`priceRange`);
@@ -53,7 +53,13 @@ export function Tier2Card({ item, onPress }: Props) {
           </View>
 
           {!!item.description && (
-            <Text style={[styles.description, { color: theme.textSecondary }]}>
+            // Clamped to 4 lines with a trailing ellipsis. Descriptions are
+            // CMS-authored and vary a lot in length; without a clamp a long one
+            // pushes the Select button down and the cards in a row stop lining up.
+            <Text
+              style={[styles.description, { color: theme.textSecondary }]}
+              numberOfLines={4}
+              ellipsizeMode="tail">
               {item.description}
             </Text>
           )}
