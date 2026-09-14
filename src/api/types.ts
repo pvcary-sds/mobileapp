@@ -44,11 +44,24 @@ export interface CatalogResponse {
 }
 
 /** One size of a product line. `sku` drives the fulfilment endpoints. */
+/** A choice that selects between SKUs rather than setting an attribute. */
+export interface ProductSkuAxis {
+  id: string;
+  label: string;
+  values: { value: string; label: string; isDefault?: boolean }[];
+}
+
 export interface ProductVariant {
   sku: string;
   size: string;
   price: string; // decimal string, USD, no symbol e.g. "60.00"
   orientation: string; // "Square" | "Portrait / landscape"
+  /**
+   * Which SKU group this variant is in, when the product is sold in more than
+   * one form at the same size (framed prints: matted or plain, both "16x20").
+   * Undefined for every other product.
+   */
+  skuGroup?: { id: string; value: string };
 }
 
 /** The full product page (`GET /v1/products/{id}`). */
@@ -79,6 +92,12 @@ export interface Product {
    * Prodigi's own strings — display-case them, never edit them.
    */
   options: ProductOption[];
+  /**
+   * Present only when variants span more than one SKU group. Selecting a value
+   * FILTERS the size grid — it does not add anything to the order, because the
+   * chosen variant's `sku` already encodes it.
+   */
+  skuAxis?: ProductSkuAxis;
   packaging: string[];
   variants: ProductVariant[];
 }
