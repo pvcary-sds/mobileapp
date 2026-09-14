@@ -20,6 +20,8 @@ business. It consumes the SDS API; it never talks to Prodigi / Stripe / Storyblo
 - [docs/photo-flow.md](./docs/photo-flow.md) — capture / customize / upload pipeline
 - [docs/cart.md](./docs/cart.md) · [docs/checkout.md](./docs/checkout.md) · [docs/orders.md](./docs/orders.md) — cart → checkout → order tracking
 - [docs/customize-builder.md](./docs/customize-builder.md) — the Skia photo editor
+- [docs/framed-print-mount.md](./docs/framed-print-mount.md) — spec: choosing a
+  mount on framed prints (a choice that selects between SKUs, not an attribute)
 - [TODO.md](./TODO.md) — outstanding work (incl. Stripe production checklist)
 
 ## Conventions
