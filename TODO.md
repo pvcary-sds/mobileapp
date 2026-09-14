@@ -37,6 +37,31 @@ ways:
 | Maple wood | finish — natural / white | **in the SKU**: `…-NAT-` / `-WHI-` |
 | Aluminium | finish — high gloss / mid-gloss / satin / sheer glossy / sheer matte | **an `attributes` value** on one SKU |
 
+> **These four are the same gap.** The PDP can render a size grid and a flat list
+> of attribute values, and nothing else. Every product added since acrylic has
+> wanted something it can't draw:
+>
+> | Product | Needs | Why the PDP can't |
+> |---|---|---|
+> | Stretched / eco canvas | `ImageWrap`, `MirrorWrap` | the **edge** isn't drawn at all |
+> | Maple wood | 1/4" and 1/2" borders | a second **SKU-encoded axis** beside size |
+> | Slim canvas (not stocked) | 19mm vs 38mm depth | same SKU axis, and **depth** isn't drawn |
+> | Poster hangers | portrait vs landscape | two identical-looking chips per size |
+>
+> Two capabilities cover all four: **render the edge/depth of a print**, and
+> **offer a second SKU-encoded axis**. Doing them once unlocks image wraps, both
+> wood borders, slim canvas as a product, and makes hangers buyable — rather than
+> four separate workarounds.
+
+- [ ] **Surface hanger orientation on the PDP — blocks buying a hanger.** Poster
+      hangers sell the same size in portrait and landscape as separate SKUs at
+      different prices (20x28 is $43 portrait, $48 landscape — the rail width
+      follows the print's width). Both variants carry size `20x28`, so the picker
+      shows **two identical-looking chips**. The `orientation` field is populated
+      (`Portrait` / `Landscape` / `Square`) and correct; nothing renders it.
+      Pricing is already handled — that table keys on SKU rather than size, the
+      only one that does.
+
 - [ ] **Sell the wood border options (1/4" and 1/2").** We ship `NAT-NOBDR` only.
       All three cost the same and report the same `productDimensions`, but the
       printable area differs (11x14: 3300x4200 / 3240x4140 / 3150x4050), so the
@@ -85,6 +110,25 @@ ways:
       should reject an order whose SKU has required attributes that are missing,
       *before* it charges — rather than surfacing a Prodigi 400 after the money
       has moved.
+
+## Release — production is behind staging
+
+`main` trails `develop`, so production runs older API code than staging. Most of
+the gap is `scripts/**`, which never deploys (it is in the workflow's
+`paths-ignore`) and only affects local tooling. Two things do affect the running
+service:
+
+- [ ] **`framecolor` in `ATTRIBUTE_FIELDS`** — without it `posterhangers` returns
+      `options: []` in production, so the PDP has no Frame colour picker and a
+      hanger cannot be bought there. Checkout itself is fine: it reads Prodigi's
+      own attributes, so a colour sent by a client is accepted and priced
+      correctly ($43/$48 verified in production).
+- [ ] **The `posters` tier2 config entry** — the fallback that keeps
+      `POST /v1/tier2/posters` from 404ing before its CMS story resolves.
+
+Cutting a release is a deliberate act against live Stripe and live Prodigi, so
+it happens when it happens. Recorded here so the drift is tracked rather than
+rediscovered.
 
 ## Pricing — the canvas oversize shipping cliff
 
