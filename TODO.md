@@ -53,6 +53,16 @@ ways:
 > wood borders, slim canvas as a product, and makes hangers buyable — rather than
 > four separate workarounds.
 
+- [ ] **Framed prints: choose a mount.** Matted and plain are separate SKUs at
+      the same size (`GLOBAL-CFP-16X20` $85, `GLOBAL-CFPM-16X20` $95), so the
+      choice has to swap the SKU rather than set an attribute. Flow is
+      **Choose a matte → Choose a size → Choose a frame color**, with matte first
+      because it changes the prices in the size grid.
+      **Specced in [docs/framed-print-mount.md](docs/framed-print-mount.md)** —
+      scoped to framed prints only. The mechanism would serve the three items
+      above, but for those the group value isn't in Prodigi's attributes, so
+      extending it is a separate decision.
+
 - [ ] **Surface hanger orientation on the PDP — blocks buying a hanger.** Poster
       hangers sell the same size in portrait and landscape as separate SKUs at
       different prices (20x28 is $43 portrait, $48 landscape — the rail width
