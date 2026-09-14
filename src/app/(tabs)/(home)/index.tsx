@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getTier1 } from '@/api/catalog';
 import type { CatalogItem, Category } from '@/api/types';
@@ -12,6 +13,7 @@ import {
 import { CategoryFilter } from '@/components/category-filter';
 import { ScreenState } from '@/components/screen-state';
 import { ThemedView } from '@/components/themed-view';
+import { BottomTabInset } from '@/constants/theme';
 import { useAsync } from '@/hooks/use-async';
 
 /** The "no filter" sentinel category id. */
@@ -30,6 +32,7 @@ const ALL_CATEGORY: Category = { id: ALL, label: 'All', iconUrl: '' };
  * Tapping a product opens its sub-catalog (`/tier2/{id}`).
  */
 export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const [category, setCategory] = useState(ALL);
   const { data, error, loading, refreshing, reload } = useAsync(
@@ -74,7 +77,12 @@ export default function HomeScreen() {
           renderItem={({ item }) => (
             <CatalogCard item={item} onPress={() => openTier2(item)} />
           )}
-          contentContainerStyle={styles.list}
+          // Same allowance as tier2: the liquid-glass tab bar floats over the
+          // grid, so the last row sits behind it without this.
+          contentContainerStyle={[
+            styles.list,
+            { paddingBottom: CATALOG_GRID_PADDING + BottomTabInset + insets.bottom },
+          ]}
           // Pull down to re-fetch tier1.
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}
         />
@@ -88,7 +96,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   list: {
-    paddingBottom: CATALOG_GRID_PADDING,
+    // paddingBottom is applied inline — it needs the tab-bar inset.
     rowGap: CATALOG_GRID_GAP, // gap between the filter header and rows, and between rows
   },
   row: {
