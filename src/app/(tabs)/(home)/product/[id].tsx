@@ -41,6 +41,7 @@ export default function ProductScreen() {
   const [selecting, setSelecting] = useState(false);
   const [sizesExpanded, setSizesExpanded] = useState(false); // "Show N more" size chips
   const [chosen, setChosen] = useState<Record<string, string>>({});
+  const [skuGroup, setSkuGroup] = useState<string | null>(null);
   const { data: product, error, loading, reload } = useAsync(
     (signal) => getProduct(id, signal),
     [id],
@@ -53,6 +54,21 @@ export default function ProductScreen() {
   const options = product?.options ?? [];
   const attributes: Record<string, string> = {};
   for (const o of options) attributes[o.id] = chosen[o.id] ?? o.values[0];
+
+  // A SKU axis (framed prints: matted or plain) picks between VARIANTS rather
+  // than setting an attribute — both forms carry size "16x20" at different
+  // prices, so the grid has to be filtered or it shows two identical chips.
+  // Nothing is added to the order: the chosen variant's sku already encodes it.
+  const skuAxis = product?.skuAxis;
+  const activeGroup =
+    skuGroup ?? skuAxis?.values.find((v) => v.isDefault)?.value ?? skuAxis?.values[0]?.value;
+  const variants = useMemo(
+    () =>
+      skuAxis && activeGroup
+        ? (product?.variants ?? []).filter((v) => v.skuGroup?.value === activeGroup)
+        : (product?.variants ?? []),
+    [product?.variants, skuAxis, activeGroup],
+  );
 
   const longText = useMemo(
     () => (product ? htmlToText(product.longDescription) : ''),
@@ -169,13 +185,38 @@ export default function ProductScreen() {
                 </View>
               </View>
 
+              {/* A SKU-axis picker sits ABOVE the sizes because it changes their
+                  prices — framed prints are $85 plain and $95 matted at 16x20. */}
+              {skuAxis && (
+                <View style={styles.finishSection}>
+                  <Text style={[styles.sizeHeading, styles.finishHeading, { color: theme.text }]}>
+                    Choose a {skuAxis.label.toLowerCase()}
+                  </Text>
+                  <View style={styles.finishRow}>
+                    {skuAxis.values.map((v) => (
+                      <OptionChip
+                        key={v.value}
+                        value={v.value}
+                        label={v.label}
+                        selected={v.value === activeGroup}
+                        onPress={() => {
+                          setSkuGroup(v.value);
+                          // The size list changes with the group, and not every
+                          // size exists in both (16x24 is plain-only), so a
+                          // stale selection could point at a variant that is no
+                          // longer offered.
+                          setSelectedSku(null);
+                        }}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
+
               <View style={[styles.section, styles.sizeSection]}>
                 <Text style={[styles.sizeHeading, { color: theme.text }]}>Choose a size</Text>
                 <View style={styles.sizeGrid}>
-                  {(sizesExpanded
-                    ? product.variants
-                    : product.variants.slice(0, COLLAPSED_SIZE_COUNT)
-                  ).map((v) => (
+                  {(sizesExpanded ? variants : variants.slice(0, COLLAPSED_SIZE_COUNT)).map((v) => (
                     <SizeChip
                       key={v.sku}
                       variant={v}
@@ -185,7 +226,7 @@ export default function ProductScreen() {
                   ))}
                   {/* Toggle tile — always the last tile once there are more sizes
                       than fit. Collapsed: "Show N more"; expanded: "Show N less". */}
-                  {product.variants.length > COLLAPSED_SIZE_COUNT && (
+                  {variants.length > COLLAPSED_SIZE_COUNT && (
                     <Pressable
                       onPress={() => setSizesExpanded((e) => !e)}
                       style={[
@@ -195,7 +236,7 @@ export default function ProductScreen() {
                       {/* Two lines: "Show" / "N more" (or "N less"). */}
                       <Text style={[styles.sizeToggleText, { color: theme.text }]}>Show</Text>
                       <Text style={[styles.sizeToggleText, { color: theme.text }]}>
-                        {product.variants.length - COLLAPSED_SIZE_COUNT}{' '}
+                        {variants.length - COLLAPSED_SIZE_COUNT}{' '}
                         {sizesExpanded ? 'less' : 'more'}
                       </Text>
                     </Pressable>
@@ -328,10 +369,17 @@ function SizeChip({
  */
 function OptionChip({
   value,
+  label,
   selected,
   onPress,
 }: {
+  /** Prodigi's raw value, title-cased for display when no `label` is given. */
   value: string;
+  /**
+   * Ready-to-show text, used verbatim. SKU-axis values arrive already
+   * customer-facing ("No matte"), and title-casing would make it "No Matte".
+   */
+  label?: string;
   selected: boolean;
   onPress: () => void;
 }) {
@@ -348,7 +396,7 @@ function OptionChip({
           borderColor: selected ? theme.text : theme.border,
         },
       ]}>
-      <Text style={[styles.finishText, { color: theme.text }]}>{titleCase(value)}</Text>
+      <Text style={[styles.finishText, { color: theme.text }]}>{label ?? titleCase(value)}</Text>
     </Pressable>
   );
 }
