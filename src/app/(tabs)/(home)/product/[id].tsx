@@ -32,6 +32,9 @@ const HERO_HEIGHT = 268;
 const COLLAPSED_SIZE_COUNT = 6;
 
 /** `GET /v1/products/{id}` — the product page. */
+/** Case- and separator-insensitive compare, matching the API's attribute matcher. */
+const loose = (v: string) => v.toLowerCase().replace(/[\s_-]+/g, '');
+
 export default function ProductScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
@@ -51,9 +54,36 @@ export default function ProductScreen() {
   // defaults to its first value, so a customer who ignores the pickers still has
   // a valid basket — /v1/checkout rejects an item whose SKU requires an
   // attribute it doesn't carry.
-  const options = product?.options ?? [];
+  const allOptions = product?.options ?? [];
+
+  // Some lines offer an attribute on SOME sizes only — budget framed posters sell
+  // `black` at 12x12 but not 11x14, and `white` at 6x8 but not 16x20. The variant
+  // carries what it can actually be ordered with, so once a size is picked the
+  // values it cannot take are hidden rather than shown and rejected at checkout.
+  //
+  // Before a size is picked there is nothing to narrow by, so the full list shows.
+  const selectedVariant = product?.variants.find((v) => v.sku === selectedSku);
+  const options = useMemo(
+    () =>
+      allOptions.map((o) => {
+        const allowed = selectedVariant?.optionValues;
+        if (!allowed || allowed.id !== o.id) return o;
+        const values = o.values.filter((v) => allowed.values.some((a) => loose(a) === loose(v)));
+        // An empty intersection would leave the customer no choice at all, which
+        // is worse than showing the unfiltered list and letting checkout speak.
+        return values.length > 0 ? { ...o, values } : o;
+      }),
+    [allOptions, selectedVariant],
+  );
+
   const attributes: Record<string, string> = {};
-  for (const o of options) attributes[o.id] = chosen[o.id] ?? o.values[0];
+  for (const o of options) {
+    // A chosen value that this size cannot take falls back to the first it can —
+    // otherwise picking 12x12/black then switching to 11x14 would silently keep
+    // sending `black`, and checkout would refuse it.
+    const picked = chosen[o.id];
+    attributes[o.id] = picked && o.values.includes(picked) ? picked : o.values[0];
+  }
 
   // A SKU axis (framed prints: matted or plain) picks between VARIANTS rather
   // than setting an attribute — both forms carry size "16x20" at different
@@ -108,7 +138,7 @@ export default function ProductScreen() {
         width: a.width,
         height: a.height,
       }));
-      const selectedVariant = product?.variants.find((v) => v.sku === selectedSku);
+      // selectedVariant is derived above, from the same selectedSku.
       // Capture the full selected product for the builder + cart (labels, print
       // spec, cart details) — the photos are transient so they ride the route.
       if (product && selectedVariant) selectionStore.set(product, selectedVariant, attributes);
