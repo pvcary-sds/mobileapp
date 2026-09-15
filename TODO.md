@@ -140,6 +140,106 @@ Cutting a release is a deliberate act against live Stripe and live Prodigi, so
 it happens when it happens. Recorded here so the drift is tracked rather than
 rediscovered.
 
+## Pricing — revisit box frame pricing once there is demand data
+
+**Decision 2026-09-15: box frames ship at the standard 12% target, same as every
+other line.** Cheapest-in-market is the deliberate early-stage posture — we have
+zero orders and no reputation, price is the only lever we have, and **prices can
+go up later but cannot come down.** Being wrong cheap is recoverable; launching
+expensive with no reviews is not.
+
+This item exists because box frames are the **first line with real like-for-like
+competitor benchmarks**, and they show substantial headroom. Recorded so the
+opportunity isn't lost, not because anything is wrong today.
+
+| Size | Ours (plain) | AU Deep-Set | Framebridge | Gap vs cheapest rival |
+|---|---|---|---|---|
+| 8x10 | $65 | $69 | $90 | −6% |
+| 11x14 | $75 | $99 | $125 | −24% |
+| 16x20 | $90 | $139 | $175 | −35% |
+| 20x20 | $95 | $159 | — | −40% |
+| 24x24 | $105 | $219 | — | −52% |
+| 20x30 | $115 | $239 | — | −52% |
+| 30x30 | $135 | $299 | — | −55% |
+| 30x40 | $170 | $329 | $300 | −43% |
+
+Both rivals quote all-inclusive (frame, mat, glazing, hardware, shipping) as we
+do; read 2026-09-15. **The gap widens with size** — small sizes are floored by
+Prodigi's cost, large ones are not. Note AU's price includes a mat, so it is the
+strict comparator for our *matted* SKU; the real gap on plain is wider.
+
+**What a repricing would be worth:** at 12% we keep ~$15.17/order, ~$11 after a
+25% income-tax set-aside. A 20% target would keep ~$26.27 (~$19.70 after tax) and
+would *still* be under both rivals at every size — a 16x20 would go $90 → $100
+against their $139 and $175.
+
+- [ ] **Revisit after the first ~50–100 orders**, not before. The question to
+      answer is whether price is actually why people bought. Without conversion
+      data this is guesswork.
+- [ ] **Watch whether large sizes convert at all.** The headroom is concentrated
+      at 20x20 and up. If those never sell, the headroom is theoretical and the
+      small sizes — which have none — are the whole business.
+- [ ] **If we ever pay for traffic, reprice first.** At ~$11 take-home, any
+      customer-acquisition cost above ~$11 makes an order lose money no matter
+      how cheap it is. Thin margins only work on organic discovery.
+- [ ] **Do NOT anchor to a competitor's ladder.** Tried and rejected 2026-09-15:
+      pricing at "20% under AU" let their number drive ours (a 24x24 jumped
+      $105 → $175 because *they* charge $219, not because our costs moved) and
+      it introduced a visible seam mid-ladder. Any future raise should be a
+      higher **cost-plus target** applied uniformly, with competitors used only
+      as a sanity ceiling.
+- [ ] **Check whether the same headroom exists on classic framed prints.** Same
+      benchmarks apply — it was simply never measured for that line.
+
+See `PRICING.md` → *Box frames* → "Headroom exists — but we are not taking it yet".
+
+## Pricing — resubscribe to Prodigi Pro before production
+
+Every price list in `PRICING.md` **assumes a 15% Prodigi Pro discount on item cost**
+(each spreadsheet tab multiplies by 0.85). That discount is **not active** — the
+subscription is deliberately unpaid until we are closer to production (~$50/mo,
+£35/mo billed annually).
+
+Verified 2026-09-14: the live account returns the **same list price as sandbox** on
+every SKU tested (acrylic, canvas, FAP, box frame), and the quote body carries no
+discount field — `unitCost` is full list. An acrylic 11x14 that PRICING.md recorded
+at $51 now quotes at $60.00.
+
+Harmless today — **no real order has ever been placed**. It becomes a real problem
+the moment one is.
+
+**Margins at currently-listed retail, recomputed at full list:**
+
+| Line | Avg *with* 15% | Avg *without* | Worst | # below 0% |
+|---|---|---|---|---|
+| Acrylic | 11.9% | **2.3%** | −1.1% | **4** |
+| Maple wood | 11.5% | **1.8%** | −0.7% | **7** |
+| Aluminium | 11.4% | **1.6%** | −1.1% | **7** |
+| Dibond | 12.3% | **3.0%** | −0.2% | **1** |
+| Stretched canvas | 12.4% | 4.8% | 1.4% | 0 |
+| Eco canvas | 13.0% | 8.6% | 3.0% | 0 |
+| Rolled canvas | 14.4% | 7.0% | 1.6% | 0 |
+| Posters | 13.6% | 9.2% | 5.1% | 0 |
+| Poster hangers | 13.1% | 6.2% | 3.2% | 0 |
+| Classic framed | 14.5% | 5.8% | 1.5% | 0 |
+
+**Box frames are the exception** — priced at full list on purpose, so they are
+correct either way and gain ~8 points once Pro is back.
+
+- [ ] **Subscribe to Prodigi Pro** (~$50/mo) as part of the production go-live, not
+      before — there is nothing to discount until orders are real.
+- [ ] **Validate the discount actually lands in quotes** once subscribed. Re-quote
+      `GLOBAL-MOU-ACRY-11X14` against `api.prodigi.com`: it must return **$51.00**,
+      not $60.00. Sandbox has no Pro and will keep returning $60 — compare the two.
+- [ ] **If the discount does NOT return to the quote**, it has moved to invoice
+      time. Confirm against a real invoice before trusting any price list, and
+      until then treat full list as the costing basis.
+- [ ] **If we launch without Pro, re-price first.** 19 SKUs across acrylic, wood,
+      aluminium and Dibond sell **at a loss** at full list. Either re-run
+      `set-prices.mjs` off an undiscounted model or do not list those sizes.
+
+See `PRICING.md` caveat 2 for the full breakdown.
+
 ## Pricing — the canvas oversize shipping cliff
 
 Prodigi's stretched-canvas shipping is tiered by longest side, and the top tier is
@@ -181,10 +281,12 @@ above the cliff and none are listed. That caps canvas at 40x40 / $165.
       (c) charge shipping separately on oversize items — which breaks the
       free-shipping promise that is currently baked into every price on every
       product, so it is not a canvas-only change.
-- [ ] **Check whether the cliff exists on other lines.** Acrylic goes to 30x40 and
-      wood to 30x40, both under the threshold, so it has not bitten yet — but the
-      next large-format product could hit it silently. Nothing in the pricing
-      script warns when shipping jumps disproportionately to size.
+- [x] **Check whether the cliff exists on other lines.** ✅ It does. **Box frames
+      hit it 2026-09-14**: shipping holds at $50.75 through 40x40, then jumps to
+      **$232.20 plain / $428.68 matted** at 32x48 and 36x48. A 36x48 matted lands
+      at $618 COGS — 69% freight — and would retail at $755. Both 48" sizes were
+      excluded, same call as canvas at 40". Acrylic and wood both stop at 30x40 and
+      stay under the threshold. Assume every future large-format line has it.
 - [ ] **Consider a guard in the pricing workflow.** A size whose shipping is >40%
       of landed cost is almost certainly mispriced or shouldn't be listed; today
       that is only caught by reading the table.
