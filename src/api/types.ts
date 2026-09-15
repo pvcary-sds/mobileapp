@@ -62,6 +62,15 @@ export interface ProductVariant {
    * Undefined for every other product.
    */
   skuGroup?: { id: string; value: string };
+  /**
+   * Which values of ONE option this variant can actually be ordered with, when
+   * the answer depends on the size. Budget framed posters sell `black` at 12x12
+   * but not at 11x14, and `white` at 6x8 but not 16x20.
+   *
+   * Undefined means unrestricted — the whole product-level `options` entry
+   * applies. That is every product but framed posters.
+   */
+  optionValues?: { id: string; values: string[] };
 }
 
 /** The full product page (`GET /v1/products/{id}`). */
