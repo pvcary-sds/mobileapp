@@ -140,6 +140,59 @@ Cutting a release is a deliberate act against live Stripe and live Prodigi, so
 it happens when it happens. Recorded here so the drift is tracked rather than
 rediscovered.
 
+## Pricing — revisit box frame pricing once there is demand data
+
+**Decision 2026-09-15: box frames ship at the standard 12% target, same as every
+other line.** Cheapest-in-market is the deliberate early-stage posture — we have
+zero orders and no reputation, price is the only lever we have, and **prices can
+go up later but cannot come down.** Being wrong cheap is recoverable; launching
+expensive with no reviews is not.
+
+This item exists because box frames are the **first line with real like-for-like
+competitor benchmarks**, and they show substantial headroom. Recorded so the
+opportunity isn't lost, not because anything is wrong today.
+
+| Size | Ours (plain) | AU Deep-Set | Framebridge | Gap vs cheapest rival |
+|---|---|---|---|---|
+| 8x10 | $65 | $69 | $90 | −6% |
+| 11x14 | $75 | $99 | $125 | −24% |
+| 16x20 | $90 | $139 | $175 | −35% |
+| 20x20 | $95 | $159 | — | −40% |
+| 24x24 | $105 | $219 | — | −52% |
+| 20x30 | $115 | $239 | — | −52% |
+| 30x30 | $135 | $299 | — | −55% |
+| 30x40 | $170 | $329 | $300 | −43% |
+
+Both rivals quote all-inclusive (frame, mat, glazing, hardware, shipping) as we
+do; read 2026-09-15. **The gap widens with size** — small sizes are floored by
+Prodigi's cost, large ones are not. Note AU's price includes a mat, so it is the
+strict comparator for our *matted* SKU; the real gap on plain is wider.
+
+**What a repricing would be worth:** at 12% we keep ~$15.17/order, ~$11 after a
+25% income-tax set-aside. A 20% target would keep ~$26.27 (~$19.70 after tax) and
+would *still* be under both rivals at every size — a 16x20 would go $90 → $100
+against their $139 and $175.
+
+- [ ] **Revisit after the first ~50–100 orders**, not before. The question to
+      answer is whether price is actually why people bought. Without conversion
+      data this is guesswork.
+- [ ] **Watch whether large sizes convert at all.** The headroom is concentrated
+      at 20x20 and up. If those never sell, the headroom is theoretical and the
+      small sizes — which have none — are the whole business.
+- [ ] **If we ever pay for traffic, reprice first.** At ~$11 take-home, any
+      customer-acquisition cost above ~$11 makes an order lose money no matter
+      how cheap it is. Thin margins only work on organic discovery.
+- [ ] **Do NOT anchor to a competitor's ladder.** Tried and rejected 2026-09-15:
+      pricing at "20% under AU" let their number drive ours (a 24x24 jumped
+      $105 → $175 because *they* charge $219, not because our costs moved) and
+      it introduced a visible seam mid-ladder. Any future raise should be a
+      higher **cost-plus target** applied uniformly, with competitors used only
+      as a sanity ceiling.
+- [ ] **Check whether the same headroom exists on classic framed prints.** Same
+      benchmarks apply — it was simply never measured for that line.
+
+See `PRICING.md` → *Box frames* → "Headroom exists — but we are not taking it yet".
+
 ## Pricing — resubscribe to Prodigi Pro before production
 
 Every price list in `PRICING.md` **assumes a 15% Prodigi Pro discount on item cost**
