@@ -121,24 +121,90 @@ ways:
       *before* it charges — rather than surfacing a Prodigi 400 after the money
       has moved.
 
-## Release — production is behind staging
+## ~~Release — production is behind staging~~ ✅ RESOLVED 2026-09-15
 
-`main` trails `develop`, so production runs older API code than staging. Most of
-the gap is `scripts/**`, which never deploys (it is in the workflow's
-`paths-ignore`) and only affects local tooling. Two things do affect the running
-service:
+Closed by api#50 (`develop` → `main`, 12 commits). Production deploy
+#34991454034 succeeded in 9m45s. Both items that affected the running service
+are verified live:
 
-- [ ] **`framecolor` in `ATTRIBUTE_FIELDS`** — without it `posterhangers` returns
-      `options: []` in production, so the PDP has no Frame colour picker and a
-      hanger cannot be bought there. Checkout itself is fine: it reads Prodigi's
-      own attributes, so a colour sent by a client is accepted and priced
-      correctly ($43/$48 verified in production).
-- [ ] **The `posters` tier2 config entry** — the fallback that keeps
-      `POST /v1/tier2/posters` from 404ing before its CMS story resolves.
+- [x] **`framecolor` in `ATTRIBUTE_FIELDS`** — `GET /v1/products/posterhangers`
+      on production now returns
+      `options: [{"id":"color","label":"Frame color","values":["Natural","Black","White"]}]`.
+      Note the label is the American spelling; api#45 shipped in the same release.
+- [x] **The `posters` tier2 config entry** — `POST /v1/tier2/posters` returns
+      **200** on production.
 
-Cutting a release is a deliberate act against live Stripe and live Prodigi, so
-it happens when it happens. Recorded here so the drift is tracked rather than
-rediscovered.
+The release also shipped `toSkuAxis`, which production needed urgently: with it
+missing, both framed-print lines rendered **two identical size chips at different
+prices** with nothing saying which was matted. Verified fixed — `framedprints`
+(59 variants) and `boxframedprints` (68) both return
+`skuAxis: ["Matte","No matte"]` in production.
+
+> **The lesson worth keeping:** box frames were published to Storyblok *before*
+> the release merged, which put production into that broken state for ~40 minutes.
+> Publishing CMS content and shipping the code that renders it are one change —
+> **merge the release first, publish second.** Low-stakes this time only because
+> no app points at production.
+
+## Product — budget framed posters: evaluated and skipped
+
+`GLOBAL-BFP`. Silk 150gsm poster paper in a budget frame. **Evaluated 2026-09-15,
+decided NOT to stock.** Recorded so it isn't re-evaluated from scratch, and so we
+notice if Prodigi changes the things that made it a poor fit.
+
+Single family — no `GLOBAL-BFPM`, so no SKU-axis work would have been needed. That
+was the appealing part. Three things outweighed it:
+
+**1. Three of eleven sizes are non-US.** `5x7` and `24x32` ship from Britain in
+every colour, `18x24` in the only colour it has. UK freight is $50.99–$97.62
+against $24.80 domestic.
+
+**2. It isn't actually cheap.** Item cost is genuinely low (11x14: **$17** vs
+classic framed's $48) but shipping + ops + Stripe form a **~$28 floor that doesn't
+scale down**, so only $20–$30 reaches the customer:
+
+| Size | Budget | Classic | Box |
+|---|---|---|---|
+| 11x14 | $55 | $75 | $75 |
+| 16x20 | $60 | $85 | $90 |
+| 20x28 | $75 | $105 | $110 |
+
+A visibly worse product (Silk 150gsm vs EMA 200gsm fine art) for $20 off
+cannibalises the good lines instead of opening a new price point.
+
+**3. ⚠️ Colour availability varies PER SIZE — and `/products` misreports it.**
+This is the blocker. `/v4.0/products/GLOBAL-BFP-6X8` advertises `black`; quoting
+that SKU in black returns `NotAvailable`. Meanwhile `white` is the only option on
+`12x16`, and `natural` the only US one on `16x20` and `20x28`.
+
+`framecolor` is **per-product, not per-variant**, so no colour list works across
+sizes: `natural` breaks `12x16`; `white` routes `16x20`/`18x24` to Britain;
+`black` breaks 7 of 11. The `/v1/checkout` guard catches all of these before
+charging — nobody is billed for an impossible order — but the customer picks a
+size and colour, taps through, and gets rejected.
+
+### What would have to change to revisit
+
+- [ ] **Prodigi makes colour uniform across sizes**, or adds US fulfilment for
+      `5x7` / `18x24` / `24x32`. Re-run the size × colour matrix in
+      `PRICING.md` → *Budget framed posters* to check; every cell there is a live
+      quote, so it's directly re-runnable.
+- [ ] **OR we build per-variant attribute filtering.** Today `options` is
+      product-wide. Making valid colours depend on the selected variant is new API
+      shape plus PDP work. **Worth doing only if a product we actually want needs
+      it** — not for this one. If it ever gets built, this line becomes cheap to
+      add.
+- [ ] **OR we list only the safe subset.** `12x12`, `16x16`, `20x20` are
+      US-fulfilled in all three colours and need no new work — a 3-size catalogue
+      at $55/$60/$65. Rejected as too thin to be worth a PDP entry, but it is the
+      zero-effort option if a cheap framed tier is ever wanted.
+
+One number worth remembering: **`6x8` white lands at $45**, the cheapest framed
+price the catalogue could offer. If an entry-level framed price point ever
+matters, that single SKU is the reason to look here again.
+
+Full analysis incl. the live-quote matrix and the 12% table: `PRICING.md` →
+*Budget framed posters — EVALUATED 2026-09-15, NOT STOCKED*.
 
 ## Pricing — revisit box frame pricing once there is demand data
 
