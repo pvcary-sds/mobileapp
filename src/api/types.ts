@@ -54,6 +54,12 @@ export interface ProductSkuAxis {
 export interface ProductVariant {
   sku: string;
   size: string;
+  /**
+   * Unit the `size` label is in. Absent means inches — every product but cork pin
+   * boards, whose SKUs are metric-native (`CORK-40X30` is 40x30 cm) and whose
+   * inch figures are rounded conversions that distort the aspect ratio.
+   */
+  unit?: 'in' | 'cm';
   price: string; // decimal string, USD, no symbol e.g. "60.00"
   orientation: string; // "Square" | "Portrait / landscape"
   /**

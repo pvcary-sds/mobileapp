@@ -383,8 +383,10 @@ function SizeChip({
         },
       ]}>
       <Text style={[styles.priceText, { color: theme.textTertiary }]}>${variant.price}</Text>
-      {/* TODO: unit ("in") is hardcoded — the API's variant.size has no unit. */}
-      <Text style={[styles.sizeText, { color: theme.text }]}>{variant.size} in</Text>
+      {/* Inches unless the variant says otherwise — cork pin boards are metric. */}
+      <Text style={[styles.sizeText, { color: theme.text }]}>
+        {variant.size} {variant.unit ?? 'in'}
+      </Text>
     </Pressable>
   );
 }
