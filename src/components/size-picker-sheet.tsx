@@ -75,7 +75,9 @@ export function SizePickerSheet({
                   ]}>
                   <Text style={[styles.price, { color: theme.textTertiary }]}>${v.price}</Text>
                   {/* TODO: unit ("in") is hardcoded — variant.size carries no unit. */}
-                  <Text style={[styles.size, { color: theme.text }]}>{v.size} in</Text>
+                  <Text style={[styles.size, { color: theme.text }]}>
+                    {v.size} {v.unit ?? 'in'}
+                  </Text>
                 </Pressable>
               );
             })}

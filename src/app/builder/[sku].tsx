@@ -93,9 +93,11 @@ const FILTERS = [
   { id: 'fade', name: 'Fade' },
 ];
 
-/** Parse a print-size label like "8x10 in" into `[width, height]` inches (the
- *  product's physical dimensions), or null if it can't be read. Drives the
- *  WYSIWYG print frame's aspect ratio. */
+/** Parse a print-size label like "8x10 in" (or "40x30 cm") into `[width, height]`,
+ *  or null if it can't be read. Only the RATIO is used, so the unit does not
+ *  matter here — but which unit the label is IN does: cork's A4/A3 sizes are 6.1%
+ *  off in rounded inches and 0.20% off in cm, and this drives the WYSIWYG print
+ *  frame until Prodigi's exact pixel canvas loads. */
 function parsePrintSize(size?: string): [number, number] | null {
   if (!size) return null;
   const m = size.match(/(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)/i);
@@ -176,7 +178,9 @@ export default function BuilderScreen() {
   // product flows through cleanly rather than via route-param strings.
   const selection = useSelection();
   const title = selection?.product.name ?? '';
-  const size = selection ? `${selection.variant.size} in` : '';
+  const size = selection
+    ? `${selection.variant.size} ${selection.variant.unit ?? 'in'}`
+    : '';
   const price = selection?.variant.price ?? '';
 
   // The authoritative print spec from Prodigi (via our API), fetched per sku —
