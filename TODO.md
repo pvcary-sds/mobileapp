@@ -146,6 +146,47 @@ prices** with nothing saying which was matted. Verified fixed — `framedprints`
 > **merge the release first, publish second.** Low-stakes this time only because
 > no app points at production.
 
+## ⚠️ Product — order a cork pin board sample before selling one
+
+**Framed cork pin boards (product #14) are LIVE in production, and there is one
+unresolved fact about them that a real order would settle.**
+
+Prodigi's own product PDF says:
+
+> "No printed image is included — the product is a blank pinnable display board."
+
+Everything else says the opposite:
+
+- `GET /v4.0/products/CORK-40X30` returns `printAreas.default.required: true`
+- the print area is `4724x3543` — **exactly 300 dpi** at 15.7x11.8"
+- `paperType` is `Cork`
+- an order with no asset is **rejected** by the quote endpoint
+- Prodigi's own product imagery shows a printed world map on the cork, pins in it
+
+Confirmed printed by Patrick 2026-09-16. **Not independently verified with
+Prodigi.** `PRICING.md` records it that way on purpose.
+
+**Why this one matters more than a normal unknown:** every other product in the
+catalogue fails safe. If we are wrong about a frame colour or a mount, the
+customer gets a print that is subtly not what they picked. If we are wrong here,
+the customer uploads a photo, pays $45–$110, and receives **a blank cork board
+with no photo on it at all.** There is no partial version of that failure.
+
+- [ ] **Place one real order** — `CORK-20X15` in black is the cheapest at $45
+      landed ~$37. Use the live Prodigi account. Confirm the delivered board
+      carries the uploaded image.
+- [ ] **If it arrives blank**, unpublish `framedcorkpinboards` immediately, then
+      decide: either drop the line, or keep it as a no-photo product — which the
+      app cannot currently express, since every flow assumes a customer photo
+      (capture → customize → upload). That would be real work, not a copy change.
+- [ ] **If it arrives printed**, note it in `PRICING.md` and delete this item. Also
+      worth writing the product copy around the pin-your-travels / pin-around-a-
+      photo use case, which is the actual appeal and unlike anything else we sell.
+
+Related: this is also a good first candidate for the "place one small real order"
+item under *Stripe — production readiness*, since it exercises the live Prodigi
+path on the cheapest SKU we sell.
+
 ## Product — budget framed posters: evaluated and skipped
 
 `GLOBAL-BFP`. Silk 150gsm poster paper in a budget frame. **Evaluated 2026-09-15,
