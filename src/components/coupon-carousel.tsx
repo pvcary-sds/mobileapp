@@ -1,0 +1,140 @@
+import { Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { SvgXml } from 'react-native-svg';
+
+import type { CouponOffer } from '@/api/coupons';
+import { FontFamily } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+
+/** Filled check-circle glyph, `currentColor` — the "Active" coupon badge (12×12,
+ *  Label/dark green on Label/light green). Same shape as the toast's, recolorable. */
+const CHECK_BADGE_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C9.62663 0 7.30655 0.703788 5.33316 2.02236C3.35977 3.34094 1.8217 5.21508 0.913451 7.4078C0.00519941 9.60051 -0.232441 12.0133 0.230582 14.3411C0.693605 16.6689 1.83649 18.807 3.51472 20.4853C5.19295 22.1635 7.33115 23.3064 9.65892 23.7694C11.9867 24.2324 14.3995 23.9948 16.5922 23.0865C18.7849 22.1783 20.6591 20.6402 21.9776 18.6668C23.2962 16.6934 24 14.3734 24 12C23.9939 8.81927 22.7277 5.77057 20.4785 3.52146C18.2294 1.27234 15.1807 0.0060992 12 0ZM17.7115 9.9L10.95 16.3615C10.7752 16.526 10.5438 16.6169 10.3039 16.6154C10.1865 16.6171 10.0701 16.5955 9.96115 16.5519C9.85223 16.5084 9.75302 16.4436 9.66923 16.3615L6.28847 13.1308C6.1947 13.049 6.11844 12.949 6.06427 12.837C6.0101 12.725 5.97915 12.6031 5.97327 12.4788C5.96739 12.3545 5.9867 12.2303 6.03005 12.1137C6.07339 11.997 6.13988 11.8903 6.22551 11.8C6.31113 11.7097 6.41413 11.6377 6.52832 11.5882C6.6425 11.5387 6.76551 11.5129 6.88995 11.5121C7.01439 11.5114 7.13769 11.5359 7.25244 11.584C7.36719 11.6322 7.47103 11.703 7.5577 11.7923L10.3039 14.4115L16.4423 8.56154C16.6218 8.40495 16.8549 8.3238 17.0928 8.33505C17.3307 8.34631 17.5551 8.4491 17.719 8.62194C17.8829 8.79477 17.9736 9.02427 17.9722 9.26246C17.9708 9.50065 17.8774 9.72908 17.7115 9.9Z" fill="currentColor"/></svg>`;
+
+type Props = {
+  offers: CouponOffer[];
+  /** The clipped/applied code, if any — its card renders as "Active". */
+  activeCode: string | null | undefined;
+  onApply: (code: string) => void;
+  onRemove: () => void;
+  /** Outer scroll style — the caller owns spacing and any full-bleed offset. */
+  style?: StyleProp<ViewStyle>;
+};
+
+/**
+ * The "Offers for you" coupon cards, in a horizontal scroll. Shared by the cart
+ * and the landing page so both show the same card and the same clip/unclip
+ * experience: "Apply Code" turns the card white with an "Active" badge and the
+ * button becomes "Remove Code"; tapping it again unclips.
+ *
+ * What "apply" actually does is the caller's business — the cart validates
+ * against its basket, the landing page clips a code before there is one.
+ */
+export function CouponCarousel({ offers, activeCode, onApply, onRemove, style }: Props) {
+  const theme = useTheme();
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={style}
+      contentContainerStyle={styles.content}>
+      {offers.map((c, i) => {
+        const active = activeCode === c.code;
+        return (
+          <View
+            key={c.code}
+            style={[
+              styles.coupon,
+              i > 0 && styles.gap,
+              {
+                // Applied → white; otherwise the brand surface.
+                backgroundColor: active ? theme.background : theme.brandSurface,
+                borderColor: theme.strokeFaint,
+              },
+            ]}>
+            <View>
+              <Text style={[styles.desc, { color: theme.textTertiary }]}>{c.title}</Text>
+              <Text style={[styles.code, { color: theme.text }]}>{c.code}</Text>
+            </View>
+
+            {/* "Active" badge — pinned to the top-right once applied. */}
+            {active && (
+              <View style={[styles.badge, { backgroundColor: theme.successBg }]}>
+                <SvgXml xml={CHECK_BADGE_ICON} width={12} height={12} color={theme.successFg} />
+                <Text style={[styles.badgeText, { color: theme.successFg }]}>Active</Text>
+              </View>
+            )}
+
+            <Pressable
+              style={[
+                styles.apply,
+                {
+                  backgroundColor: theme.background,
+                  borderColor: active ? theme.removeStroke : theme.textTertiary,
+                },
+              ]}
+              onPress={() => (active ? onRemove() : onApply(c.code))}>
+              <Text style={[styles.applyText, { color: active ? theme.removeText : theme.text }]}>
+                {active ? 'Remove Code' : 'Apply Code'}
+              </Text>
+            </Pressable>
+          </View>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  content: {
+    paddingHorizontal: 16, // first coupon 16 from the leading edge
+  },
+  gap: {
+    marginLeft: 12, // 12 between coupons
+  },
+  coupon: {
+    width: 240, // height grows with content (no fixed height)
+    borderWidth: 1, // Additional stroke/10
+    borderRadius: 12,
+    padding: 16, // 16 top/leading/trailing/bottom
+  },
+  badge: {
+    position: 'absolute',
+    top: 16, // 16 from the top / trailing of the card
+    right: 16,
+    height: 20,
+    flexDirection: 'row',
+    alignItems: 'center', // centers the 12px glyph → 4 top/bottom
+    paddingLeft: 4, // 4 to the glyph
+    paddingRight: 8,
+    borderRadius: 6,
+  },
+  badgeText: {
+    marginLeft: 4, // 4 from the glyph
+    fontFamily: FontFamily.bodyMedium, // Caption / Medium 12/18
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  desc: {
+    fontFamily: FontFamily.bodyMedium, // Body 2 / Medium 14/20, Gray/700
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  code: {
+    marginTop: 4, // 4 below the description
+    fontFamily: FontFamily.titleBold, // Title 2 / Bold (Crimson Text) 20/30, Gray/black
+    fontSize: 20,
+    lineHeight: 30,
+  },
+  apply: {
+    marginTop: 42, // 42 from the code to the button
+    height: 40,
+    borderWidth: 1, // Gray/700 stroke on white
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  applyText: {
+    fontFamily: FontFamily.bodySemiBold, // Body 2 / SemiBold 14/20, Gray/black
+    fontSize: 14,
+    lineHeight: 20,
+  },
+});
