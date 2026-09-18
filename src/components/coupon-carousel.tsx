@@ -8,7 +8,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import Svg, { Path, SvgXml } from 'react-native-svg';
+import Svg, { ClipPath, Defs, Image as SvgImage, Path, SvgXml } from 'react-native-svg';
 
 import type { CouponOffer } from '@/api/coupons';
 import { FontFamily } from '@/constants/theme';
@@ -25,6 +25,11 @@ const TICKET = {
   radius: 12, // top and bottom corners
   notch: 18, // side notches: a 36-tall semicircle cutting 18 inwards
   inset: 24, // content 24 from the left and right edges, clear of the notches
+  // Decorative illustration on the right, flush to the edge. It's 185x144 — the
+  // ticket's full height — with the right notch already cut out (transparent),
+  // but its right-hand corners are square, so it's clipped to the ticket outline.
+  art: require('../../assets/images/coupon-ticket.png'),
+  artWidth: 185,
 };
 
 /**
@@ -35,11 +40,14 @@ const TICKET = {
  * border runs around the notches too.
  */
 function TicketShape({
+  id,
   width,
   height,
   fill,
   stroke,
 }: {
+  /** Unique per ticket — the SVG clip-path id must not collide across cards. */
+  id: string;
   width: number;
   height: number;
   fill: string;
@@ -69,9 +77,28 @@ function TicketShape({
     `A ${r} ${r} 0 0 1 ${L + r} ${T}`,
     'Z',
   ].join(' ');
+  const clipId = `ticket-${id}`;
   return (
     <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
-      <Path d={path} fill={fill} stroke={stroke} strokeWidth={1} />
+      <Defs>
+        <ClipPath id={clipId}>
+          <Path d={path} />
+        </ClipPath>
+      </Defs>
+      <Path d={path} fill={fill} />
+      {/* The art is clipped to the outline so its square corners take the ticket's
+          12 radius, and its transparent notch lines up with the cut-out. */}
+      <SvgImage
+        href={TICKET.art}
+        x={width - TICKET.artWidth}
+        y={0}
+        width={TICKET.artWidth}
+        height={height}
+        preserveAspectRatio="xMaxYMid meet"
+        clipPath={`url(#${clipId})`}
+      />
+      {/* Border last, so it runs unbroken over the art's edge. */}
+      <Path d={path} fill="none" stroke={stroke} strokeWidth={1} />
     </Svg>
   );
 }
@@ -140,6 +167,7 @@ export function CouponCarousel({
             ]}>
             {ticket && (
               <TicketShape
+                id={c.code}
                 width={ticketWidth}
                 height={TICKET.height}
                 // Same fill whether or not it's applied — the Active badge and the
@@ -148,7 +176,14 @@ export function CouponCarousel({
                 stroke={theme.strokeFaint}
               />
             )}
-            <View>
+            {/* On the ticket, keep the copy clear of the art on the right: a long
+                title wraps rather than running into the illustration. */}
+            <View
+              style={
+                ticket
+                  ? { maxWidth: ticketWidth - TICKET.inset - TICKET.artWidth }
+                  : undefined
+              }>
               <Text style={[styles.desc, { color: theme.textTertiary }]}>{c.title}</Text>
               <Text style={[styles.code, { color: theme.text }]}>{c.code}</Text>
             </View>
