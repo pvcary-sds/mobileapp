@@ -203,6 +203,8 @@ const styles = StyleSheet.create({
   },
   ticketApply: {
     marginTop: 0, // pinned to the bottom by space-between, not a fixed gap
+    alignSelf: 'flex-start', // left-aligned, sized to its label — not full width
+    paddingHorizontal: 16, // 16 either side of "Apply Code" / "Remove Code"
   },
   coupon: {
     width: 240, // height grows with content (no fixed height)
