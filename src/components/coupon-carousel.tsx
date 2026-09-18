@@ -142,7 +142,9 @@ export function CouponCarousel({
               <TicketShape
                 width={ticketWidth}
                 height={TICKET.height}
-                fill={active ? theme.background : theme.brandSurface}
+                // Same fill whether or not it's applied — the Active badge and the
+                // button carry the state on this style, not the background.
+                fill={theme.brandSurface}
                 stroke={theme.strokeFaint}
               />
             )}
@@ -168,13 +170,26 @@ export function CouponCarousel({
               style={[
                 styles.apply,
                 ticket && styles.ticketApply,
-                {
-                  backgroundColor: theme.background,
-                  borderColor: active ? theme.removeStroke : theme.textTertiary,
-                },
+                ticket && !active
+                  ? // Ticket, not applied: solid Gray/black with a white label.
+                    { backgroundColor: theme.text, borderColor: theme.text }
+                  : {
+                      backgroundColor: theme.background,
+                      borderColor: active ? theme.removeStroke : theme.textTertiary,
+                    },
               ]}
               onPress={() => (active ? onRemove() : onApply(c.code))}>
-              <Text style={[styles.applyText, { color: active ? theme.removeText : theme.text }]}>
+              <Text
+                style={[
+                  styles.applyText,
+                  {
+                    color: active
+                      ? theme.removeText
+                      : ticket
+                        ? theme.onPrimary
+                        : theme.text,
+                  },
+                ]}>
                 {active ? 'Remove Code' : 'Apply Code'}
               </Text>
             </Pressable>
