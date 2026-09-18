@@ -187,6 +187,44 @@ Related: this is also a good first candidate for the "place one small real order
 item under *Stripe — production readiness*, since it exercises the live Prodigi
 path on the cheapest SKU we sell.
 
+## Product — framed photo tiles: evaluated and skipped
+
+`PHOTIL-FRA-{0000}`. Restickable adhesive photo tiles. **Evaluated 2026-09-17,
+decided NOT to stock.** Recorded so it isn't re-derived, and so we notice if the
+one thing that would change the answer changes.
+
+**Why not:** shipping is bigger than the product, and it doesn't amortize. An
+$8–$10 tile carries $21–$25 freight, and **each extra tile adds $11** (measured:
+1→$24.80, 3→$46.80, 12→$145.80). At the 12% target a single 8x8 lands at **$40**.
+
+**Mixtiles defines this category at $15 list, $5–$9 discounted, 12 for $99 with
+free shipping.** We'd be 2.7x their list and ~5x their bulk price. Every other
+line in the catalogue undercuts its competitor by 30–55%; this is the only one
+where we'd be the expensive option, against a competitor that advertises heavily
+to exactly these buyers.
+
+Margin wasn't the problem — because each tile is priced carrying full single-unit
+freight, a 6-tile basket would run **46%** and a 12-tile basket **49%**, the best
+in the catalogue. The price to the customer is the problem.
+
+### What would change it
+
+- [ ] **Prodigi flat-rates multi-tile shipping.** One call settles it: quote
+      `PHOTIL-FRA-0810` at `copies: 12`. Today that's $145.80 freight. If it ever
+      returns ~$25, cost per tile at 12 drops to ~$11.50 and a competitive ~$20
+      tile becomes possible.
+- [ ] **A cheaper fulfiller for small flat goods.** Tiles are the clearest case
+      in the catalogue for the second-`fulfillmentType` idea in `PRICING.md`.
+
+> **SKU format, recorded because it cost 348 failed probes:** zero-padded, no
+> `X` — `PHOTIL-FRA-0810`, not `PHOTIL-8X10`. Prodigi's PDF for this product is
+> image-only, so its "SKU prefix" line was a reader's inference rather than
+> printed text. When a PDF has no extractable text, ask for the SKU instead of
+> probing.
+
+Full analysis incl. the basket-margin table: `PRICING.md` → *Framed photo
+tiles — EVALUATED 2026-09-17, NOT STOCKED*.
+
 ## Product — budget framed posters: evaluated and skipped
 
 `GLOBAL-BFP`. Silk 150gsm poster paper in a budget frame. **Evaluated 2026-09-15,
