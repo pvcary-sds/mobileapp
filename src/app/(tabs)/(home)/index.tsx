@@ -93,6 +93,7 @@ export default function HomeScreen() {
                     activeCode={appliedCoupon?.code}
                     onApply={clipCoupon}
                     onRemove={unclipCoupon}
+                    variant="ticket"
                     style={styles.coupons}
                   />
                 )}
